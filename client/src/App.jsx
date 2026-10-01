@@ -1,6 +1,7 @@
 import { t, lang, LANGS, setLang } from './i18n.jsx';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { NavLink, Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
+import { Link, NavLink, Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
+import { getTheme, isDark, setTheme } from './theme.js';
 import { api, getToken, setToken, setUnauthorizedHandler } from './api.js';
 import { setFormat } from './format.js';
 import { ToastProvider, Loading, Button, Field, Input, Select, useAction } from './components/ui.jsx';
@@ -18,6 +19,7 @@ import Recurring from './pages/Recurring.jsx';
 import Reports from './pages/Reports.jsx';
 import Settings from './pages/Settings.jsx';
 import Payroll from './pages/Payroll.jsx';
+import Reminders, { useReminderCount } from './pages/Reminders.jsx';
 import PublicDoc from './pages/PublicDoc.jsx';
 import { Gate, Lock } from './components/plan.jsx';
 import Connections from './pages/Connections.jsx';
@@ -25,6 +27,16 @@ import { Pricing, Welcome } from './pages/Pricing.jsx';
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
+
+function ThemeToggle({ className = '' }) {
+  const [theme, setThemeState] = useState(getTheme());
+  const dark = isDark(theme);
+  const toggle = () => { const next = dark ? 'light' : 'dark'; setTheme(next); setThemeState(next); };
+  return (
+    <button type="button" onClick={toggle} aria-label={dark ? t('Switch to light mode') : t('Switch to dark mode')} title={dark ? t('Light mode') : t('Dark mode')}
+      className={`inline-flex h-10 w-10 items-center justify-center rounded-lg text-lg hover:bg-white/10 ${className}`}>{dark ? '☀' : '☾'}</button>
+  );
+}
 
 function LangSwitch({ dark = false }) {
   return (
@@ -81,6 +93,7 @@ function AuthScreen({ status, onAuth }) {
 
 const NAV = [
   { to: '/', label: t('Dashboard'), icon: '◧', read: 'reports', end: true },
+  { to: '/reminders', label: t('Reminders'), icon: '◔', read: 'settings', bell: true },
   { group: t('Sales'), items: [['/invoices', t('Invoices'), 'sales'], ['/estimates', t('Estimates'), 'sales'], ['/credit-memos', t('Credit memos'), 'sales', 'credit_memos'], ['/recurring', t('Recurring'), 'sales', 'recurring'], ['/customers', t('Customers'), 'sales']] },
   { group: t('Purchases'), items: [['/bills', t('Bills'), 'purchases', 'bills'], ['/purchase-orders', t('Purchase orders'), 'purchases', 'purchase_orders'], ['/expenses', t('Expenses'), 'purchases'], ['/vendors', t('Vendors'), 'sales']] },
   { group: t('Banking'), items: [['/connections', t('Connected banks'), 'banking', 'bank_feeds'], ['/banking', t('Transactions & reconciliation'), 'banking']] },
@@ -93,16 +106,31 @@ function Shell({ user, settings, logout }) {
   const [open, setOpen] = useState(false);
   const loc = useLocation();
   useEffect(() => setOpen(false), [loc.pathname]);
+  useEffect(() => { // menu aberto no celular: Esc fecha e a página de trás não rola
+    if (!open) return undefined;
+    const esc = (e) => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('keydown', esc); document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', esc); document.body.style.overflow = ''; };
+  }, [open]);
   const can = (m) => user.permissions.read.includes(m);
-  const link = ({ isActive }) => `block rounded-lg px-3 py-1.5 text-sm ${isActive ? 'bg-white/15 font-medium text-white' : 'text-indigo-100 hover:bg-white/10'}`;
+  const link = ({ isActive }) => `block rounded-lg px-3 py-2 text-sm md:py-1.5 ${isActive ? 'bg-white/15 font-medium text-white' : 'text-indigo-100 hover:bg-white/10'}`;
+  const reminders = useReminderCount(loc.pathname);
   const home = can('reports') ? '/' : can('sales') ? '/invoices' : '/settings';
   return (
-    <div className="flex min-h-screen">
-      <button className="no-print fixed left-3 top-3 z-40 rounded-lg bg-brand-700 px-3 py-2 text-white md:hidden" onClick={() => setOpen(!open)} aria-label={t('Menu')}>☰</button>
-      <aside className={`no-print fixed inset-y-0 left-0 z-30 w-60 shrink-0 overflow-y-auto bg-brand-900 p-4 transition md:static md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
+    <div className="min-h-screen md:flex">
+      {/* barra superior (celular): fica abaixo da hora/entalhe do iPhone */}
+      <header className="no-print sticky top-0 z-40 flex items-center gap-1 bg-brand-900 px-2 pb-2 text-white safe-top md:hidden">
+        <button className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-2xl hover:bg-white/10" onClick={() => setOpen(!open)} aria-label={t('Menu')} aria-expanded={open} aria-controls="sidebar">☰</button>
+        <Link to={home} className="flex items-center gap-2 font-semibold"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold">F</span>Fluxo</Link>
+        <div className="ml-auto flex items-center">{reminders > 0 && <Link to="/reminders" className="relative inline-flex h-11 w-11 items-center justify-center rounded-lg text-xl hover:bg-white/10" aria-label={t('{0} open reminders', [reminders])}>🔔<span className="absolute right-1 top-1 rounded-full bg-rose-500 px-1.5 text-[11px] font-semibold">{reminders}</span></Link>}<ThemeToggle /></div>
+      </header>
+      {open && <div className="no-print fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setOpen(false)} aria-hidden="true" />}
+      <aside id="sidebar" className={`no-print fixed inset-y-0 left-0 z-50 w-72 shrink-0 overflow-y-auto bg-brand-900 p-4 pb-8 safe-top transition-transform md:sticky md:top-0 md:z-30 md:h-screen md:w-60 md:translate-x-0 md:pt-4 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="mb-6 flex items-center gap-2.5 px-1 pt-1">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 font-bold text-white">F</div>
-          <div className="min-w-0"><div className="font-semibold leading-tight text-white">Fluxo</div><div className="truncate text-xs text-indigo-200">{settings.company_name}</div></div>
+          <div className="min-w-0 flex-1"><div className="font-semibold leading-tight text-white">Fluxo</div><div className="truncate text-xs text-indigo-200">{settings.company_name}</div></div>
+          <ThemeToggle className="hidden text-white md:inline-flex" />
+          <button className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-xl text-white hover:bg-white/10 md:hidden" onClick={() => setOpen(false)} aria-label={t('Close')}>✕</button>
         </div>
         <nav className="space-y-4">
           {NAV.map((n, i) => n.group ? (
@@ -110,7 +138,7 @@ function Shell({ user, settings, logout }) {
               {n.items.some(([, , m]) => can(m)) && <div className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-indigo-300">{n.group}</div>}
               {n.items.filter(([, , m]) => can(m)).map(([to, label, , feat]) => <NavLink key={to} to={to} className={link}>{label}{feat && !has(feat) && <Lock />}</NavLink>)}
             </div>
-          ) : can(n.read) && <NavLink key={n.to} to={n.to} end={n.end} className={link}>{n.label}</NavLink>)}
+          ) : can(n.read) && <NavLink key={n.to} to={n.to} end={n.end} className={link}>{n.label}{n.bell && reminders > 0 && <span className="ml-2 rounded-full bg-rose-500 px-1.5 py-0.5 text-[11px] font-semibold text-white" aria-label={t('{0} open reminders', [reminders])}>{reminders}</span>}</NavLink>)}
         </nav>
         <div className="mt-8 border-t border-white/10 pt-4 text-xs text-indigo-200">
           <div className="font-medium text-white">{user.name}</div><div>{user.email}</div>
@@ -118,10 +146,11 @@ function Shell({ user, settings, logout }) {
           <button onClick={logout} className="mt-3 block underline hover:text-white">{t('Sign out')}</button>
         </div>
       </aside>
-      <main className="min-w-0 flex-1 p-4 pt-14 md:p-8 md:pt-8">
+      <main className="min-w-0 flex-1 p-4 md:p-8">
         {user.planInfo.billing?.status === 'past_due' && <div className="no-print mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{t('Your last payment failed.')} <NavLink to="/settings/plan" className="font-semibold underline">{t('Update your payment method')}</NavLink></div>}
         <Routes>
           <Route path="/" element={can('reports') ? <Dashboard /> : <Navigate to={home} replace />} />
+          <Route path="/reminders" element={<Reminders />} />
           <Route path="/invoices" element={<Docs type="invoice" />} />
           <Route path="/estimates" element={<Docs type="estimate" />} />
           <Route path="/credit-memos" element={<Gate feature="credit_memos"><Docs type="credit" /></Gate>} />

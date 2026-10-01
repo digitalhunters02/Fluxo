@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { all, get, run, insert, tx, getSetting, setSetting, applyLanguage, LANGS } from './db.js';
 import * as tenants from './tenants.js';
+import * as auto from './automations.js';
 import * as acc from './accounting.js';
 import * as bank from './banking.js';
 import * as rep from './reports.js';
@@ -636,10 +637,19 @@ api.get('/reports/inventory', can('reports'), wrap((_req, res) => ok(res, rep.in
 
 // backup completo em JSON (somente proprietário)
 api.get('/export', can('users'), wrap((_req, res) => {
-  const tables = ['settings', 'accounts', 'contacts', 'items', 'projects', 'docs', 'doc_lines', 'payments', 'expenses', 'journal_entries', 'journal_lines', 'bank_txns', 'bank_rules', 'time_entries', 'recurring', 'employees', 'pay_runs', 'pay_run_lines', 'payroll_remittances'];
   res.setHeader('Content-Disposition', `attachment; filename="fluxo-backup-${today()}.json"`);
-  ok(res, Object.fromEntries(tables.map((t) => [t, all(`SELECT * FROM ${t}`)])));
+  ok(res, auto.exportAll({ forDownload: true }));
 }));
+
+/* ---------------------- lembretes e automações (todos os planos) ---------------------- */
+api.get('/reminders', can('settings'), wrap((_req, res) => ok(res, auto.listReminders())));
+api.post('/reminders', can('settings'), wrap((req, res) => { const rid = auto.createReminder(req.body || {}); audit(req, 'create', 'reminder', rid, String(req.body.title).slice(0, 80)); ok(res, { id: rid }); }));
+api.post('/reminders/:id/done', can('settings'), wrap((req, res) => ok(res, auto.completeReminder(id(req)))));
+api.post('/reminders/:id/snooze', can('settings'), wrap((req, res) => ok(res, auto.snoozeReminder(id(req), req.body?.days))));
+api.delete('/reminders/:id', can('settings'), wrap((req, res) => ok(res, auto.deleteReminder(id(req)))));
+api.get('/automations', can('settings'), wrap((_req, res) => ok(res, auto.getAutomations())));
+api.put('/automations', can('settings', true), wrap((req, res) => { const r = auto.setAutomations(req.body || {}); audit(req, 'update', 'automations'); ok(res, r); }));
+
 
 api.use((req, _res, next) => next(new HttpError(404, 'Route not found')));
 app.use('/api', api);
@@ -662,7 +672,7 @@ app.use((err, _req, res, _next) => {
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   const port = Number(process.env.PORT || 4000);
   app.listen(port, () => console.log(`Fluxo rodando em http://localhost:${port}`));
-  const tick = () => { const job = () => { try { const n = acc.runRecurring().length; if (n) console.log(`${n} fatura(s) recorrente(s) geradas`); } catch (e) { console.error(e); } }; return multi() ? tenants.eachTenant(job) : job(); };
+  const tick = () => { const job = () => { try { const n = acc.runRecurring().length; if (n) console.log(`${n} fatura(s) recorrente(s) geradas`); auto.generate(); auto.dailyBackup(); } catch (e) { console.error(e); } }; return multi() ? tenants.eachTenant(job) : job(); };
   tick(); setInterval(tick, 60 * 60 * 1000).unref();
   const bankTick = () => { const job = () => (get('SELECT 1 FROM plaid_items LIMIT 1') ? plaidSvc.syncAll().catch((e) => console.error('bank sync', e.message)) : undefined); return multi() ? tenants.eachTenant(job) : job(); };
   setInterval(bankTick, 60 * 60 * 1000).unref();

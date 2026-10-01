@@ -114,6 +114,37 @@ function LockDate() {
   );
 }
 
+function AutomationsTab() {
+  const { can } = useAuth();
+  const { data, loading, error, reload } = useLoad(() => api.get('/automations'));
+  const [run, busy] = useAction();
+  if (loading) return <Loading />; if (error) return <ErrorBox error={error} />;
+  const ro = !can('settings', true);
+  const save = (patch) => run(async () => { await api.put('/automations', patch); await reload(); }, t('Saved'));
+  const Row = ({ k, title, hint, days, daysLabel }) => (
+    <div className="flex flex-wrap items-start gap-3 border-b border-slate-100 py-3 last:border-0">
+      <label className="flex min-w-0 flex-1 items-start gap-3">
+        <input type="checkbox" className="mt-1 h-5 w-5" disabled={ro || busy} checked={data[k]} onChange={(e) => save({ [k]: e.target.checked })} />
+        <span><span className="block font-medium text-slate-900">{title}</span><span className="block text-sm text-slate-500">{hint}</span></span>
+      </label>
+      {days && data[k] && <label className="flex items-center gap-2 text-sm text-slate-600">{daysLabel}<input type="number" min="0" max="90" disabled={ro} defaultValue={data[days]} onBlur={(e) => Number(e.target.value) !== data[days] && save({ [days]: Number(e.target.value) })} className="field !w-20" /></label>}
+    </div>
+  );
+  return (
+    <Card title={t('Automations')}>
+      <p className="mb-2 max-w-2xl text-sm text-slate-500">{t('Fluxo watches your books and adds a reminder when something needs attention. They appear in Reminders and nothing is sent to anyone.')}</p>
+      <Row k="auto_overdue" title={t('Overdue invoices')} hint={t('Remind me to chase customers, with an email ready to send from my own inbox.')} days="overdue_days" daysLabel={t('Days after due date')} />
+      <Row k="auto_bills" title={t('Bills coming due')} hint={t('Remind me before a bill is due. Needs the Essentials plan.')} days="bills_days" daysLabel={t('Days before')} />
+      <Row k="auto_estimates" title={t('Estimates about to expire')} hint={t('Remind me to follow up before an estimate expires.')} days="estimate_days" daysLabel={t('Days before')} />
+      <Row k="auto_lowstock" title={t('Low stock')} hint={t('Remind me when a product falls to its reorder point. Needs the Plus plan.')} />
+      <Row k="auto_bank" title={t('Bank transactions to review')} hint={t('Remind me when imported transactions are waiting to be categorized.')} />
+      <Row k="auto_tax_calendar" title={t('U.S. tax calendar')} hint={t('Federal estimated tax, Form 941, W-2 and 1099-NEC deadlines, two weeks ahead. Dates can move when they fall on a weekend or holiday.')} />
+      <Row k="auto_backup" title={t('Daily backup')} hint={t('Saves a full copy of your data on the server every day and keeps the last 14.')} />
+      <p className="mt-4 text-sm text-slate-500">{t('Recurring invoices, bank rules and repeating reminders already run on their own.')}</p>
+    </Card>
+  );
+}
+
 const PLAN_FEATURES = [
   ['5 invoices per month & unlimited estimates', 'free'], ['Send by link, email button or PDF', 'free'], ['Expenses, receipts & sales receipts', 'free'], ['Bank CSV import & reconciliation', 'free'], ['Core financial reports', 'free'],
   ['Unlimited invoices', 'starter'], ['Credit memos', 'starter'], ['Logo & brand color on invoices', 'starter'], ['Unlimited users', 'starter'],
@@ -249,9 +280,9 @@ export default function Settings({ reloadSettings }) {
   const { tab = 'company' } = useParams();
   const nav = useNavigate();
   const owner = user.role === 'owner';
-  const tabs = [['company', t('Company')], ['plan', t('Plan')], ['account', t('My account')],
+  const tabs = [['company', t('Company')], ['plan', t('Plan')], ['account', t('My account')], ['automations', t('Automations')],
     ...(owner ? [['users', t('Users')], ['roles', <>{t('Roles')}{!has('custom_roles') && <Lock />}</>], ['audit', <>{t('Audit log')}{!has('audit_log') && <Lock />}</>]] : [])];
   return (<><PageHeader title={t('Settings')} /><Tabs tabs={tabs} value={tab} onChange={(k) => nav(`/settings/${k}`)} />
-    {tab === 'company' && <><Company reload={reloadSettings} /><LockDate /></>}{tab === 'plan' && <PlanTab />}{tab === 'account' && <Account />}{tab === 'users' && owner && <Users />}
+    {tab === 'company' && <><Company reload={reloadSettings} /><LockDate /></>}{tab === 'plan' && <PlanTab />}{tab === 'automations' && <AutomationsTab />}{tab === 'account' && <Account />}{tab === 'users' && owner && <Users />}
     {tab === 'roles' && owner && <Gate feature="custom_roles"><RolesTab /></Gate>}{tab === 'audit' && owner && <Gate feature="audit_log"><Audit /></Gate>}</>);
 }

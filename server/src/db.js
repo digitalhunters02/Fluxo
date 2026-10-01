@@ -166,6 +166,10 @@ CREATE TABLE IF NOT EXISTS payroll_remittances (
   id INTEGER PRIMARY KEY, component TEXT NOT NULL, amount INTEGER NOT NULL, date TEXT NOT NULL, account_id INTEGER NOT NULL REFERENCES accounts(id),
   memo TEXT DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS reminders (
+  id INTEGER PRIMARY KEY, kind TEXT NOT NULL, ref_key TEXT NOT NULL UNIQUE, title TEXT NOT NULL, detail TEXT DEFAULT '', link TEXT DEFAULT '', data TEXT DEFAULT '',
+  due_date TEXT, snoozed_until TEXT, done_at TEXT, repeat TEXT NOT NULL DEFAULT '', manual INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 `;
 
 /** Abre (ou cria) um banco de empresa com o esquema completo e as configurações padrão. */
@@ -278,6 +282,7 @@ export function ensureDefaults() {
   const defaults = { ...LANG_DEFAULTS.en, lang: 'en', next_invoice: '1001', next_estimate: '1001', next_bill: '1001', default_tax_rate: '0', default_terms_days: '15',
     payroll_suta_rate: '0', payroll_suta_base: '0', default_tax_rate: '0', credit_prefix: 'CM-', po_prefix: 'PO-', next_credit: '1001', next_po: '1001',
     plan: 'advanced', addon_payroll: '1', lock_date: '', company_logo: '', brand_color: '#4338CA',
+    auto_overdue: '1', overdue_days: '1', auto_bills: '1', bills_days: '3', auto_estimates: '1', estimate_days: '3', auto_lowstock: '1', auto_bank: '1', auto_tax_calendar: '1', auto_backup: '0', last_backup: '',
     stripe_customer_id: '', stripe_subscription_id: '', subscription_status: '', subscription_period_end: '', subscription_cancel_at_end: '0', billing_managed: '0' };
   for (const [k, v] of Object.entries(defaults)) if (get('SELECT 1 FROM settings WHERE key=?', k) === undefined) setSetting(k, v);
 }

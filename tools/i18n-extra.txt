@@ -636,3 +636,63 @@ You have reached the invoice limit of your plan this month. Upgrade to create mo
 The Free plan needs no payment || O plano Grátis não exige pagamento || El plan Gratis no requiere pago
 This purchase already has an account. Sign in instead. || Esta compra já tem uma conta. Entre com ela. || Esta compra ya tiene una cuenta. Inicie sesión.
 Enter a valid email || Informe um e-mail válido || Ingrese un correo válido
+Switch to light mode || Mudar para o modo claro || Cambiar al modo claro
+Switch to dark mode || Mudar para o modo escuro || Cambiar al modo oscuro
+Light mode || Modo claro || Modo claro
+Dark mode || Modo escuro || Modo oscuro
+Reminders || Lembretes || Recordatorios
+Automations || Automações || Automatizaciones
+Things Fluxo noticed, and tasks you want to remember. || O que o Fluxo percebeu e tarefas que você quer lembrar. || Lo que Fluxo detectó y tareas que quiere recordar.
+Add a reminder || Adicionar lembrete || Añadir recordatorio
+What do you need to do? || O que você precisa fazer? || ¿Qué necesita hacer?
+Pay payroll taxes || Pagar impostos da folha || Pagar impuestos de nómina
+Repeat || Repetir || Repetir
+Does not repeat || Não se repete || No se repite
+Repeating reminders come back by themselves when you mark them done. || Lembretes repetidos voltam sozinhos quando você os conclui. || Los recordatorios repetidos vuelven solos al marcarlos como hechos.
+All caught up. Nothing needs your attention. || Tudo em dia. Nada precisa da sua atenção. || Todo al día. Nada requiere su atención.
+Was due {0} || Venceu em {0} || Venció el {0}
+Due {0} || Vence em {0} || Vence el {0}
+Email customer || Enviar e-mail ao cliente || Enviar correo al cliente
+Snooze || Adiar || Posponer
+Snoozed until tomorrow || Adiado até amanhã || Pospuesto hasta mañana
+Done || Concluído || Hecho
+Delete this reminder? || Excluir este lembrete? || ¿Eliminar este recordatorio?
+Reminder added || Lembrete adicionado || Recordatorio añadido
+{0} open reminders || {0} lembretes abertos || {0} recordatorios abiertos
+Hi {0}, our records show invoice {1} for {2} was due on {3}. Could you let us know when to expect payment? {4} || Olá {0}, pelos nossos registros a fatura {1} de {2} venceu em {3}. Pode nos avisar quando esperar o pagamento? {4} || Hola {0}, según nuestros registros la factura {1} por {2} venció el {3}. ¿Puede avisarnos cuándo esperar el pago? {4}
+Invoice {0} is past due || A fatura {0} está vencida || La factura {0} está vencida
+Invoice {0} is overdue || A fatura {0} está vencida || La factura {0} está vencida
+Bill {0} is due || A conta {0} vence em breve || La factura de compra {0} vence pronto
+Estimate {0} expires soon || O orçamento {0} vence em breve || El presupuesto {0} vence pronto
+Low stock: {0} || Estoque baixo: {0} || Stock bajo: {0}
+{0} bank transactions need review || {0} transações bancárias precisam de revisão || {0} transacciones bancarias requieren revisión
+Federal estimated tax payment (Q1) || Pagamento federal de imposto estimado (T1) || Pago federal de impuesto estimado (T1)
+Federal estimated tax payment (Q2) || Pagamento federal de imposto estimado (T2) || Pago federal de impuesto estimado (T2)
+Federal estimated tax payment (Q3) || Pagamento federal de imposto estimado (T3) || Pago federal de impuesto estimado (T3)
+Federal estimated tax payment (Q4) || Pagamento federal de imposto estimado (T4) || Pago federal de impuesto estimado (T4)
+Form 941 due (Q1) || Formulário 941 vence (T1) || Formulario 941 vence (T1)
+Form 941 due (Q2) || Formulário 941 vence (T2) || Formulario 941 vence (T2)
+Form 941 due (Q3) || Formulário 941 vence (T3) || Formulario 941 vence (T3)
+Form 941 due (Q4) || Formulário 941 vence (T4) || Formulario 941 vence (T4)
+W-2 and 1099-NEC forms due || Formulários W-2 e 1099-NEC vencem || Los formularios W-2 y 1099-NEC vencen
+Dates can move when they fall on a weekend or holiday. Confirm with the IRS. || As datas podem mudar quando caem em fim de semana ou feriado. Confirme com o IRS. || Las fechas pueden cambiar si caen en fin de semana o feriado. Confirme con el IRS.
+Fluxo watches your books and adds a reminder when something needs attention. They appear in Reminders and nothing is sent to anyone. || O Fluxo acompanha a sua contabilidade e cria um lembrete quando algo precisa de atenção. Eles aparecem em Lembretes e nada é enviado a ninguém. || Fluxo vigila su contabilidad y crea un recordatorio cuando algo requiere atención. Aparecen en Recordatorios y no se envía nada a nadie.
+Overdue invoices || Faturas vencidas || Facturas vencidas
+Remind me to chase customers, with an email ready to send from my own inbox. || Lembrar de cobrar clientes, com um e-mail pronto para enviar da minha própria caixa. || Recordarme cobrar a los clientes, con un correo listo para enviar desde mi propia bandeja.
+Days after due date || Dias após o vencimento || Días después del vencimiento
+Bills coming due || Contas a vencer || Facturas por vencer
+Remind me before a bill is due. Needs the Essentials plan. || Lembrar antes de uma conta vencer. Exige o plano Essentials. || Recordarme antes de que venza una factura. Requiere el plan Essentials.
+Days before || Dias antes || Días antes
+Estimates about to expire || Orçamentos prestes a vencer || Presupuestos por vencer
+Remind me to follow up before an estimate expires. || Lembrar de acompanhar antes que um orçamento expire. || Recordarme dar seguimiento antes de que venza un presupuesto.
+Remind me when a product falls to its reorder point. Needs the Plus plan. || Lembrar quando um produto chegar ao ponto de reposição. Exige o plano Plus. || Recordarme cuando un producto llegue a su punto de reposición. Requiere el plan Plus.
+Bank transactions to review || Transações bancárias a revisar || Transacciones bancarias por revisar
+Remind me when imported transactions are waiting to be categorized. || Lembrar quando houver transações importadas esperando categorização. || Recordarme cuando haya transacciones importadas esperando categoría.
+U.S. tax calendar || Calendário de impostos dos EUA || Calendario de impuestos de EE. UU.
+Federal estimated tax, Form 941, W-2 and 1099-NEC deadlines, two weeks ahead. Dates can move when they fall on a weekend or holiday. || Prazos de imposto federal estimado, Formulário 941, W-2 e 1099-NEC, com duas semanas de antecedência. As datas podem mudar quando caem em fim de semana ou feriado. || Plazos de impuesto federal estimado, Formulario 941, W-2 y 1099-NEC, con dos semanas de antelación. Las fechas pueden cambiar si caen en fin de semana o feriado.
+Daily backup || Backup diário || Copia de seguridad diaria
+Saves a full copy of your data on the server every day and keeps the last 14. || Salva uma cópia completa dos seus dados no servidor todos os dias e guarda as últimas 14. || Guarda una copia completa de sus datos en el servidor cada día y conserva las últimas 14.
+Recurring invoices, bank rules and repeating reminders already run on their own. || Faturas recorrentes, regras do banco e lembretes repetidos já funcionam sozinhos. || Las facturas recurrentes, las reglas bancarias y los recordatorios repetidos ya funcionan solos.
+Saved || Salvo || Guardado
+
+Open§action || Abrir || Abrir

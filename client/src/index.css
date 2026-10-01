@@ -2,7 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-body { @apply bg-slate-50 text-slate-800 antialiased; }
+/* Escala "slate" por variáveis: o tema escuro só inverte a escala (e o fundo branco). */
+:root {
+  --slate-50: 248 250 252; --slate-100: 241 245 249; --slate-200: 226 232 240; --slate-300: 203 213 225; --slate-400: 148 163 184;
+  --slate-500: 100 116 139; --slate-600: 71 85 105; --slate-700: 51 65 85; --slate-800: 30 41 59; --slate-900: 15 23 42;
+}
+@media screen {
+  html.dark {
+    color-scheme: dark;
+    --slate-50: 11 17 32; --slate-100: 17 25 44; --slate-200: 36 48 70; --slate-300: 56 70 96; --slate-400: 116 132 158;
+    --slate-500: 148 163 184; --slate-600: 176 188 206; --slate-700: 203 213 225; --slate-800: 226 232 240; --slate-900: 241 245 249;
+  }
+  .dark .bg-white { background-color: rgb(var(--slate-100)); }
+  .dark .bg-brand-50 { background-color: rgb(49 46 129 / 0.35); }
+  .dark .bg-brand-100 { background-color: rgb(55 48 163 / 0.5); }
+  .dark .text-brand-700, .dark .text-brand-600 { color: #a5b4fc; }
+  .dark .bg-rose-50 { background-color: rgb(136 19 55 / 0.35); } .dark .text-rose-700, .dark .text-rose-600 { color: #fda4af; } .dark .border-rose-200 { border-color: rgb(136 19 55 / 0.7); }
+  .dark .bg-amber-50 { background-color: rgb(120 53 15 / 0.35); } .dark .text-amber-800, .dark .text-amber-700 { color: #fcd34d; }
+  .dark .bg-emerald-50 { background-color: rgb(6 78 59 / 0.35); } .dark .text-emerald-700, .dark .text-emerald-600 { color: #6ee7b7; }
+  .dark .bg-slate-900\/40 { background-color: rgb(0 0 0 / 0.6); }
+}
+body { @apply bg-slate-50 text-slate-800 antialiased; -webkit-text-size-adjust: 100%; }
+.safe-top { padding-top: max(env(safe-area-inset-top), 1.25rem); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 .num { font-variant-numeric: tabular-nums; }
 .field { @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:bg-slate-100; }
 .btn { @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed; }
