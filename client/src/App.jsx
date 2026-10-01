@@ -19,6 +19,7 @@ import Recurring from './pages/Recurring.jsx';
 import Reports from './pages/Reports.jsx';
 import Settings from './pages/Settings.jsx';
 import Payroll from './pages/Payroll.jsx';
+import Admin from './pages/Admin.jsx';
 import Reminders, { useReminderCount } from './pages/Reminders.jsx';
 import PublicDoc from './pages/PublicDoc.jsx';
 import { Gate, Lock } from './components/plan.jsx';
@@ -80,7 +81,7 @@ function AuthScreen({ status, onAuth }) {
         {((status.needsSetup && status.billing) || status.multi) && <p className="mb-3 rounded-lg bg-brand-50 p-3 text-sm text-brand-700">{t('New here?')} <a className="font-semibold underline" href="/pricing">{t('Choose a plan to get started')}</a></p>}
         <h1 className="mb-4 text-base font-semibold">{status.needsSetup ? t('Create your owner account') : t('Sign in to {0}', [status.company])}</h1>
         <div className="space-y-3">
-          {status.needsSetup && <><Field label={t('Company name')}><Input value={f.company_name} onChange={set('company_name')} placeholder={t('My Company LLC')} /></Field><Field label={t('Currency')}><Select value={f.currency} onChange={set('currency')}>{['USD', 'EUR', 'GBP', 'CAD', 'MXN'].map((c) => <option key={c}>{c}</option>)}</Select></Field><Field label={t('Plan')} hint={t('You can change it later in Settings')}><Select value={f.plan} onChange={set('plan')}><option value="starter">Starter — $29</option><option value="essentials">Essentials — $65</option><option value="plus">Plus — $109</option><option value="advanced">Advanced — $269</option></Select></Field><Field label={t('Your name')}><Input required value={f.name} onChange={set('name')} /></Field></>}
+          {status.needsSetup && <><Field label={t('Company name')}><Input value={f.company_name} onChange={set('company_name')} placeholder={t('My Company LLC')} /></Field><Field label={t('Currency')}><Select value={f.currency} onChange={set('currency')}>{['USD', 'EUR', 'GBP', 'CAD', 'MXN'].map((c) => <option key={c}>{c}</option>)}</Select></Field><Field label={t('Plan')} hint={t('You can change it later in Settings')}><Select value={f.plan} onChange={set('plan')}><option value="free">Free — $0</option><option value="starter">Starter — $29</option><option value="essentials">Essentials — $65</option><option value="plus">Plus — $109</option><option value="advanced">Advanced — $269</option></Select></Field><Field label={t('Your name')}><Input required value={f.name} onChange={set('name')} /></Field></>}
           <Field label={t('Email')}><Input type="email" required autoComplete="username" value={f.email} onChange={set('email')} /></Field>
           <Field label={t('Password')} hint={status.needsSetup ? t('At least 8 characters') : ''}><Input type="password" required minLength={status.needsSetup ? 8 : 1} autoComplete={status.needsSetup ? 'new-password' : 'current-password'} value={f.password} onChange={set('password')} /></Field>
           {status.needsSetup && <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={f.demo} onChange={set('demo')} />{' '}{t('Load sample data (6 months of activity)')}</label>}
@@ -199,6 +200,7 @@ export default function App() {
   useEffect(() => { boot(); }, [boot]);
   useEffect(() => { setUnauthorizedHandler(() => { setToken(null); setUser(null); }); }, []);
 
+  if (loc.pathname === '/admin') return <ToastProvider><Admin /></ToastProvider>;
   if (loc.pathname === '/pricing') return <Pricing />;
   if (loc.pathname === '/welcome') return <Welcome />;
   if (loc.pathname.startsWith('/p/')) return <ToastProvider><Routes><Route path="/p/:token" element={<PublicDoc />} /></Routes></ToastProvider>;

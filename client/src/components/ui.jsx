@@ -104,7 +104,7 @@ export function Modal({ title, onClose, children, wide = false, footer }) {
   useEffect(() => { const h = (e) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, [onClose]);
   return (
     <div className="no-print fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label={title} className={`mt-10 w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} rounded-xl bg-white shadow-2xl`}>
+      <div role="dialog" aria-modal="true" aria-label={title} className={`mt-10 w-full min-w-0 ${wide ? 'max-w-3xl' : 'max-w-lg'} rounded-xl bg-white shadow-2xl`}>
         <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5"><h3 className="font-semibold text-slate-900">{title}</h3><button onClick={onClose} aria-label={t('Close')} className="text-slate-400 hover:text-slate-700">✕</button></header>
         <div className="p-5">{children}</div>
         {footer && <footer className="flex justify-end gap-2 border-t border-slate-100 px-5 py-3">{footer}</footer>}
@@ -116,7 +116,7 @@ export function useConfirm() {
   return (msg) => window.confirm(msg);
 }
 export const Tabs = ({ tabs, value, onChange }) => (
-  <div className="no-print mb-4 flex gap-1 border-b border-slate-200">
+  <div className="no-print mb-4 flex gap-1 overflow-x-auto whitespace-nowrap border-b border-slate-200">
     {tabs.map(([k, label]) => (
       <button key={k} onClick={() => onChange(k)} className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${value === k ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>{label}</button>
     ))}

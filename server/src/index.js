@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { all, get, run, insert, tx, getSetting, setSetting, applyLanguage, LANGS } from './db.js';
 import * as tenants from './tenants.js';
 import * as auto from './automations.js';
+import * as admin from './admin.js';
 import * as acc from './accounting.js';
 import * as bank from './banking.js';
 import * as rep from './reports.js';
@@ -12,7 +13,7 @@ import * as pay from './payroll.js';
 import * as plaidSvc from './plaid.js';
 import * as billing from './billing.js';
 import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, limitFor, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE } from './plans.js';
-import { authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
+import { cleanPerms, authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
 
 const { HttpError, today, isDate, cents } = acc;
 const bad = (m) => new HttpError(400, m);
@@ -29,6 +30,7 @@ app.use((req, _res, next) => {
   if (!multi()) return next();
   const [slug, raw] = splitRef(tokenOf(req));
   if (!tenants.tenantExists(slug)) return next();
+  if (tenants.isSuspended(slug)) return next(new HttpError(403, 'This account is suspended. Please contact support.'));
   req.headers.authorization = `Bearer ${raw}`;
   tenants.inTenant(slug, next);
 });
@@ -101,8 +103,18 @@ api.post('/login', wrap((req, res) => {
   if (!multi()) return ok(res, attempt());
   const slug = tenants.slugForEmail(email);
   if (!slug) throw new HttpError(401, 'Incorrect email or password');
+  if (tenants.isSuspended(slug)) throw new HttpError(403, 'This account is suspended. Please contact support.');
   ok(res, tenants.inTenant(slug, attempt));
 }));
+
+// painel do administrador da plataforma (só no modo multi-empresa e com FLUXO_ADMIN_EMAIL/PASSWORD definidos)
+api.post('/admin/login', wrap((req, res) => { rateLimitLogin(`admin|${req.ip}`); ok(res, { token: admin.adminLogin(req.body?.email, req.body?.password) }); }));
+api.get('/admin/overview', admin.requireAdmin, wrap((_req, res) => ok(res, admin.overview())));
+api.post('/admin/tenants/:slug/:action', admin.requireAdmin, wrap((req, res) => {
+  if (!['suspend', 'resume'].includes(req.params.action) || !tenants.setStatus(req.params.slug, req.params.action === 'suspend' ? 'suspended' : 'active')) throw new HttpError(404, 'Route not found');
+  ok(res, { slug: req.params.slug, status: req.params.action === 'suspend' ? 'suspended' : 'active' });
+}));
+api.get('/admin/enabled', wrap((_req, res) => ok(res, { enabled: admin.adminEnabled() })));
 
 // visualização pública de documento (link compartilhável)
 api.get('/public/doc/:token', publicTenant, wrap((req, res) => {
@@ -195,24 +207,29 @@ api.post('/users', can('users', true), wrap((req, res) => {
   if (userCap !== null && get('SELECT COUNT(*) n FROM users WHERE active=1').n >= userCap) throw new HttpError(402, 'Your plan includes one user. Upgrade to add more.', { feature: 'users', required: 'starter' });
   const custom = req.body.custom_role_id ? Number(req.body.custom_role_id) : null;
   if (custom) { assertFeature('custom_roles'); if (!get('SELECT 1 FROM roles WHERE id=?', custom)) throw bad('Invalid role'); }
-  const role = custom ? 'viewer' : req.body.role;
+  let perms = null;
+  if (req.body.perms) { assertFeature('user_access'); perms = JSON.stringify(cleanPerms(req.body.perms)); }
+  const role = custom || perms ? 'viewer' : req.body.role;
   need(name, 'Enter the name'); need(email, 'Enter the email');
   if (!ROLES[role]) throw bad('Invalid role');
   if (!password || password.length < 8) throw bad('Password must be at least 8 characters');
   if (get('SELECT 1 FROM users WHERE email=?', email.trim().toLowerCase())) throw bad('Email already registered');
   if (multi() && !tenants.registerEmail(email, tenants.currentSlug())) throw bad('Email already registered');
-  const uid = insert('INSERT INTO users(name,email,password_hash,role,custom_role_id) VALUES(?,?,?,?,?)', name.trim(), email.trim().toLowerCase(), hashPassword(password), role, custom);
+  const uid = insert('INSERT INTO users(name,email,password_hash,role,custom_role_id,custom_perms) VALUES(?,?,?,?,?,?)', name.trim(), email.trim().toLowerCase(), hashPassword(password), role, custom, perms);
   audit(req, 'create', 'user', uid, `${email} (${role})`); ok(res, publicUser(get('SELECT * FROM users WHERE id=?', uid)));
 }));
 api.put('/users/:id', can('users', true), wrap((req, res) => {
   const uid = id(req); const u = get('SELECT * FROM users WHERE id=?', uid);
   if (!u) throw new HttpError(404, 'User not found');
-  let custom = u.custom_role_id;
+  let custom = u.custom_role_id, perms = u.custom_perms;
   if ('custom_role_id' in req.body) { custom = req.body.custom_role_id ? Number(req.body.custom_role_id) : null; if (custom) { assertFeature('custom_roles'); if (!get('SELECT 1 FROM roles WHERE id=?', custom)) throw bad('Invalid role'); } }
-  const role = custom ? 'viewer' : (req.body.role ?? u.role), active = req.body.active ?? !!u.active;
+  const newRole = req.body.role || null;
+  if (req.body.perms) { assertFeature('user_access'); perms = JSON.stringify(cleanPerms(req.body.perms)); custom = null; }       // acesso por aba escolhido
+  else if (custom || newRole || req.body.perms === null) perms = null;                                                          // escolher um papel (ou limpar) substitui o acesso por aba
+  const role = custom || perms ? 'viewer' : (newRole ?? u.role), active = req.body.active ?? !!u.active;
   if (!ROLES[role]) throw bad('Invalid role');
   if (u.role === 'owner' && (role !== 'owner' || !active) && get('SELECT COUNT(*) AS n FROM users WHERE role=\'owner\' AND active=1').n <= 1) throw bad('At least one active owner is required');
-  run('UPDATE users SET name=?, role=?, custom_role_id=?, active=? WHERE id=?', req.body.name || u.name, role, custom, active ? 1 : 0, uid);
+  run('UPDATE users SET name=?, role=?, custom_role_id=?, custom_perms=?, active=? WHERE id=?', req.body.name || u.name, role, custom, perms, active ? 1 : 0, uid);
   if (req.body.password) { if (req.body.password.length < 8) throw bad('Password must be at least 8 characters'); run('UPDATE users SET password_hash=? WHERE id=?', hashPassword(req.body.password), uid); }
   if (!active) run('DELETE FROM sessions WHERE user_id=?', uid);
   audit(req, 'update', 'user', uid, `${u.email} → ${role}${active ? '' : ' (inactive)'}`); ok(res, publicUser(get('SELECT * FROM users WHERE id=?', uid)));

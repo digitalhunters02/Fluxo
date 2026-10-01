@@ -90,6 +90,7 @@ Set `FLUXO_MULTI=1` and every company gets its **own SQLite file** (`<data>/tena
 - Login is email + password. The session token is `company.token`, so one domain serves everyone (no wildcard DNS). An email belongs to one company.
 - Public invoice links carry the company: `/p/<company>.<token>`.
 - Stripe and Plaid webhooks are routed to the right company through the control database. Recurring invoices and bank syncs run for each company.
+- Platform admin: set `FLUXO_ADMIN_EMAIL` and `FLUXO_ADMIN_PASSWORD` (12+ characters) and open `/admin` to see every company, its plan and usage, and to suspend or reactivate one. There is no impersonation: you cannot read a customer's books from there.
 - Without `FLUXO_MULTI`, nothing changes: one company per installation.
 
 ### Deploy
@@ -102,3 +103,10 @@ Set `FLUXO_MULTI=1` and every company gets its **own SQLite file** (`<data>/tena
 5. **Back up `/data`** (disk snapshots) and keep a copy of `FLUXO_ENCRYPTION_KEY`.
 
 One instance serves many small companies. Scaling beyond a single machine means moving the per-company files to a shared database, which is a separate piece of work.
+
+## Reminders, automations, team access, themes
+- **Reminders** (bell + `/reminders`): overdue invoices (with a ready-to-send email from the user's own inbox), bills and estimates coming due, low stock, bank transactions to review, the U.S. tax calendar (federal estimated tax, Form 941, W-2/1099-NEC), and your own repeating reminders. Each one can be switched on or off under Settings > Automations. Nothing is sent to anyone.
+- **Daily backup**: optional, a JSON copy per company in `FLUXO_BACKUP_DIR`, last 14 kept.
+- **Team access by tab** (Starter and up): choose which tabs each person can view or change. Named reusable roles stay on Advanced.
+- **Mobile**: top bar with a menu button and the Fluxo logo, kept below the iPhone clock/notch; the menu slides in from the left.
+- **Dark mode**: toggle in the sidebar (or top bar on phones); follows the device until you choose.

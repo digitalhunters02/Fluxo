@@ -8,6 +8,7 @@ await new Promise((r) => mock.listen(0, r));
 process.env.FLUXO_DB = ':memory:'; process.env.FLUXO_MULTI = '1'; process.env.FLUXO_REQUIRE_PAYMENT = '1';
 process.env.STRIPE_SECRET_KEY = 'sk_test_123'; process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test'; process.env.STRIPE_API_BASE = `http://127.0.0.1:${mock.address().port}`;
 process.env.APP_URL = 'https://app.fluxo.test';
+process.env.FLUXO_ADMIN_EMAIL = 'Root@Fluxo.com'; process.env.FLUXO_ADMIN_PASSWORD = 'uma-senha-bem-longa';
 
 const { get } = await import('../src/db.js');
 const { app } = await import('../src/index.js');
@@ -103,10 +104,35 @@ test('compra pelo Stripe: o cadastro aplica a assinatura e os webhooks caem na e
   assert.equal((await hook({ id: `evt_m${++evId}`, type: 'customer.subscription.updated', data: { object: { id: 'sub_zz', customer: 'cus_zz', status: 'active', items: { data: [] } } } })).body.ignored, true);
 });
 
+test('painel do administrador: login, visão geral e suspensão de empresa', async () => {
+  assert.equal((await call('/admin/overview')).status, 401);
+  assert.equal((await call('/admin/login', 'POST', { email: 'root@fluxo.com', password: 'errada' })).status, 401);
+  assert.equal((await call('/admin/login', 'POST', { email: 'outro@fluxo.com', password: 'uma-senha-bem-longa' })).status, 401);
+  const l = await call('/admin/login', 'POST', { email: 'root@fluxo.com', password: 'uma-senha-bem-longa' });
+  assert.equal(l.status, 200); const adm = l.body.token;
+  assert.equal((await call('/admin/overview', 'GET', undefined, tokens.a)).status, 401);                // token de empresa não vale como admin
+  assert.equal((await call('/admin/overview', 'GET', undefined, adm.replace(/.$/, (c) => (c === '0' ? '1' : '0')))).status, 401);   // assinatura adulterada
+  const o = (await call('/admin/overview', 'GET', undefined, adm)).body;
+  assert.equal(o.total, 3); assert.equal(o.byPlan.free, 2); assert.equal(o.byPlan.starter, 1);
+  const alfa = o.tenants.find((x) => x.slug === 'alfa-ltda');
+  assert.deepEqual([alfa.owner_email, alfa.invoices, alfa.users, alfa.status], ['a@alfa.com', 5, 1, 'active']);
+  // suspender: a empresa não entra mais, nem com sessão aberta; as outras seguem normais
+  assert.equal((await call('/admin/tenants/alfa-ltda/suspend', 'POST', {}, adm)).status, 200);
+  assert.equal((await call('/login', 'POST', { email: 'a@alfa.com', password: 'senha1234' })).status, 403);
+  assert.equal((await call('/me', 'GET', undefined, tokens.a)).status, 403);
+  assert.equal((await call('/me', 'GET', undefined, tokens.b)).status, 200);
+  assert.equal((await call('/admin/tenants/alfa-ltda/resume', 'POST', {}, adm)).status, 200);
+  assert.equal((await call('/me', 'GET', undefined, tokens.a)).status, 200);
+  assert.equal((await call('/admin/tenants/nao-existe/suspend', 'POST', {}, adm)).status, 404);
+  // "Admin" não pode virar o nome de uma empresa (colide com o prefixo do token do painel)
+  const r = await call('/setup', 'POST', { company_name: 'Admin', name: 'x', email: 'x@admin.com', password: 'senha1234' });
+  assert.equal(r.status, 200); assert.notEqual(r.body.token.split('.')[0], 'admin');
+});
+
 test('tarefas em segundo plano percorrem cada empresa', async () => {
   const seen = [];
   await tenants.eachTenant(() => { seen.push(tenants.currentSlug()); });
-  assert.deepEqual(seen.sort(), ['alfa-ltda', 'beta-inc', 'gama-sa']);
+  assert.equal(seen.length, 4); assert.ok(['alfa-ltda', 'beta-inc', 'gama-sa'].every((x) => seen.includes(x)));    // inclui a empresa criada no teste do painel
 });
 
 test.after(() => { server.close(); mock.close(); });

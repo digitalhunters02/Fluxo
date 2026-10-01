@@ -696,3 +696,25 @@ Recurring invoices, bank rules and repeating reminders already run on their own.
 Saved || Salvo || Guardado
 
 Open§action || Abrir || Abrir
+Tab || Aba || Pestaña
+Choose which tabs this person can open || Escolha quais abas esta pessoa pode abrir || Elija qué pestañas puede abrir esta persona
+Dashboard totals and settings stay visible to everyone with an account. Only the owner manages users and billing. || Os totais do painel e as configurações ficam visíveis para todos com conta. Só o proprietário gerencia usuários e cobrança. || Los totales del panel y los ajustes son visibles para todos con cuenta. Solo el propietario gestiona usuarios y facturación.
+Custom access (choose tabs) || Acesso personalizado (escolher abas) || Acceso personalizado (elegir pestañas)
+Edit access || Editar acesso || Editar acceso
+Access updated || Acesso atualizado || Acceso actualizado
+Choose at least one area || Escolha ao menos uma área || Elija al menos un área
+Admin || Administrador || Administrador
+Suspend {0}? Nobody in this company will be able to sign in. || Suspender {0}? Ninguém desta empresa poderá entrar. || ¿Suspender {0}? Nadie de esta empresa podrá iniciar sesión.
+Fluxo administrator || Administrador do Fluxo || Administrador de Fluxo
+Companies || Empresas || Empresas
+Back to app || Voltar ao app || Volver a la app
+Owner || Proprietário || Propietario
+Users || Usuários || Usuarios
+Invoices || Faturas || Facturas
+Created || Criada em || Creada
+Suspended || Suspensa || Suspendida
+Suspend || Suspender || Suspender
+Reactivate || Reativar || Reactivar
+No companies yet. || Nenhuma empresa ainda. || Aún no hay empresas.
+This account is suspended. Please contact support. || Esta conta está suspensa. Fale com o suporte. || Esta cuenta está suspendida. Contacte con soporte.
+Report || Relatório || Informe

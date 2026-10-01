@@ -178,6 +178,7 @@ export function openDb(file) {
   const d = new DatabaseSync(file);
   d.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   d.exec(SCHEMA);
+  if (!d.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'custom_perms')) d.exec('ALTER TABLE users ADD COLUMN custom_perms TEXT'); // acesso por aba definido por usuário
   als.run({ db: d }, ensureDefaults);
   return d;
 }

@@ -42,8 +42,34 @@ function Company({ reload }) {
   );
 }
 
+const ACCESS_MODULES = ['sales', 'purchases', 'banking', 'accounting', 'reports', 'projects', 'inventory', 'payroll'];
+const accessLabel = () => ({ sales: t('Sales'), purchases: t('Purchases'), banking: t('Banking'), accounting: t('Accounting'), reports: t('Reports'), projects: t('Projects & time'), inventory: t('Products & inventory'), payroll: t('Payroll') });
+/** Escolhe, aba por aba, o que a pessoa pode ver e alterar. */
+function AccessMatrix({ value, onChange }) {
+  const L = accessLabel();
+  const read = new Set(value.read), write = new Set(value.write);
+  const emit = (r, w) => onChange({ read: [...new Set([...r, ...w])], write: [...w] });
+  return (
+    <table className="w-full text-sm"><thead><tr className="text-left text-xs uppercase text-slate-500"><th className="py-1">{t('Tab')}</th><th className="text-center">{t('Can view')}</th><th className="text-center">{t('Can change')}</th></tr></thead>
+      <tbody>{ACCESS_MODULES.map((m) => (
+        <tr key={m} className="border-t border-slate-100"><td className="py-2">{L[m]}</td>
+          <td className="text-center"><input type="checkbox" className="h-5 w-5" aria-label={`${L[m]} — ${t('Can view')}`} checked={read.has(m) || write.has(m)} disabled={write.has(m)} onChange={(e) => { const r = new Set(read); e.target.checked ? r.add(m) : r.delete(m); emit([...r], [...write]); }} /></td>
+          <td className="text-center"><input type="checkbox" className="h-5 w-5" aria-label={`${L[m]} — ${t('Can change')}`} checked={write.has(m)} onChange={(e) => { const w = new Set(write); e.target.checked ? w.add(m) : w.delete(m); emit([...read], [...w]); }} /></td></tr>))}</tbody></table>
+  );
+}
+function AccessModal({ initial, onClose, onSave, busy }) {
+  const [v, setV] = useState(initial || { read: [], write: [] });
+  return (
+    <Modal title={t('Choose which tabs this person can open')} onClose={onClose} footer={<><Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button><Button disabled={busy || !v.read.length} onClick={() => onSave(v)}>{t('Save')}</Button></>}>
+      <AccessMatrix value={v} onChange={setV} />
+      <p className="mt-3 text-xs text-slate-500">{t('Dashboard totals and settings stay visible to everyone with an account. Only the owner manages users and billing.')}</p>
+    </Modal>
+  );
+}
+
 function Users() {
-  const { planInfo } = useAuth();
+  const { planInfo, has } = useAuth();
+  const [access, setAccess] = useState(null); // { user } ao editar um usuário; {} no formulário de novo usuário
   const { data, loading, error, reload } = useLoad(() => api.get('/users'));
   const [adding, setAdding] = useState(false);
   const [f, setF] = useState({ name: '', email: '', password: '', role: 'sales' });
@@ -54,15 +80,17 @@ function Users() {
       <div className="mb-3 flex items-center justify-between"><p className="text-sm text-slate-500">{planInfo.limits.users ? t('Your plan includes {0} user. Upgrade to add more.', [planInfo.limits.users]) : t('No user limit. Each role has different permissions.')}</p><Button onClick={() => setAdding(true)}>{t('+ Invite user')}</Button></div>
       <Card pad={false}><Table head={[t('Name'), t('Email'), t('Role'), t('Status'), '']}>
         {data.users.map((u) => <tr key={u.id}><td className="td font-medium">{u.name}</td><td className="td">{u.email}</td>
-          <td className="td"><Select value={u.custom_role_id ? `custom:${u.custom_role_id}` : u.role} onChange={(e) => run(async () => { const v = e.target.value; await api.put(`/users/${u.id}`, v.startsWith('custom:') ? { custom_role_id: Number(v.slice(7)) } : { role: v, custom_role_id: null }); reload(); }, t('Role updated'))} aria-label={t('Role')}>{Object.entries(data.roles).map(([k, l]) => <option key={k} value={k}>{t(l)}</option>)}{data.customRoles.map((r) => <option key={r.id} value={`custom:${r.id}`}>{r.name}</option>)}</Select></td>
+          <td className="td"><Select value={u.custom_perms ? 'perms' : u.custom_role_id ? `custom:${u.custom_role_id}` : u.role} onChange={(e) => { const v = e.target.value; if (v === 'perms') { setAccess({ user: u }); return; } run(async () => { await api.put(`/users/${u.id}`, v.startsWith('custom:') ? { custom_role_id: Number(v.slice(7)) } : { role: v, custom_role_id: null }); reload(); }, t('Role updated')); }} aria-label={t('Role')}>{Object.entries(data.roles).map(([k, l]) => <option key={k} value={k}>{t(l)}</option>)}{data.customRoles.map((r) => <option key={r.id} value={`custom:${r.id}`}>{r.name}</option>)}<option value="perms">{t('Custom access (choose tabs)')}{!has('user_access') ? ' 🔒' : ''}</option></Select>{u.custom_perms && <button className="ml-2 text-xs text-brand-700 hover:underline" onClick={() => setAccess({ user: u })}>{t('Edit access')}</button>}</td>
           <td className="td">{u.active ? <Badge status="paid">{t('Active')}</Badge> : <Badge status="void">{t('Inactive')}</Badge>}</td>
           <td className="td text-right"><button className="text-xs text-brand-700 hover:underline" onClick={() => run(async () => { await api.put(`/users/${u.id}`, { active: !u.active }); reload(); })}>{u.active ? t('Deactivate') : t('Activate')}</button></td></tr>)}
       </Table></Card>
       <Card title={t('What each role can do')} className="mt-4"><ul className="space-y-1 text-sm text-slate-600"><li><b>{t('Owner:')}</b>{' '}{t('everything, including users and settings.')}</li><li><b>{t('Accountant:')}</b>{' '}{t('all finance, banking, payroll, reports and the chart of accounts.')}</li><li><b>{t('Sales:')}</b>{' '}{t('customers, invoices, estimates, products, projects and time.')}</li><li><b>{t('Read-only:')}</b>{' '}{t('view documents and reports without changing anything.')}</li></ul></Card>
       {adding && <Modal title={t('New user')} onClose={() => setAdding(false)} footer={<><Button variant="ghost" onClick={() => setAdding(false)}>{t('Cancel')}</Button><Button disabled={busy} onClick={async () => { const r = await run(() => api.post('/users', f), t('User created')); if (r) { setAdding(false); reload(); } }}>{t('Create')}</Button></>}>
-        <div className="grid gap-3"><Field label={t('Name')}><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field><Field label={t('Email')}><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
+        <div className="grid grid-cols-1 gap-3"><Field label={t('Name')}><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field><Field label={t('Email')}><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
           <Field label={t('Initial password')} hint={t('At least 8 characters')}><Input type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></Field>
-          <Field label={t('Role')}><Select value={f.custom_role_id ? `custom:${f.custom_role_id}` : f.role} onChange={(e) => { const v = e.target.value; setF(v.startsWith('custom:') ? { ...f, custom_role_id: Number(v.slice(7)) } : { ...f, role: v, custom_role_id: null }); }}>{Object.entries(data.roles).map(([k, l]) => <option key={k} value={k}>{t(l)}</option>)}{data.customRoles.map((r) => <option key={r.id} value={`custom:${r.id}`}>{r.name}</option>)}</Select></Field></div></Modal>}
+          <Field label={t('Role')}><Select value={f.perms ? 'perms' : f.custom_role_id ? `custom:${f.custom_role_id}` : f.role} onChange={(e) => { const v = e.target.value; setF(v === 'perms' ? { ...f, perms: f.perms || { read: ['sales'], write: [] }, custom_role_id: null } : v.startsWith('custom:') ? { ...f, perms: null, custom_role_id: Number(v.slice(7)) } : { ...f, perms: null, role: v, custom_role_id: null }); }}>{Object.entries(data.roles).map(([k, l]) => <option key={k} value={k}>{t(l)}</option>)}{data.customRoles.map((r) => <option key={r.id} value={`custom:${r.id}`}>{r.name}</option>)}<option value="perms">{t('Custom access (choose tabs)')}{!has('user_access') ? ' 🔒' : ''}</option></Select></Field>
+          {f.perms && <AccessMatrix value={f.perms} onChange={(perms) => setF({ ...f, perms })} />}</div></Modal>}
+      {access?.user && <AccessModal busy={busy} initial={access.user.custom_perms} onClose={() => setAccess(null)} onSave={async (perms) => { const r = await run(() => api.put(`/users/${access.user.id}`, { perms }), t('Access updated')); if (r) { setAccess(null); reload(); } }} />}
     </>
   );
 }

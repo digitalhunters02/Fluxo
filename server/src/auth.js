@@ -21,7 +21,17 @@ export const permissionsFor = (role) => ({
   write: Object.keys(WRITE).filter((m) => WRITE[m].includes(role)),
 });
 /** Permissões de um usuário: papel personalizado (plano Advanced) ou um dos quatro papéis padrão. */
+/** Valida o acesso por aba enviado pelo cliente: só módulos conhecidos; escrever implica ver; "settings" nunca é concedido por aqui. */
+export function cleanPerms(p) {
+  const list = (x) => [...new Set((Array.isArray(x) ? x : []).filter((m) => MODULES.includes(m) && m !== 'settings'))];
+  const write = list(p?.write), read = list([...(p?.read || []), ...write]);
+  if (!read.length) throw new HttpError(400, 'Choose at least one area');
+  return { read, write };
+}
 export function effectivePerms(u) {
+  if (u.custom_perms) {
+    try { const p = JSON.parse(u.custom_perms); return { read: [...new Set([...p.read, ...p.write, 'settings'])], write: p.write }; } catch { /* acesso inválido: cai para o papel */ }
+  }
   if (u.custom_role_id) {
     const r = get('SELECT * FROM roles WHERE id=?', u.custom_role_id);
     if (r) {
@@ -50,7 +60,7 @@ export function createSession(user_id) {
   return token;
 }
 
-export const publicUser = (u) => ({ id: u.id, name: u.name, email: u.email, role: u.role, custom_role_id: u.custom_role_id || null, active: !!u.active, permissions: effectivePerms(u) });
+export const publicUser = (u) => ({ id: u.id, name: u.name, email: u.email, role: u.role, custom_role_id: u.custom_role_id || null, custom_perms: u.custom_perms ? (() => { try { return JSON.parse(u.custom_perms); } catch { return null; } })() : null, active: !!u.active, permissions: effectivePerms(u) });
 
 export function authenticate(req, _res, next) {
   const h = req.headers.authorization || '';

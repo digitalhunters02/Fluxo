@@ -10,7 +10,7 @@ export const PAYROLL_ADDON_PRICE = { base: 35, perEmployee: 5 };
 
 /** recurso -> plano mínimo. Recursos que não aparecem aqui valem para todos os planos. */
 export const FEATURES = {
-  credit_memos: 'starter', branding: 'starter',
+  credit_memos: 'starter', branding: 'starter', user_access: 'starter',
   bills: 'essentials', recurring: 'essentials', time_tracking: 'essentials', audit_log: 'essentials', reports_full: 'essentials',
   bank_feeds: 'essentials', inventory: 'plus', project_profit: 'plus', contractors_1099: 'plus', budgets: 'plus', purchase_orders: 'plus', period_lock: 'plus', classes: 'plus',
   custom_roles: 'advanced', batch_invoices: 'advanced',

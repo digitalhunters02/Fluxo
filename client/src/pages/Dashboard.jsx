@@ -9,7 +9,7 @@ function BarChart({ series }) {
   const W = 520, H = 190, pad = 46, bw = (W - pad * 2) / series.length;
   return (
     <svg viewBox={`0 0 ${W} ${H + 22}`} className="w-full" role="img" aria-label={t('Income and expenses by month')}>
-      {[0, 0.5, 1].map((t) => <g key={t}><line x1={pad} x2={W - 6} y1={H - t * (H - 14)} y2={H - t * (H - 14)} stroke="#e2e8f0" /><text x={pad - 4} y={H - t * (H - 14) + 3} fontSize="9" textAnchor="end" fill="#94a3b8">{t ? moneyShort(max * t) : '0'}</text></g>)}
+      {[0, 0.5, 1].map((t) => <g key={t}><line x1={pad} x2={W - 6} y1={H - t * (H - 14)} y2={H - t * (H - 14)} className="stroke-slate-200" /><text x={pad - 4} y={H - t * (H - 14) + 3} fontSize="9" textAnchor="end" fill="#94a3b8">{t ? moneyShort(max * t) : '0'}</text></g>)}
       {series.map((s, i) => {
         const x = pad + i * bw + bw * 0.15, w = bw * 0.33, h = (v) => (v / max) * (H - 14);
         return (

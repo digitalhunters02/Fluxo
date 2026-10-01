@@ -21,6 +21,7 @@ const ctl = () => {
     CREATE TABLE IF NOT EXISTS identities (email TEXT PRIMARY KEY, slug TEXT NOT NULL REFERENCES tenants(slug));
     CREATE TABLE IF NOT EXISTS links (kind TEXT NOT NULL, key TEXT NOT NULL, slug TEXT NOT NULL REFERENCES tenants(slug), PRIMARY KEY (kind, key));
   `);
+  if (!control.prepare('PRAGMA table_info(tenants)').all().some((c) => c.name === 'status')) control.exec("ALTER TABLE tenants ADD COLUMN status TEXT NOT NULL DEFAULT 'active'");
   return control;
 };
 const q = (sql, ...p) => ctl().prepare(sql).get(...p);
@@ -32,6 +33,13 @@ const tenantFile = (slug) => (inMemory() ? ':memory:' : path.join(process.env.FL
 
 export const tenantExists = (slug) => !!(slug && /^[a-z0-9-]+$/.test(slug) && q('SELECT 1 FROM tenants WHERE slug=?', slug));
 export const currentSlug = () => als.getStore()?.slug || '';
+export const isSuspended = (slug) => q('SELECT status FROM tenants WHERE slug=?', slug)?.status === 'suspended';
+export function setStatus(slug, status) {
+  if (!tenantExists(slug)) return false;
+  qr('UPDATE tenants SET status=? WHERE slug=?', status === 'suspended' ? 'suspended' : 'active', slug);
+  return true;
+}
+export const listTenants = () => qa('SELECT slug,name,owner_email,status,created_at FROM tenants ORDER BY created_at DESC');
 export const allSlugs = () => qa('SELECT slug FROM tenants ORDER BY created_at').map((r) => r.slug);
 
 function openTenant(slug) {
@@ -47,10 +55,11 @@ export async function eachTenant(fn) {
   }
 }
 
+const RESERVED = new Set(['admin', 'api', 'p', 'pricing', 'welcome', 'setup', 'login', 'www', 'app', 'static', 'assets']);
 export const slugify = (name) => (String(name || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30)) || 'company';
 function uniqueSlug(name) {
   const base = slugify(name);
-  if (!q('SELECT 1 FROM tenants WHERE slug=?', base)) return base;
+  if (!RESERVED.has(base) && !q('SELECT 1 FROM tenants WHERE slug=?', base)) return base;
   for (;;) { const s = `${base}-${crypto.randomBytes(2).toString('hex')}`; if (!q('SELECT 1 FROM tenants WHERE slug=?', s)) return s; }
 }
 

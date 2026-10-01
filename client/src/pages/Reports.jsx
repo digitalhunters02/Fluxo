@@ -131,8 +131,9 @@ export default function Reports() {
       <PageHeader title={t('Reports')}>
         <Button variant="ghost" disabled={!data || locked} onClick={() => download(`${report}.csv`, cfg.csv(data))}>{t('Export CSV')}</Button><Button variant="ghost" onClick={() => window.print()}>{t('Print / PDF')}</Button>
       </PageHeader>
-      <div className="grid gap-5 lg:grid-cols-[14rem_1fr]">
-        <nav className="no-print space-y-4">{GROUPS.map(([g, keys]) => <div key={g}><div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{g}</div>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[14rem_minmax(0,1fr)]">
+        <Select className="field no-print lg:hidden" aria-label={t('Report')} value={report} onChange={(e) => nav(`/reports/${e.target.value}`)}>{GROUPS.map(([g, keys]) => <optgroup key={g} label={g}>{keys.map((k) => <option key={k} value={k}>{REPORTS[k].title}</option>)}</optgroup>)}</Select>
+        <nav className="no-print hidden space-y-4 lg:block">{GROUPS.map(([g, keys]) => <div key={g}><div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{g}</div>
           {keys.map((k) => <NavLink key={k} to={`/reports/${k}`} className={({ isActive }) => `block rounded-lg px-2 py-1.5 text-sm ${isActive ? 'bg-brand-50 font-medium text-brand-700' : 'text-slate-600 hover:bg-slate-100'}`}>{REPORTS[k].title}{FEATURE_OF[k] && !has(FEATURE_OF[k]) && <Lock />}</NavLink>)}</div>)}</nav>
         <Card title={title} pad={false}>
           {(cfg.range || cfg.asof) && <div className="no-print flex flex-wrap items-end gap-3 border-b border-slate-100 p-3">
