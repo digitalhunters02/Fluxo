@@ -56,7 +56,7 @@ export default function Docs({ type }) {
   const [title, newLabel, who] = TITLES[type];
   const mod = ['bill', 'po'].includes(type) ? 'purchases' : 'sales';
   const purchase = ['bill', 'po'].includes(type);
-  const { has } = useAuth();
+  const { has, planInfo } = useAuth();
   const [batch, setBatch] = useState(false);
   const rows = useMemo(() => (data || []).filter((d) => {
     if (status === 'overdue' ? !d.overdue : status && d.status !== status) return false;
@@ -74,6 +74,9 @@ export default function Docs({ type }) {
         {type === 'invoice' && can('sales', true) && has('batch_invoices') && <Button variant="ghost" onClick={() => setBatch(true)}>{t('Batch invoices')}</Button>}
         {can(mod, true) && <Button onClick={() => nav(`/document/${type}/new`)}>+ {newLabel}</Button>}
       </PageHeader>
+      {type === 'invoice' && planInfo.limits.invoices_per_month != null && (
+        <p className="mb-4 rounded-lg bg-brand-50 p-3 text-sm text-brand-700">{t('Free plan: {0} of {1} invoices used this month.', [planInfo.limits.invoices_used, planInfo.limits.invoices_per_month])} <Link to="/settings/plan" className="font-semibold underline">{t('See plans')}</Link></p>
+      )}
       {type === 'credit' && <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-3"><Stat label={t('Unused credit')} value={money(sum(open))} sub={`${open.length} ${t('credit memo(s)')}`} /></div>}
       {['invoice', 'bill'].includes(type) && (
         <div className="mb-4 grid grid-cols-2 gap-4 lg:grid-cols-3">

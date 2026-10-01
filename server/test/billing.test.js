@@ -29,7 +29,7 @@ let evId = 0; const ev = (type, object) => ({ id: `evt_${++evId}`, type, data: {
 test('a página de preços pública informa os valores e que a cobrança está configurada', async () => {
   const r = await call('/public/plans', 'GET', undefined, '');
   assert.equal(r.status, 200); assert.equal(r.body.configured, true); assert.equal(r.body.needsSetup, true);
-  assert.deepEqual(r.body.prices, { starter: 29, essentials: 65, plus: 109, advanced: 269 });
+  assert.deepEqual(r.body.prices, { free: 0, starter: 29, essentials: 65, plus: 109, advanced: 269 });
 });
 
 test('checkout público cria os preços sob demanda e abre uma assinatura mensal', async () => {
@@ -95,7 +95,7 @@ test('webhook: só aceita eventos com assinatura HMAC válida e recente', async 
   assert.equal(setting('subscription_status'), 'active');
 });
 
-test('webhook: mudança de assinatura no Stripe atualiza o plano; cancelamento volta ao Starter', async () => {
+test('webhook: mudança de assinatura no Stripe atualiza o plano; cancelamento volta ao plano gratuito', async () => {
   await billing.planPrice('advanced');
   S.subs.sub_1 = subObj('sub_1', 'active', [['fluxo_plan_advanced_monthly']], { cancel_at_period_end: true });
   await hook(ev('customer.subscription.updated', S.subs.sub_1));
@@ -104,7 +104,7 @@ test('webhook: mudança de assinatura no Stripe atualiza o plano; cancelamento v
   await hook(ev('customer.subscription.updated', subObj('sub_x', 'active', [['fluxo_plan_starter_monthly']], { customer: 'cus_outro' })));
   assert.equal(setting('plan'), 'advanced');
   await hook(ev('customer.subscription.deleted', S.subs.sub_1));
-  assert.equal(setting('plan'), 'starter'); assert.equal(setting('subscription_status'), 'canceled');
+  assert.equal(setting('plan'), 'free'); assert.equal(setting('subscription_status'), 'canceled');
   assert.equal((await call('/plaid/overview')).status, 402);                                                                          // recursos do plano superior foram travados
 });
 

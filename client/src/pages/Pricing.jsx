@@ -5,7 +5,8 @@ import { api, setToken } from '../api.js';
 import { Button, Card, ErrorBox, Field, Input, Loading, ToastProvider, useAction, useLoad } from '../components/ui.jsx';
 
 const PLAN_INFO = {
-  starter: { name: t('Starter'), blurb: t('Invoicing and bookkeeping basics'), features: [t('Invoices, estimates & credit memos'), t('Expenses, receipts & sales receipts'), t('Bank CSV import & reconciliation'), t('Core financial reports')] },
+  free: { name: t('Free'), blurb: t('Try Fluxo with no card'), features: [t('5 invoices per month & unlimited estimates'), t('Send by link, email button or PDF'), t('Expenses, receipts & sales receipts'), t('Bank CSV import & reconciliation'), t('Core financial reports'), t('1 user')] },
+  starter: { name: t('Starter'), blurb: t('Invoicing and bookkeeping basics'), features: [t('Everything in Free'), t('Unlimited invoices'), t('Credit memos'), t('Logo & brand color on invoices'), t('Unlimited users')] },
   essentials: { name: t('Essentials'), blurb: t('Bills, time and automatic banks'), features: [t('Everything in Starter'), t('Bills & vendor payments'), t('Recurring invoices'), t('Time tracking'), t('Connect banks automatically (2)')] },
   plus: { name: t('Plus'), blurb: t('Inventory, projects and budgets'), features: [t('Everything in Essentials'), t('Inventory (average cost)'), t('Purchase orders'), t('Budgets, classes & 1099 report'), t('Connect up to 5 banks')] },
   advanced: { name: t('Advanced'), blurb: t('Teams, permissions and scale'), features: [t('Everything in Plus'), t('Custom roles & permissions'), t('Batch invoicing'), t('Connect up to 15 banks')] },
@@ -34,13 +35,14 @@ export function Pricing() {
   const [email, setEmail] = useState('');
   const [chosen, setChosen] = useState(params.get('plan') || '');
   const [run, busy] = useAction();
+  const nav = useNavigate();
   useEffect(() => { document.title = `${t('Pricing')} — Fluxo`; }, []);
-  const go = (plan) => run(async () => { const r = await api.post('/public/checkout', { plan, payroll, email: email || undefined }); window.location.href = r.url; });
+  const go = (plan) => plan === 'free' ? nav('/welcome?plan=free') : run(async () => { const r = await api.post('/public/checkout', { plan, payroll, email: email || undefined }); window.location.href = r.url; });
   return (
     <ToastProvider><Shell>
       <div className="mx-auto max-w-2xl py-8 text-center">
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t('Choose your plan')}</h1>
-        <p className="mt-2 text-slate-600">{t('Every plan includes unlimited users. Change or cancel any time.')}</p>
+        <p className="mt-2 text-slate-600">{t('Start free, or pick a paid plan with unlimited users. Change or cancel any time.')}</p>
         {params.get('canceled') && <p className="mt-3 rounded-lg bg-amber-50 p-2 text-sm text-amber-800">{t('Checkout was canceled. Pick a plan whenever you are ready.')}</p>}
       </div>
       {loading ? <Loading /> : error ? <ErrorBox error={error} /> : (
@@ -51,13 +53,13 @@ export function Pricing() {
             <Field label={t('Your email (for the receipt)')} className="min-w-[16rem] flex-1"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" autoComplete="email" /></Field>
             <label className="mb-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={payroll} onChange={(e) => setPayroll(e.target.checked)} /> {t('Add U.S. payroll (${0}/mo + ${1} per employee)', [data.payrollPrice.base, data.payrollPrice.perEmployee])}</label>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             {data.order.map((p) => (
               <Card key={p} className={chosen === p ? 'ring-2 ring-brand-500' : ''}>
                 <h2 className="text-lg font-semibold">{PLAN_INFO[p].name}</h2><p className="text-sm text-slate-500">{PLAN_INFO[p].blurb}</p>
                 <div className="num my-3 text-4xl font-bold">${data.prices[p]}<span className="text-sm font-normal text-slate-500">{t('/month')}</span></div>
                 <ul className="mb-5 space-y-1.5 text-sm">{PLAN_INFO[p].features.map((f) => <li key={f}>✓ {f}</li>)}</ul>
-                <Button className="w-full" disabled={busy || !data.needsSetup || !data.configured} onClick={() => { setChosen(p); go(p); }}>{busy && chosen === p ? t('Please wait…') : t('Choose {0}', [PLAN_INFO[p].name])}</Button>
+                <Button className="w-full" disabled={busy || !data.needsSetup || (p !== 'free' && !data.configured)} onClick={() => { setChosen(p); go(p); }}>{busy && chosen === p ? t('Please wait…') : p === 'free' ? t('Start free') : t('Choose {0}', [PLAN_INFO[p].name])}</Button>
               </Card>
             ))}
           </div>
@@ -72,14 +74,15 @@ export function Welcome() {
   const [params] = useSearchParams();
   const nav = useNavigate();
   const sid = params.get('session_id');
-  const { data, loading, error } = useLoad(() => api.get(`/public/signup?session_id=${encodeURIComponent(sid || '')}`), [sid]);
+  const free = params.get('plan') === 'free' && !sid;
+  const { data, loading, error } = useLoad(() => free ? api.get('/public/signup?plan=free') : api.get(`/public/signup?session_id=${encodeURIComponent(sid || '')}`), [sid, free]);
   const [f, setF] = useState({ company_name: '', name: '', email: '', password: '', currency: 'USD' });
   const [run, busy] = useAction();
   useEffect(() => { if (data?.email) setF((x) => ({ ...x, email: data.email })); }, [data]);
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const submit = async (e) => {
     e.preventDefault();
-    const r = await run(() => api.post('/setup', { ...f, lang, checkout_session_id: sid }));
+    const r = await run(() => api.post('/setup', { ...f, lang, ...(free ? { plan: 'free' } : { checkout_session_id: sid }) }));
     if (r) { setToken(r.token); window.location.href = '/'; }
   };
   return (
@@ -89,8 +92,8 @@ export function Welcome() {
           : data.alreadySetup ? <Card><p className="text-sm">{t('This workspace is already set up.')}</p><Link to="/" className="btn btn-primary mt-4">{t('Sign in')}</Link></Card>
           : (
             <form onSubmit={submit} className="card space-y-3 p-6">
-              <h1 className="text-xl font-semibold">{t('Payment received — create your account')}</h1>
-              <p className="text-sm text-slate-500">{t('Your plan is ready. Set up your owner login to start.')}</p>
+              <h1 className="text-xl font-semibold">{free ? t('Create your free account') : t('Payment received — create your account')}</h1>
+              <p className="text-sm text-slate-500">{free ? t('No card needed. You can upgrade any time.') : t('Your plan is ready. Set up your owner login to start.')}</p>
               <Field label={t('Company name')}><Input required value={f.company_name} onChange={set('company_name')} /></Field>
               <Field label={t('Your name')}><Input required value={f.name} onChange={set('name')} autoComplete="name" /></Field>
               <Field label={t('Email')}><Input type="email" required value={f.email} onChange={set('email')} autoComplete="username" /></Field>

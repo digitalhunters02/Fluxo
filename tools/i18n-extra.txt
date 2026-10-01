@@ -614,3 +614,23 @@ No free account code in the bank range || Não há código de conta livre na fai
 The bank connection service returned an error || O serviço de conexão bancária retornou um erro || El servicio de conexión bancaria devolvió un error
 connected || conectou || conectó
 disconnected || desconectou || desconectó
+Free || Grátis || Gratis
+Free plan: {0} of {1} invoices used this month. || Plano grátis: {0} de {1} faturas usadas neste mês. || Plan gratis: {0} de {1} facturas usadas este mes.
+Try Fluxo with no card || Experimente o Fluxo sem cartão || Pruebe Fluxo sin tarjeta
+5 invoices per month & unlimited estimates || 5 faturas por mês e orçamentos ilimitados || 5 facturas al mes y presupuestos ilimitados
+Send by link, email button or PDF || Enviar por link, botão de e-mail ou PDF || Enviar por enlace, botón de correo o PDF
+1 user || 1 usuário || 1 usuario
+Everything in Free || Tudo do plano Grátis || Todo lo del plan Gratis
+Unlimited invoices || Faturas ilimitadas || Facturas ilimitadas
+Unlimited users || Usuários ilimitados || Usuarios ilimitados
+Start free, or pick a paid plan with unlimited users. Change or cancel any time. || Comece grátis ou escolha um plano pago com usuários ilimitados. Troque ou cancele quando quiser. || Empiece gratis o elija un plan de pago con usuarios ilimitados. Cambie o cancele cuando quiera.
+Start free || Começar grátis || Empezar gratis
+Create your free account || Crie sua conta grátis || Cree su cuenta gratis
+No card needed. You can upgrade any time. || Não precisa de cartão. Você pode mudar de plano quando quiser. || No necesita tarjeta. Puede mejorar su plan cuando quiera.
+Logo and brand color are available from the Starter plan. || Logotipo e cor da marca estão disponíveis a partir do plano Starter. || El logotipo y el color de marca están disponibles desde el plan Starter.
+Your plan includes {0} user. Upgrade to add more. || Seu plano inclui {0} usuário. Faça upgrade para adicionar mais. || Su plan incluye {0} usuario. Mejore su plan para añadir más.
+Your plan decides which features are available. Paid plans include unlimited users with no per-user fee; Free includes one user. || Seu plano define quais recursos estão disponíveis. Os planos pagos incluem usuários ilimitados, sem taxa por usuário; o Grátis inclui um usuário. || Su plan define qué funciones están disponibles. Los planes de pago incluyen usuarios ilimitados sin cargo por usuario; el plan Gratis incluye un usuario.
+Switch to Free? Your paid plan keeps running until the end of the period you already paid. || Mudar para o Grátis? Seu plano pago continua até o fim do período que você já pagou. || ¿Cambiar a Gratis? Su plan de pago sigue activo hasta el final del período ya pagado.
+Your plan includes one user. Upgrade to add more. || Seu plano inclui um usuário. Faça upgrade para adicionar mais. || Su plan incluye un usuario. Mejore su plan para añadir más.
+You have reached the invoice limit of your plan this month. Upgrade to create more. || Você atingiu o limite de faturas do seu plano neste mês. Faça upgrade para criar mais. || Ha alcanzado el límite de facturas de su plan este mes. Mejore su plan para crear más.
+The Free plan needs no payment || O plano Grátis não exige pagamento || El plan Gratis no requiere pago

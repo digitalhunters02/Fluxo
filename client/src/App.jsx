@@ -81,7 +81,7 @@ function AuthScreen({ status, onAuth }) {
 
 const NAV = [
   { to: '/', label: t('Dashboard'), icon: '◧', read: 'reports', end: true },
-  { group: t('Sales'), items: [['/invoices', t('Invoices'), 'sales'], ['/estimates', t('Estimates'), 'sales'], ['/credit-memos', t('Credit memos'), 'sales'], ['/recurring', t('Recurring'), 'sales', 'recurring'], ['/customers', t('Customers'), 'sales']] },
+  { group: t('Sales'), items: [['/invoices', t('Invoices'), 'sales'], ['/estimates', t('Estimates'), 'sales'], ['/credit-memos', t('Credit memos'), 'sales', 'credit_memos'], ['/recurring', t('Recurring'), 'sales', 'recurring'], ['/customers', t('Customers'), 'sales']] },
   { group: t('Purchases'), items: [['/bills', t('Bills'), 'purchases', 'bills'], ['/purchase-orders', t('Purchase orders'), 'purchases', 'purchase_orders'], ['/expenses', t('Expenses'), 'purchases'], ['/vendors', t('Vendors'), 'sales']] },
   { group: t('Banking'), items: [['/connections', t('Connected banks'), 'banking', 'bank_feeds'], ['/banking', t('Transactions & reconciliation'), 'banking']] },
   { group: t('Management'), items: [['/products', t('Products & inventory'), 'inventory'], ['/projects', t('Projects & time'), 'projects', 'time_tracking'], ['/payroll', t('Payroll'), 'payroll', 'payroll'], ['/reports', t('Reports'), 'reports'], ['/accounting', t('Accounting'), 'accounting']] },
@@ -124,7 +124,7 @@ function Shell({ user, settings, logout }) {
           <Route path="/" element={can('reports') ? <Dashboard /> : <Navigate to={home} replace />} />
           <Route path="/invoices" element={<Docs type="invoice" />} />
           <Route path="/estimates" element={<Docs type="estimate" />} />
-          <Route path="/credit-memos" element={<Docs type="credit" />} />
+          <Route path="/credit-memos" element={<Gate feature="credit_memos"><Docs type="credit" /></Gate>} />
           <Route path="/bills" element={<Gate feature="bills"><Docs type="bill" /></Gate>} />
           <Route path="/purchase-orders" element={<Gate feature="purchase_orders"><Docs type="po" /></Gate>} />
           <Route path="/document/:type/new" element={<DocEditor />} />

@@ -39,7 +39,7 @@ api.post('/setup', wrap(async (req, res) => {
   // quem pagou pela landing page chega aqui com a sessão do Stripe; o servidor confirma o pagamento antes de aceitar
   let paid = null;
   if (req.body.checkout_session_id) paid = await billing.verifyCheckoutSession(req.body.checkout_session_id);
-  else if (process.env.FLUXO_REQUIRE_PAYMENT === '1') throw new HttpError(402, 'Payment required');
+  else if (process.env.FLUXO_REQUIRE_PAYMENT === '1' && req.body.plan !== 'free') throw new HttpError(402, 'Payment required'); // o plano gratuito nunca exige pagamento
   const { company_name, name, email, password, demo, currency } = req.body;
   if (req.body.plan) setPlan({ plan: req.body.plan });
   const lang = LANGS.includes(req.body.lang) ? req.body.lang : 'en';
@@ -108,13 +108,14 @@ api.post('/public/checkout', wrap(async (req, res) => {
 }));
 api.get('/public/signup', wrap(async (req, res) => {
   if (get('SELECT 1 FROM users LIMIT 1')) return ok(res, { alreadySetup: true });
+  if (req.query.plan === 'free') return ok(res, { email: '', plan: 'free', payroll: false });
   const v = await billing.verifyCheckoutSession(req.query.session_id);
   ok(res, { email: v.email, plan: v.plan, payroll: v.payroll });
 }));
 
 api.use(requireAuth);
 api.post('/logout', wrap((req, res) => { run('DELETE FROM sessions WHERE token=?', req.headers.authorization.slice(7)); ok(res, {}); }));
-const planInfo = () => ({ plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, lockDate: getSetting('lock_date', ''), billing: billing.billingState(), limits: { bank_connections: limitFor('bank_connections') } });
+const planInfo = () => ({ plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, lockDate: getSetting('lock_date', ''), billing: billing.billingState(), limits: { bank_connections: limitFor('bank_connections'), invoices_per_month: limitFor('invoices_per_month'), users: limitFor('users'), invoices_used: invoicesThisMonth() } });
 api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), planInfo: planInfo() })));
 api.get('/plan', wrap((_req, res) => ok(res, planInfo())));
 api.put('/plan', can('users', true), wrap((req, res) => {
@@ -134,6 +135,7 @@ api.get('/settings', can('settings'), wrap((_req, res) => ok(res, Object.fromEnt
 api.put('/settings', can('settings', true), wrap((req, res) => {
   if ('company_logo' in req.body && req.body.company_logo !== '' && !(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(req.body.company_logo) && req.body.company_logo.length <= 400_000)) throw bad('Logo must be a PNG, JPEG or WebP under 300 KB');
   if ('brand_color' in req.body && !/^#[0-9a-fA-F]{6}$/.test(req.body.brand_color)) throw bad('Invalid color');
+  if ((req.body.company_logo && req.body.company_logo !== getSetting('company_logo', '')) || (req.body.brand_color && req.body.brand_color !== getSetting('brand_color', ''))) assertFeature('branding');
   for (const k of PUBLIC_SETTINGS) if (k !== 'lock_date' && k in req.body) setSetting(k, req.body[k]);
   audit(req, 'update', 'settings'); ok(res, {});
 }));
@@ -141,6 +143,8 @@ api.put('/settings', can('settings', true), wrap((req, res) => {
 api.get('/users', can('users'), wrap((_req, res) => ok(res, { users: listUsers(), roles: ROLES, customRoles: hasFeature('custom_roles') ? all('SELECT id,name FROM roles ORDER BY name') : [] })));
 api.post('/users', can('users', true), wrap((req, res) => {
   const { name, email, password } = req.body;
+  const userCap = limitFor('users');
+  if (userCap !== null && get('SELECT COUNT(*) n FROM users WHERE active=1').n >= userCap) throw new HttpError(402, 'Your plan includes one user. Upgrade to add more.', { feature: 'users', required: 'starter' });
   const custom = req.body.custom_role_id ? Number(req.body.custom_role_id) : null;
   if (custom) { assertFeature('custom_roles'); if (!get('SELECT 1 FROM roles WHERE id=?', custom)) throw bad('Invalid role'); }
   const role = custom ? 'viewer' : req.body.role;
@@ -279,9 +283,15 @@ api.post('/items/:id/adjust', can('inventory', true), requireFeature('inventory'
 
 /* -------------------------------- documentos ------------------------------ */
 const docModule = (type) => (['bill', 'po'].includes(type) ? 'purchases' : 'sales');
-const TYPE_FEATURE = { bill: 'bills', po: 'purchase_orders' };
+const TYPE_FEATURE = { bill: 'bills', po: 'purchase_orders', credit: 'credit_memos' };
 const gateType = (type) => { if (TYPE_FEATURE[type]) assertFeature(TYPE_FEATURE[type]); };
 api.param('type', (_req, _res, next, val) => { try { gateType(val); next(); } catch (e) { next(e); } });
+/** Plano free: limite de faturas novas por mês (conta pela data de criação, não pela data da fatura). */
+const invoicesThisMonth = () => get("SELECT COUNT(*) n FROM docs WHERE type='invoice' AND status!='void' AND strftime('%Y-%m',created_at)=strftime('%Y-%m','now')").n;
+function assertInvoiceQuota(adding) {
+  const cap = limitFor('invoices_per_month');
+  if (cap !== null && invoicesThisMonth() + adding > cap) throw new HttpError(402, 'You have reached the invoice limit of your plan this month. Upgrade to create more.', { feature: 'invoices_per_month', required: 'starter' });
+}
 const typeParam = (req) => { const t = req.params.type; if (!['invoice', 'estimate', 'bill', 'credit', 'po'].includes(t)) throw new HttpError(404, 'Invalid type'); return t; };
 
 api.get('/docs/:type', (req, res, next) => can(docModule(req.params.type))(req, res, next), wrap((req, res) => {
@@ -303,6 +313,7 @@ api.post('/docs/invoice/batch', can('sales', true), requireFeature('batch_invoic
 }));
 api.post('/docs/:type', (req, res, next) => can(docModule(req.params.type), true)(req, res, next), wrap((req, res) => {
   const pay = req.params.type === 'invoice' ? req.body.pay_now : null; // recibo de venda: fatura emitida e paga na hora
+  if (req.params.type === 'invoice') assertInvoiceQuota(1);
   let d = acc.saveDoc({ ...req.body, id: undefined, type: typeParam(req), post: pay ? true : req.body.post }, req.user);
   if (pay) d = acc.addPayment(d.id, { date: pay.date || d.issue_date, amount: d.total, account_id: pay.account_id, method: pay.method || '', ref: pay.ref || '' }, req.user);
   audit(req, 'create', d.type, d.id, d.number); ok(res, d);
@@ -332,7 +343,7 @@ api.post('/doc/:id/convert-po', can('purchases', true), requireFeature('purchase
 api.post('/doc/:id/apply-credit', can('sales', true), wrap((req, res) => { const d = acc.applyCredit(id(req), req.body); audit(req, 'apply', 'credit', d.id, d.number); ok(res, d); }));
 api.post('/doc/:id/refund', can('sales', true), wrap((req, res) => { const d = acc.refundCredit(id(req), req.body, req.user); audit(req, 'refund', 'credit', d.id, d.number); ok(res, d); }));
 api.delete('/credit-applications/:id', can('sales', true), wrap((req, res) => { const d = acc.removeCreditApplication(id(req)); audit(req, 'delete', 'credit', d.id, d.number); ok(res, d); }));
-api.post('/doc/:id/convert', can('sales', true), wrap((req, res) => { const d = acc.convertEstimate(id(req), req.user); audit(req, 'convert', 'estimate', id(req), `→ ${d.number}`); ok(res, d); }));
+api.post('/doc/:id/convert', can('sales', true), wrap((req, res) => { assertInvoiceQuota(1); const d = acc.convertEstimate(id(req), req.user); audit(req, 'convert', 'estimate', id(req), `→ ${d.number}`); ok(res, d); }));
 api.post('/doc/:id/payments', wrap((req, res) => {
   const cur = get('SELECT type FROM docs WHERE id=?', id(req));
   if (!cur) throw new HttpError(404, 'Document not found');

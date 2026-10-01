@@ -8,13 +8,14 @@ import { useAuth } from '../App.jsx';
 import { Gate, Lock, PLAN_LABEL } from '../components/plan.jsx';
 
 function Company({ reload }) {
-  const { can } = useAuth();
+  const { can, has } = useAuth();
   const { data, loading, error } = useLoad(() => api.get('/settings'));
   const [f, setF] = useState(null);
   const [run, busy] = useAction();
   if (loading) return <Loading />; if (error) return <ErrorBox error={error} />;
   const v = f || data; const set = (k) => (e) => setF({ ...v, [k]: e.target.value });
   const ro = !can('settings', true);
+  const brandLocked = !has('branding');
   return (
     <Card title={t('Company details & numbering')}><div className="grid max-w-3xl gap-3 md:grid-cols-2">
       <Field label={t('Company name')}><Input disabled={ro} value={v.company_name} onChange={set('company_name')} /></Field><Field label={t('EIN / Tax ID')}><Input disabled={ro} value={v.company_tax_id} onChange={set('company_tax_id')} /></Field>
@@ -27,20 +28,22 @@ function Company({ reload }) {
       <Field label={t('Logo (PNG, JPEG or WebP, max 300 KB)')} className="md:col-span-2">
         <div className="flex items-center gap-3">
           {v.company_logo ? <img src={v.company_logo} alt="" className="max-h-12 rounded border border-slate-200 bg-white p-1" /> : <span className="text-xs text-slate-400">{t('No logo')}</span>}
-          {!ro && <input type="file" accept="image/png,image/jpeg,image/webp" aria-label={t('Logo')} className="text-sm" onChange={(e) => {
+          {!ro && !brandLocked && <input type="file" accept="image/png,image/jpeg,image/webp" aria-label={t('Logo')} className="text-sm" onChange={(e) => {
             const file = e.target.files[0]; if (!file) return;
             if (file.size > 300_000) { alert(t('Logo must be a PNG, JPEG or WebP under 300 KB')); e.target.value = ''; return; }
             const r = new FileReader(); r.onload = () => setF({ ...v, company_logo: r.result }); r.readAsDataURL(file);
           }} />}
-          {!ro && v.company_logo && <button className="text-xs text-rose-600 hover:underline" onClick={() => setF({ ...v, company_logo: '' })}>{t('Remove')}</button>}
+          {brandLocked && <span className="text-xs text-amber-700">{t('Logo and brand color are available from the Starter plan.')}</span>}
+          {!ro && !brandLocked && v.company_logo && <button className="text-xs text-rose-600 hover:underline" onClick={() => setF({ ...v, company_logo: '' })}>{t('Remove')}</button>}
         </div>
       </Field>
-      <Field label={t('Brand color')}><input type="color" disabled={ro} className="h-10 w-20 rounded border border-slate-300" value={v.brand_color || '#4338CA'} onChange={set('brand_color')} aria-label={t('Brand color')} /></Field>
+      <Field label={t('Brand color')}><input type="color" disabled={ro || brandLocked} className="h-10 w-20 rounded border border-slate-300" value={v.brand_color || '#4338CA'} onChange={set('brand_color')} aria-label={t('Brand color')} /></Field>
     </div>{!ro && <Button className="mt-4" disabled={busy || !f} onClick={() => run(async () => { await api.put('/settings', f); await reload(); setF(null); }, t('Settings saved'))}>{t('Save')}</Button>}</Card>
   );
 }
 
 function Users() {
+  const { planInfo } = useAuth();
   const { data, loading, error, reload } = useLoad(() => api.get('/users'));
   const [adding, setAdding] = useState(false);
   const [f, setF] = useState({ name: '', email: '', password: '', role: 'sales' });
@@ -48,7 +51,7 @@ function Users() {
   if (loading) return <Loading />; if (error) return <ErrorBox error={error} />;
   return (
     <>
-      <div className="mb-3 flex items-center justify-between"><p className="text-sm text-slate-500">{t('No user limit. Each role has different permissions.')}</p><Button onClick={() => setAdding(true)}>{t('+ Invite user')}</Button></div>
+      <div className="mb-3 flex items-center justify-between"><p className="text-sm text-slate-500">{planInfo.limits.users ? t('Your plan includes {0} user. Upgrade to add more.', [planInfo.limits.users]) : t('No user limit. Each role has different permissions.')}</p><Button onClick={() => setAdding(true)}>{t('+ Invite user')}</Button></div>
       <Card pad={false}><Table head={[t('Name'), t('Email'), t('Role'), t('Status'), '']}>
         {data.users.map((u) => <tr key={u.id}><td className="td font-medium">{u.name}</td><td className="td">{u.email}</td>
           <td className="td"><Select value={u.custom_role_id ? `custom:${u.custom_role_id}` : u.role} onChange={(e) => run(async () => { const v = e.target.value; await api.put(`/users/${u.id}`, v.startsWith('custom:') ? { custom_role_id: Number(v.slice(7)) } : { role: v, custom_role_id: null }); reload(); }, t('Role updated'))} aria-label={t('Role')}>{Object.entries(data.roles).map(([k, l]) => <option key={k} value={k}>{t(l)}</option>)}{data.customRoles.map((r) => <option key={r.id} value={`custom:${r.id}`}>{r.name}</option>)}</Select></td>
@@ -112,12 +115,14 @@ function LockDate() {
 }
 
 const PLAN_FEATURES = [
-  ['Invoices, estimates & credit memos', 'starter'], ['Expenses, receipts & sales receipts', 'starter'], ['Bank CSV import & reconciliation', 'starter'], ['Core financial reports', 'starter'], ['Logo & brand color on invoices', 'starter'],
+  ['5 invoices per month & unlimited estimates', 'free'], ['Send by link, email button or PDF', 'free'], ['Expenses, receipts & sales receipts', 'free'], ['Bank CSV import & reconciliation', 'free'], ['Core financial reports', 'free'],
+  ['Unlimited invoices', 'starter'], ['Credit memos', 'starter'], ['Logo & brand color on invoices', 'starter'], ['Unlimited users', 'starter'],
   ['Bills & vendor payments', 'essentials'], ['Automatic bank connection (Plaid)', 'essentials'], ['Recurring invoices', 'essentials'], ['Time tracking', 'essentials'], ['Full report set & audit log', 'essentials'],
   ['Inventory (average cost)', 'plus'], ['Project profitability', 'plus'], ['Purchase orders', 'plus'], ['Budgets & budget vs actual', 'plus'], ['Classes & P&L by class', 'plus'], ['1099 contractor report', 'plus'], ['Close the books (period lock)', 'plus'],
   ['Custom roles & permissions', 'advanced'], ['Batch invoicing', 'advanced'],
 ];
 const FEATURE_LABEL = {
+  '5 invoices per month & unlimited estimates': t('5 invoices per month & unlimited estimates'), 'Send by link, email button or PDF': t('Send by link, email button or PDF'), 'Unlimited invoices': t('Unlimited invoices'), 'Credit memos': t('Credit memos'), 'Unlimited users': t('Unlimited users'),
   'Invoices, estimates & credit memos': t('Invoices, estimates & credit memos'), 'Expenses, receipts & sales receipts': t('Expenses, receipts & sales receipts'), 'Bank CSV import & reconciliation': t('Bank CSV import & reconciliation'),
   'Core financial reports': t('Core financial reports'), 'Logo & brand color on invoices': t('Logo & brand color on invoices'), 'Bills & vendor payments': t('Bills & vendor payments'), 'Automatic bank connection (Plaid)': t('Automatic bank connection (Plaid)'), 'Recurring invoices': t('Recurring invoices'),
   'Time tracking': t('Time tracking'), 'Full report set & audit log': t('Full report set & audit log'), 'Inventory (average cost)': t('Inventory (average cost)'), 'Project profitability': t('Project profitability'),
@@ -153,7 +158,7 @@ function PlanTab() {
   const statusBadge = { active: ['paid', t('Active')], trialing: ['sent', t('Trial')], past_due: ['declined', t('Payment failed')], canceled: ['void', t('Canceled')] }[bill.status];
   return (
     <>
-      <p className="mb-4 max-w-2xl text-sm text-slate-500">{t('Your plan decides which features are available. Everyone on your team is included: there is no per-user fee.')}</p>
+      <p className="mb-4 max-w-2xl text-sm text-slate-500">{t('Your plan decides which features are available. Paid plans include unlimited users with no per-user fee; Free includes one user.')}</p>
       {stripeOn && bill.managed && (
         <Card title={t('Subscription')} className="mb-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -166,9 +171,9 @@ function PlanTab() {
         </Card>
       )}
       {stripeOn && !bill.managed && owner && <label className="mb-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={withPayroll} onChange={(e) => setWithPayroll(e.target.checked)} /> {t('Include U.S. payroll (${0}/mo + ${1} per employee)', [planInfo.payrollPrice.base, planInfo.payrollPrice.perEmployee])}</label>}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {planInfo.order.map((p) => {
-          const current = p === planInfo.plan && (!stripeOn || bill.managed);
+          const current = p === planInfo.plan && (!stripeOn || bill.managed || p === 'free');
           const up = rank(p) > rank(planInfo.plan);
           return (
             <Card key={p} className={current ? 'ring-2 ring-brand-500' : ''}>
@@ -179,7 +184,7 @@ function PlanTab() {
               </ul>
               {owner && !current && (stripeOn
                 ? (bill.managed
-                  ? <Button className="mt-4 w-full" variant={up ? 'primary' : 'ghost'} disabled={busy} onClick={() => confirm(t('Switch to the {0} plan? The difference is prorated on your next invoice.', [PLAN_LABEL[p]])) && change({ plan: p })}>{up ? t('Upgrade') : t('Downgrade')}</Button>
+                  ? <Button className="mt-4 w-full" variant={up ? 'primary' : 'ghost'} disabled={busy} onClick={() => confirm(p === 'free' ? t('Switch to Free? Your paid plan keeps running until the end of the period you already paid.') : t('Switch to the {0} plan? The difference is prorated on your next invoice.', [PLAN_LABEL[p]])) && change({ plan: p })}>{up ? t('Upgrade') : t('Downgrade')}</Button>
                   : <Button className="mt-4 w-full" disabled={busy} onClick={() => subscribe(p)}>{t('Subscribe')}</Button>)
                 : <Button className="mt-4 w-full" variant={up ? 'primary' : 'ghost'} disabled={busy} onClick={() => confirm(t('Switch to the {0} plan?', [PLAN_LABEL[p]])) && manual({ plan: p })}>{up ? t('Upgrade') : t('Downgrade')}</Button>)}
             </Card>

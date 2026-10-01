@@ -3,7 +3,7 @@
 import crypto from 'node:crypto';
 import { get, run, tx, getSetting, setSetting } from './db.js';
 import { HttpError } from './accounting.js';
-import { PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE, setPlan } from './plans.js';
+import { PAID_PLANS, PLAN_PRICES, PAYROLL_ADDON_PRICE, setPlan } from './plans.js';
 
 const bad = (m) => new HttpError(400, m);
 const env = () => process.env;
@@ -39,7 +39,7 @@ async function stripe(method, path, params = {}) {
 
 /* ------------------------------------ preços ------------------------------------ */
 const KEY = { plan: (p) => `fluxo_plan_${p}_monthly`, base: 'fluxo_payroll_base_monthly', seat: 'fluxo_payroll_seat_monthly' };
-const NAME = { starter: 'Starter', essentials: 'Essentials', plus: 'Plus', advanced: 'Advanced' };
+const NAME = { free: 'Free', starter: 'Starter', essentials: 'Essentials', plus: 'Plus', advanced: 'Advanced' };
 const priceCache = new Map();
 export const _resetPriceCache = () => priceCache.clear();
 
@@ -74,7 +74,7 @@ export function billingState() {
 /** Lê plano e complemento de folha dos preços da assinatura e grava no estado da empresa. */
 export function applySubscription(sub) {
   const keys = (sub.items?.data || []).map((i) => i.price?.lookup_key).filter(Boolean);
-  const plan = PLAN_ORDER.find((p) => keys.includes(KEY.plan(p)));
+  const plan = PAID_PLANS.find((p) => keys.includes(KEY.plan(p)));
   const payroll = keys.includes(KEY.base);
   const active = ['active', 'trialing', 'past_due'].includes(sub.status);
   tx(() => {
@@ -86,7 +86,7 @@ export function applySubscription(sub) {
     setSetting('subscription_period_end', end ? new Date(end * 1000).toISOString().slice(0, 10) : '');
     setSetting('subscription_cancel_at_end', sub.cancel_at_period_end ? '1' : '0');
     if (active && plan) setPlan({ plan, payroll });
-    else if (!active) setPlan({ plan: 'starter', payroll: false }); // assinatura encerrada: volta ao plano mais básico
+    else if (!active) setPlan({ plan: 'free', payroll: false }); // assinatura encerrada: volta ao plano gratuito
   });
   return billingState();
 }
@@ -95,7 +95,8 @@ export function applySubscription(sub) {
 const originOf = (req) => env().APP_URL || `${req.protocol}://${req.get('host')}`;
 
 export async function createCheckout({ plan, payroll, origin, email, signup = false }) {
-  if (!PLAN_ORDER.includes(plan)) throw bad('Invalid plan');
+  if (plan === 'free') throw bad('The Free plan needs no payment');
+  if (!PAID_PLANS.includes(plan)) throw bad('Invalid plan');
   const customer = getSetting('stripe_customer_id', '');
   const session = await stripe('POST', '/v1/checkout/sessions', {
     mode: 'subscription', line_items: await lineItems(plan, !!payroll, signup ? 0 : activeEmployees()),
@@ -120,12 +121,15 @@ export async function changeSubscription({ plan, payroll }) {
   if (!subId) throw bad('There is no active subscription to change. Start one first.');
   const sub = await stripe('GET', `/v1/subscriptions/${subId}`);
   if (['canceled', 'incomplete_expired'].includes(sub.status)) throw bad('This subscription has ended. Start a new one.');
+  if (plan === 'free') { // voltar ao gratuito: a assinatura segue até o fim do período já pago e depois encerra
+    return applySubscription(await stripe('POST', `/v1/subscriptions/${subId}`, { cancel_at_period_end: 'true' }));
+  }
   const lookup = (i) => i.price?.lookup_key;
   const cur = sub.items.data;
   const items = [];
-  const wantPlan = plan && PLAN_ORDER.includes(plan) ? plan : PLAN_ORDER.find((p) => cur.some((i) => lookup(i) === KEY.plan(p)));
-  if (plan && !PLAN_ORDER.includes(plan)) throw bad('Invalid plan');
-  const planItem = cur.find((i) => PLAN_ORDER.some((p) => lookup(i) === KEY.plan(p)));
+  const wantPlan = plan && PAID_PLANS.includes(plan) ? plan : PAID_PLANS.find((p) => cur.some((i) => lookup(i) === KEY.plan(p)));
+  if (plan && !PAID_PLANS.includes(plan)) throw bad('Invalid plan');
+  const planItem = cur.find((i) => PAID_PLANS.some((p) => lookup(i) === KEY.plan(p)));
   if (planItem && wantPlan && lookup(planItem) !== KEY.plan(wantPlan)) items.push({ id: planItem.id, price: (await planPrice(wantPlan)).id });
   const hasPayroll = cur.some((i) => lookup(i) === KEY.base);
   if (payroll !== undefined && payroll !== hasPayroll) {
@@ -159,7 +163,7 @@ export async function verifyCheckoutSession(sessionId) {
   const sub = s.subscription ? await stripe('GET', `/v1/subscriptions/${typeof s.subscription === 'string' ? s.subscription : s.subscription.id}`) : null;
   const keys = (sub?.items?.data || []).map((i) => i.price?.lookup_key);
   return { email: s.customer_details?.email || s.customer_email || '', customer: typeof s.customer === 'string' ? s.customer : s.customer?.id, subscription: sub,
-    plan: PLAN_ORDER.find((p) => keys.includes(KEY.plan(p))) || null, payroll: keys.includes(KEY.base) };
+    plan: PAID_PLANS.find((p) => keys.includes(KEY.plan(p))) || null, payroll: keys.includes(KEY.base) };
 }
 
 /* ------------------------------------ webhooks ------------------------------------ */

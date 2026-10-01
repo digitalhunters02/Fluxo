@@ -41,11 +41,12 @@ It does **not** e-file returns, make tax deposits or run direct deposit. Head-of
 (Section 125) are not modelled. Tax tables live in `server/src/payroll.js` (`US_2026`) and must be reviewed every January.
 
 ## Plans (feature gating)
-Every feature has a minimum plan, enforced on the server (HTTP 402) and in the UI (lock icons and an upgrade notice). All plans include unlimited users.
+Every feature has a minimum plan, enforced on the server (HTTP 402) and in the UI (lock icons and an upgrade notice). Paid plans include unlimited users; the Free plan includes one user.
 
 | Plan | Price | Adds |
 |---|---|---|
-| Starter | $29 | Invoices, estimates, credit memos, expenses, bank CSV import and reconciliation, core reports, branding |
+| Free | $0 | 5 new invoices per month, unlimited estimates, expenses, bank CSV import and reconciliation, core reports, share by link / email button / PDF, 1 user. No card needed; it has no variable cost (no bank feeds, no server-sent email) |
+| Starter | $29 | Everything in Free plus unlimited invoices, credit memos, branding, unlimited users |
 | Essentials | $65 | Bills, recurring invoices, time tracking, full report set, audit log, connected banks (2) |
 | Plus | $109 | Inventory, project profitability, purchase orders, budgets, classes, 1099 report, period lock, connected banks (5) |
 | Advanced | $269 | Custom roles and permissions, batch invoicing, connected banks (15) |
@@ -60,7 +61,7 @@ your headcount), card updates, invoices and cancellation happen inside Settings 
 Prices are created in Stripe on demand by lookup key (`fluxo_plan_<plan>_monthly`, `fluxo_payroll_base_monthly`, `fluxo_payroll_seat_monthly`), so there is
 nothing to set up in the dashboard except the webhook: point an endpoint at `POST /api/stripe/webhook` with events `checkout.session.completed`,
 `customer.subscription.created|updated|deleted`, `invoice.paid`, `invoice.payment_failed`. Signatures are verified (HMAC-SHA256, 5-minute tolerance, idempotent).
-Past-due subscriptions keep their plan and show a banner; a canceled subscription drops to Starter. To try it without a Stripe account:
+Past-due subscriptions keep their plan and show a banner; a canceled subscription drops to Free (the paid plan runs until the end of the paid period). To try it without a Stripe account:
 `node server/test/mocks/run-stripe.js` and set `STRIPE_API_BASE=http://127.0.0.1:12111`.
 
 ## Connected banks with Plaid
