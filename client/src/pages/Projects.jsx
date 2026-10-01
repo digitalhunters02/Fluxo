@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { date, fromCents, money, number, toCents, today } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad } from '../components/ui.jsx';
+import { SearchBox, useSearch } from '../components/search.jsx';
 import { useAuth } from '../App.jsx';
 
 function ProjectModal({ p, contacts, onClose, onSaved }) {
@@ -43,6 +44,7 @@ export default function Projects() {
   const { can } = useAuth();
   const nav = useNavigate();
   const [tab, setTab] = useState('projects');
+  const [q, setQ, search] = useSearch();
   const { data, loading, error, reload } = useLoad(async () => { const [projects, time, contacts] = await Promise.all([api.get('/projects'), api.get('/time'), api.get('/contacts')]); return { projects, time, contacts }; });
   const [editP, setEditP] = useState(null);
   const [timing, setTiming] = useState(false);
@@ -57,9 +59,10 @@ export default function Projects() {
         {w && <Button variant="ghost" disabled={!active.length} onClick={() => setTiming(true)}>{t('⏱ Log time')}</Button>}{w && <Button onClick={() => setEditP({})}>{t('+ New project')}</Button>}
       </PageHeader>
       <Tabs tabs={[['projects', t('Projects')], ['time', t('Hours')]]} value={tab} onChange={setTab} />
+      <SearchBox className="mb-3 max-w-sm" value={q} onChange={setQ} placeholder={t('Search projects or hours…')} />
       {tab === 'projects' ? (
         <Card pad={false}><Table head={[t('Project'), t('Customer'), { label: t('Hours'), right: true }, { label: t('To invoice'), right: true }, { label: t('Invoiced§m'), right: true }, { label: t('Costs'), right: true }, { label: t('Profit'), right: true }, '']} empty={t('No projects.')}>
-          {data.projects.map((p) => (
+          {search(data.projects).map((p) => (
             <tr key={p.id} className="hover:bg-slate-50"><td className="td font-medium">{p.name} {p.status !== 'active' && <Badge status="void">{p.status === 'completed' ? t('Completed') : t('Archived')}</Badge>}
               {p.budget > 0 && <div className="mt-1 h-1 w-32 rounded bg-slate-100"><div className={`h-1 rounded ${p.invoiced > p.budget ? 'bg-rose-500' : 'bg-brand-500'}`} style={{ width: `${Math.min(100, (p.invoiced / p.budget) * 100)}%` }} /></div>}</td>
               <td className="td">{p.contact_name}</td><td className="td num text-right">{number(p.hours, 1)}</td><td className="td num text-right">{money(p.unbilled)}</td>{p.profitHidden ? <td className="td text-right text-xs text-slate-400" colSpan={3} title={t('Project profitability is available from the Plus plan.')}>🔒 {t('Plus plan')}</td> : <><td className="td num text-right">{money(p.invoiced)}</td><td className="td num text-right">{money(p.costs)}</td>

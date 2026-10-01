@@ -4,6 +4,7 @@ import { api, qs } from '../api.js';
 import { date, fromCents, money, toCents, today } from '../format.js';
 import { parseCsv, parseDate } from '../csv.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad } from '../components/ui.jsx';
+import { SearchBox, useSearch } from '../components/search.jsx';
 import { useAuth } from '../App.jsx';
 
 /* ---------- importação de extrato (CSV) ---------- */
@@ -78,6 +79,7 @@ function Feed({ accounts, accountId }) {
   const { can, } = useAuth();
   const w = can('banking', true);
   const [status, setStatus] = useState('pending');
+  const [q, setQ, search] = useSearch();
   const [cat, setCat] = useState(null);
   const [importing, setImporting] = useState(false);
   const [run, busy] = useAction();
@@ -91,8 +93,9 @@ function Feed({ accounts, accountId }) {
   const sugg = data.txns.filter((t) => t.status === 'pending' && (t.suggested_account_id || t.suggested_line_id)).length;
   return (
     <>
+      <SearchBox className="mb-3 max-w-sm" value={q} onChange={setQ} placeholder={t('Search transactions…')} />
       <div className="no-print mb-3 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex gap-2">{[['pending', t('To review')], ['categorized', t('Categorized')], ['matched', t('Matched')], ['ignored', t('Ignored')]].map(([k, l]) => <button key={k} onClick={() => setStatus(k)} className={`rounded-full px-3 py-1 text-sm ${status === k ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200'}`}>{l}</button>)}</div>
+        <div className="flex flex-wrap gap-2">{[['pending', t('To review')], ['categorized', t('Categorized')], ['matched', t('Matched')], ['ignored', t('Ignored')]].map(([k, l]) => <button key={k} onClick={() => setStatus(k)} className={`rounded-full px-3 py-1 text-sm ${status === k ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200'}`}>{l}</button>)}</div>
         {w && <div className="flex gap-2">
           {status === 'pending' && sugg > 0 && <Button variant="ghost" disabled={busy} onClick={() => run(async () => { const r = await api.post('/banking/accept-all', { account_id: accountId || undefined }); reload(); return r; }, t('Suggestions accepted'))}>{t('✓ Accept')}{' '}{sugg}{' '}{t('suggestion(s)')}</Button>}
           <Button onClick={() => setImporting(true)}>{t('Import CSV statement')}</Button>
@@ -100,7 +103,7 @@ function Feed({ accounts, accountId }) {
       </div>
       <Card pad={false}>
         <Table head={[t('Date'), t('Description'), ...(accountId ? [] : [t('Account')]), { label: t('Amount'), right: true }, status === 'pending' ? t('Suggestion') : t('Status'), '']} empty={status === 'pending' ? t('All caught up! No pending transactions. 🎉') : t('Nothing here.')}>
-          {data.txns.map((tx) => (
+          {search(data.txns).map((tx) => (
             <tr key={tx.id} className="hover:bg-slate-50"><td className="td whitespace-nowrap">{date(tx.date)}</td><td className="td">{tx.description}</td>{!accountId && <td className="td text-slate-500">{tx.account_name}</td>}
               <td className={`td num text-right font-medium ${tx.amount < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{money(tx.amount)}</td>
               <td className="td text-sm">{tx.status !== 'pending' ? <Badge status={tx.status === 'ignored' ? 'void' : 'paid'}>{{ categorized: t('Categorized§one'), matched: t('Matched§one'), ignored: t('Ignored§one') }[tx.status]}</Badge>

@@ -44,7 +44,7 @@ export default function Contacts({ kind }) {
   const { data, loading, error, reload } = useLoad(() => api.get(`/contacts?kind=${kind}`), [kind]);
   const [edit, setEdit] = useState(null);
   const [stmt, setStmt] = useState(null);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(() => { try { return new URLSearchParams(location.search).get('q') || ''; } catch { return ''; } });
   const [run] = useAction();
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} retry={reload} />;

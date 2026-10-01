@@ -34,10 +34,10 @@ export default function Dashboard() {
     <>
       <PageHeader title={t('Dashboard')} subtitle={t('Overview of your financial health')} />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label={t('Cash in bank')} value={money(d.cash)} sub={t('30-day forecast: {0}', [money(d.forecast30)])} tone={d.cash < 0 ? 'bad' : 'default'} />
-        <Stat label={t('To receive')} value={money(d.receivable.v)} sub={d.receivableOverdue.n ? t('{0} overdue ({1})', [money(d.receivableOverdue.v), d.receivableOverdue.n]) : t('Nothing overdue')} tone={d.receivableOverdue.n ? 'bad' : 'default'} />
-        <Stat label={t('To pay')} value={money(d.payable.v)} sub={d.payableOverdue.n ? t('{0} overdue ({1})', [money(d.payableOverdue.v), d.payableOverdue.n]) : t('Nothing overdue')} tone={d.payableOverdue.n ? 'bad' : 'default'} />
-        <Stat label={t('Profit this month')} value={money(d.month.profit)} sub={t('{0} income · {1} expenses', [money(d.month.income), money(d.month.expense)])} tone={d.month.profit < 0 ? 'bad' : 'good'} />
+        <Stat to="/banking" label={t('Cash in bank')} value={money(d.cash)} sub={t('30-day forecast: {0}', [money(d.forecast30)])} tone={d.cash < 0 ? 'bad' : 'default'} />
+        <Stat to="/invoices" label={t('To receive')} value={money(d.receivable.v)} sub={d.receivableOverdue.n ? t('{0} overdue ({1})', [money(d.receivableOverdue.v), d.receivableOverdue.n]) : t('Nothing overdue')} tone={d.receivableOverdue.n ? 'bad' : 'default'} />
+        <Stat to="/bills" label={t('To pay')} value={money(d.payable.v)} sub={d.payableOverdue.n ? t('{0} overdue ({1})', [money(d.payableOverdue.v), d.payableOverdue.n]) : t('Nothing overdue')} tone={d.payableOverdue.n ? 'bad' : 'default'} />
+        <Stat to="/reports/pnl" label={t('Profit this month')} value={money(d.month.profit)} sub={t('{0} income · {1} expenses', [money(d.month.income), money(d.month.expense)])} tone={d.month.profit < 0 ? 'bad' : 'good'} />
       </div>
       {(d.pendingBank > 0 || d.lowStock > 0) && (
         <div className="mt-4 flex flex-wrap gap-3">

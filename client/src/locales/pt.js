@@ -1248,5 +1248,18 @@ export default {
  "Suspend": "Suspender",
  "Reactivate": "Reativar",
  "No companies yet.": "Nenhuma empresa ainda.",
- "This account is suspended. Please contact support.": "Esta conta está suspensa. Fale com o suporte."
+ "This account is suspended. Please contact support.": "Esta conta está suspensa. Fale com o suporte.",
+ "Search items or SKU…": "Buscar itens ou SKU…",
+ "Search transactions…": "Buscar transações…",
+ "Search projects or hours…": "Buscar projetos ou horas…",
+ "Search recurring invoices…": "Buscar faturas recorrentes…",
+ "Search employees…": "Buscar funcionários…",
+ "Search accounts…": "Buscar contas…",
+ "Search entries…": "Buscar lançamentos…",
+ "Search reminders…": "Buscar lembretes…",
+ "Search users…": "Buscar usuários…",
+ "Search the audit log…": "Buscar no registro de auditoria…",
+ "Search customers, invoices, items…": "Buscar clientes, faturas, itens…",
+ "Nothing found for “{0}”.": "Nada encontrado para “{0}”.",
+ "Type at least 2 letters. Tip: press / from any page to search.": "Digite ao menos 2 letras. Dica: aperte / em qualquer página para buscar."
 };

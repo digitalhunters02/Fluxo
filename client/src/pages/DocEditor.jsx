@@ -120,7 +120,7 @@ export default function DocEditor() {
                     : <td className="pb-2 pr-2"><Input inputMode="decimal" value={l.tax_rate} onChange={(e) => setLine(i, { tax_rate: e.target.value })} aria-label={t('Tax')} /></td>}
                   {has('classes') && classes.length > 0 && <td className="pb-2 pr-2"><Select value={l.class_id} onChange={(e) => setLine(i, { class_id: e.target.value })} aria-label={t('Class')}><option value="">—</option>{classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></td>}
                   <td className="num pb-2 pt-2 text-right font-medium">{money(amt)}</td>
-                  <td className="pb-2 pt-1.5 text-right"><button type="button" aria-label={t('Remove line')} className="text-slate-400 hover:text-rose-600" onClick={() => set('lines', doc.lines.length > 1 ? doc.lines.filter((_, j) => j !== i) : doc.lines)}>✕</button></td>
+                  <td className="pb-2 pt-1.5 text-right"><button type="button" aria-label={t('Remove line')} className="text-slate-400 hover:text-rose-600" onClick={() => set('lines', doc.lines.length > 1 ? doc.lines.filter((_, j) => j !== i) : [blank(doc.lines[0].tax_rate)])}>✕</button></td>
                 </tr>
               );
             })}</tbody>

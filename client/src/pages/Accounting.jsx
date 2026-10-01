@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { api, qs } from '../api.js';
 import { addDays, date, money, toCents, today } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad } from '../components/ui.jsx';
+import { SearchBox, useSearch } from '../components/search.jsx';
 import { useAuth } from '../App.jsx';
 import { Gate, Lock } from '../components/plan.jsx';
 import { fromCents } from '../format.js';
@@ -47,15 +48,16 @@ function Chart() {
   const { data, loading, error, reload } = useLoad(() => api.get('/accounts'));
   const [edit, setEdit] = useState(null);
   const [ledger, setLedger] = useState(null);
+  const [q, setQ, search] = useSearch();
   const [run] = useAction();
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} retry={reload} />;
   return (
     <>
-      {can('accounting', true) && <div className="mb-3 flex justify-end"><Button onClick={() => setEdit({})}>{t('+ New account')}</Button></div>}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><SearchBox className="w-full max-w-sm" value={q} onChange={setQ} placeholder={t('Search accounts…')} />{can('accounting', true) && <Button onClick={() => setEdit({})}>{t('+ New account')}</Button>}</div>
       <Card pad={false}>
         <Table head={[t('Code'), t('Name'), t('Type'), { label: t('Balance'), right: true }, '']}>
-          {data.map((a) => (
+          {search(data).map((a) => (
             <tr key={a.id} className={`hover:bg-slate-50 ${a.active ? '' : 'opacity-50'}`}><td className="td font-mono text-xs">{a.code}</td><td className="td font-medium"><button className="hover:text-brand-700 hover:underline" onClick={() => setLedger(a)}>{a.name}</button>{a.is_system ? <span className="ml-2 text-xs text-slate-400">{t('system')}</span> : null}</td>
               <td className="td">{TYPES[a.type]}</td><td className="td num text-right">{money(a.balance)}</td>
               <td className="td whitespace-nowrap text-right">{can('accounting', true) && <><button className="text-xs text-brand-700 hover:underline" onClick={() => setEdit(a)}>{t('Edit')}</button>
@@ -93,15 +95,17 @@ function Journal() {
   const [from, setFrom] = useState(addDays(today(), -60));
   const [to, setTo] = useState(today());
   const [adding, setAdding] = useState(false);
+  const [q, setQ, search] = useSearch();
   const [run] = useAction();
   const { data, loading, error, reload } = useLoad(async () => { const [entries, accounts] = await Promise.all([api.get(`/journal${qs({ from, to })}`), api.get('/accounts/lookup')]); return { entries, accounts }; }, [from, to]);
   const src = { doc: t('Document'), payment: t('Payment'), expense: t('Expense'), bank: t('Banking'), manual: t('Manual'), adjust: t('Inventory') };
   return (
     <>
+      <SearchBox className="mb-3 max-w-sm" value={q} onChange={setQ} placeholder={t('Search entries…')} />
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3"><div className="flex gap-3"><Field label={t('From')}><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></Field><Field label={t('To')}><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></Field></div>
         {can('accounting', true) && <Button onClick={() => setAdding(true)}>{t('+ Manual entry')}</Button>}</div>
       {loading ? <Loading /> : error ? <ErrorBox error={error} retry={reload} /> : data.entries.length === 0 ? <Card><p className="text-sm text-slate-400">{t('No entries in this period.')}</p></Card> : (
-        <div className="space-y-3">{data.entries.map((e) => (
+        <div className="space-y-3">{search(data.entries).map((e) => (
           <Card key={e.id} pad={false}>
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2 text-sm"><span><b>{date(e.date)}</b> · {e.memo} <Badge status="draft">{src[e.source_type] || e.source_type}</Badge></span>
               {e.source_type === 'manual' && can('accounting', true) && <button className="text-xs text-rose-600 hover:underline" onClick={() => confirm(t('Delete this entry?')) && run(async () => { await api.del(`/journal/${e.id}`); reload(); }, t('Deleted'))}>{t('Delete')}</button>}</div>

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { date, money, today } from '../format.js';
 import { Button, Card, ErrorBox, Field, Input, Loading, PageHeader, Select, useAction, useLoad } from '../components/ui.jsx';
+import { SearchBox, useSearch } from '../components/search.jsx';
 import { useAuth } from '../App.jsx';
 
 const REPEAT = () => ({ '': t('Does not repeat'), weekly: t('Weekly'), monthly: t('Monthly'), quarterly: t('Quarterly'), yearly: t('Yearly') });
@@ -33,6 +34,7 @@ export default function Reminders() {
   const { data, loading, error, reload } = useLoad(() => api.get('/reminders'));
   const [run, busy] = useAction();
   const [f, setF] = useState({ title: '', due_date: today(), repeat: '' });
+  const [q, setQ, search] = useSearch();
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} retry={reload} />;
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
@@ -52,9 +54,10 @@ export default function Reminders() {
         </form>
         <p className="mt-2 text-xs text-slate-500">{t('Repeating reminders come back by themselves when you mark them done.')}</p>
       </Card>
+      {data.length > 4 && <SearchBox className="mb-3 max-w-sm" value={q} onChange={setQ} placeholder={t('Search reminders…')} />}
       {data.length === 0 ? <Card><p className="py-6 text-center text-sm text-slate-500">{t('All caught up. Nothing needs your attention.')}</p></Card> : (
         <ul className="space-y-3">
-          {data.map((r) => (
+          {search(data).map((r) => (
             <li key={r.id} className={`card flex flex-wrap items-start gap-3 p-4 ${r.overdue ? 'border-rose-200' : ''}`}>
               <div className="min-w-0 flex-1">
                 <div className="font-medium text-slate-900">{reminderTitle(r)}</div>

@@ -658,6 +658,29 @@ api.get('/export', can('users'), wrap((_req, res) => {
   ok(res, auto.exportAll({ forDownload: true }));
 }));
 
+/* ------------------------------ busca global (a lupa) ------------------------------ */
+api.get('/search', wrap((req, res) => {
+  const q = String(req.query.q || '').trim().slice(0, 60);
+  if (q.length < 2) return ok(res, []);
+  const like = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`, perms = new Set(effectivePerms(req.user).read), out = [];
+  const add = (type, rows, map) => rows.forEach((r) => out.push({ type, ...map(r) }));
+  const lookup = (sql, n = 5) => all(`${sql} LIMIT ${n}`, ...Array(sql.split('?').length - 1).fill(like));
+  if (perms.has('sales')) {
+    add('contact', lookup(`SELECT id, kind, name, email FROM contacts WHERE active=1 AND (name LIKE ? ESCAPE '\\' OR email LIKE ? ESCAPE '\\' OR phone LIKE ? ESCAPE '\\')`), (c) => ({ id: c.id, title: c.name, subtitle: c.email || '', link: c.kind === 'vendor' ? '/vendors' : '/customers', kind: c.kind }));
+    add('invoice', lookup(`SELECT d.id, d.type, d.number, d.total, d.status, c.name FROM docs d JOIN contacts c ON c.id=d.contact_id WHERE d.type IN ('invoice','estimate','credit') AND (d.number LIKE ? ESCAPE '\\' OR c.name LIKE ? ESCAPE '\\') ORDER BY d.id DESC`, 8), (d) => ({ id: d.id, title: d.number, subtitle: d.name, link: `/document/${d.id}`, doc: d.type, amount: d.total, status: d.status }));
+  }
+  if (perms.has('purchases')) {
+    const types = hasFeature('bills') ? "'bill'" : "''";
+    add('bill', lookup(`SELECT d.id, d.type, d.number, d.total, d.status, c.name FROM docs d JOIN contacts c ON c.id=d.contact_id WHERE d.type IN (${types}${hasFeature('purchase_orders') ? ",'po'" : ''}) AND (d.number LIKE ? ESCAPE '\\' OR c.name LIKE ? ESCAPE '\\') ORDER BY d.id DESC`, 5), (d) => ({ id: d.id, title: d.number, subtitle: d.name, link: `/document/${d.id}`, doc: d.type, amount: d.total, status: d.status }));
+    add('expense', lookup(`SELECT e.id, e.date, e.amount, e.description, c.name FROM expenses e LEFT JOIN contacts c ON c.id=e.contact_id WHERE e.description LIKE ? ESCAPE '\\' OR c.name LIKE ? ESCAPE '\\' OR e.ref LIKE ? ESCAPE '\\' ORDER BY e.date DESC`), (e) => ({ id: e.id, title: e.description || e.name || '', subtitle: e.name || '', link: '/expenses', amount: e.amount, date: e.date }));
+  }
+  if (perms.has('inventory')) add('item', lookup(`SELECT id, name, sku, kind FROM items WHERE active=1 AND (name LIKE ? ESCAPE '\\' OR sku LIKE ? ESCAPE '\\')`), (i) => ({ id: i.id, title: i.name, subtitle: i.sku || '', link: '/products' }));
+  if (perms.has('projects') && hasFeature('time_tracking')) add('project', lookup(`SELECT id, name FROM projects WHERE name LIKE ? ESCAPE '\\'`), (p) => ({ id: p.id, title: p.name, subtitle: '', link: '/projects' }));
+  if (perms.has('accounting')) add('account', lookup(`SELECT id, code, name FROM accounts WHERE active=1 AND (name LIKE ? ESCAPE '\\' OR code LIKE ? ESCAPE '\\')`), (a) => ({ id: a.id, title: `${a.code} ${a.name}`, subtitle: '', link: '/accounting' }));
+  if (perms.has('payroll') && hasFeature('payroll')) add('employee', lookup(`SELECT id, name, position FROM employees WHERE name LIKE ? ESCAPE '\\' OR position LIKE ? ESCAPE '\\'`), (e) => ({ id: e.id, title: e.name, subtitle: e.position || '', link: '/payroll' }));
+  ok(res, out.slice(0, 30));
+}));
+
 /* ---------------------- lembretes e automações (todos os planos) ---------------------- */
 api.get('/reminders', can('settings'), wrap((_req, res) => ok(res, auto.listReminders())));
 api.post('/reminders', can('settings'), wrap((req, res) => { const rid = auto.createReminder(req.body || {}); audit(req, 'create', 'reminder', rid, String(req.body.title).slice(0, 80)); ok(res, { id: rid }); }));

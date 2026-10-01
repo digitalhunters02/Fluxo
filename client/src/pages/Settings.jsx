@@ -5,6 +5,7 @@ import { api, getToken } from '../api.js';
 import { date } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad, useToast } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
+import { SearchBox, useSearch } from '../components/search.jsx';
 import { Gate, Lock, PLAN_LABEL } from '../components/plan.jsx';
 
 function Company({ reload }) {
@@ -69,6 +70,7 @@ function AccessModal({ initial, onClose, onSave, busy }) {
 
 function Users() {
   const { planInfo, has } = useAuth();
+  const [q, setQ, search] = useSearch();
   const [access, setAccess] = useState(null); // { user } ao editar um usuário; {} no formulário de novo usuário
   const { data, loading, error, reload } = useLoad(() => api.get('/users'));
   const [adding, setAdding] = useState(false);
@@ -78,8 +80,9 @@ function Users() {
   return (
     <>
       <div className="mb-3 flex items-center justify-between"><p className="text-sm text-slate-500">{planInfo.limits.users ? t('Your plan includes {0} user. Upgrade to add more.', [planInfo.limits.users]) : t('No user limit. Each role has different permissions.')}</p><Button onClick={() => setAdding(true)}>{t('+ Invite user')}</Button></div>
+      {data.users.length > 4 && <SearchBox className="mb-3 max-w-sm" value={q} onChange={setQ} placeholder={t('Search users…')} />}
       <Card pad={false}><Table head={[t('Name'), t('Email'), t('Role'), t('Status'), '']}>
-        {data.users.map((u) => <tr key={u.id}><td className="td font-medium">{u.name}</td><td className="td">{u.email}</td>
+        {search(data.users).map((u) => <tr key={u.id}><td className="td font-medium">{u.name}</td><td className="td">{u.email}</td>
           <td className="td"><Select value={u.custom_perms ? 'perms' : u.custom_role_id ? `custom:${u.custom_role_id}` : u.role} onChange={(e) => { const v = e.target.value; if (v === 'perms') { setAccess({ user: u }); return; } run(async () => { await api.put(`/users/${u.id}`, v.startsWith('custom:') ? { custom_role_id: Number(v.slice(7)) } : { role: v, custom_role_id: null }); reload(); }, t('Role updated')); }} aria-label={t('Role')}>{Object.entries(data.roles).map(([k, l]) => <option key={k} value={k}>{t(l)}</option>)}{data.customRoles.map((r) => <option key={r.id} value={`custom:${r.id}`}>{r.name}</option>)}<option value="perms">{t('Custom access (choose tabs)')}{!has('user_access') ? ' 🔒' : ''}</option></Select>{u.custom_perms && <button className="ml-2 text-xs text-brand-700 hover:underline" onClick={() => setAccess({ user: u })}>{t('Edit access')}</button>}</td>
           <td className="td">{u.active ? <Badge status="paid">{t('Active')}</Badge> : <Badge status="void">{t('Inactive')}</Badge>}</td>
           <td className="td text-right"><button className="text-xs text-brand-700 hover:underline" onClick={() => run(async () => { await api.put(`/users/${u.id}`, { active: !u.active }); reload(); })}>{u.active ? t('Deactivate') : t('Activate')}</button></td></tr>)}
@@ -103,8 +106,9 @@ const ENTITIES = { invoice: t('invoice'), estimate: t('estimate'), bill: t('bill
 
 function Audit() {
   const { data, loading, error } = useLoad(() => api.get('/audit'));
+  const [q, setQ, search] = useSearch();
   if (loading) return <Loading />; if (error) return <ErrorBox error={error} />;
-  return <Card pad={false}><Table head={[t('When'), t('Who'), t('Action'), t('Object'), t('Detail')]} empty={t('No records.')}>{data.map((a) => <tr key={a.id}><td className="td whitespace-nowrap">{date(a.at.slice(0, 10))} {a.at.slice(11, 16)}</td><td className="td">{a.user_name}</td><td className="td">{ACTIONS[a.action] || a.action}</td><td className="td">{ENTITIES[a.entity] || a.entity}{a.entity_id ? ` #${a.entity_id}` : ''}</td><td className="td text-slate-500">{a.detail}</td></tr>)}</Table></Card>;
+  return <><SearchBox className="mb-3 max-w-sm" value={q} onChange={setQ} placeholder={t('Search the audit log…')} /><Card pad={false}><Table head={[t('When'), t('Who'), t('Action'), t('Object'), t('Detail')]} empty={t('No records.')}>{search(data).map((a) => <tr key={a.id}><td className="td whitespace-nowrap">{date(a.at.slice(0, 10))} {a.at.slice(11, 16)}</td><td className="td">{a.user_name}</td><td className="td">{ACTIONS[a.action] || a.action}</td><td className="td">{ENTITIES[a.entity] || a.entity}{a.entity_id ? ` #${a.entity_id}` : ''}</td><td className="td text-slate-500">{a.detail}</td></tr>)}</Table></Card></>;
 }
 
 function Account() {

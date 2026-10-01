@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { api } from '../api.js';
 import { date, fromCents, money, toCents, today } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, useAction, useLoad } from '../components/ui.jsx';
+import { SearchBox, useSearch } from '../components/search.jsx';
 import { useAuth } from '../App.jsx';
 
 const FREQ = { weekly: t('Weekly'), monthly: t('Monthly'), quarterly: t('Quarterly'), yearly: t('Yearly') };
@@ -38,6 +39,7 @@ export default function Recurring() {
   const { can, settings } = useAuth();
   const { data, loading, error, reload } = useLoad(async () => { const [rec, contacts, items] = await Promise.all([api.get('/recurring'), api.get('/contacts'), api.get('/items/lookup')]); return { rec, contacts, items }; });
   const [adding, setAdding] = useState(false);
+  const [q, setQ, search] = useSearch();
   const [run] = useAction();
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} retry={reload} />;
@@ -47,8 +49,9 @@ export default function Recurring() {
       <PageHeader title={t('Recurring invoices')} subtitle={t('The server creates invoices on schedule by itself (and catches up on any that were missed).')}>
         {w && <Button variant="ghost" onClick={() => run(async () => { const r = await api.post('/recurring/run'); reload(); return r; }, t('Check complete'))}>{t('Generate due ones now')}</Button>}{w && <Button onClick={() => setAdding(true)}>{t('+ New recurring invoice')}</Button>}
       </PageHeader>
+      <SearchBox className="mb-3 max-w-sm" value={q} onChange={setQ} placeholder={t('Search recurring invoices…')} />
       <Card pad={false}><Table head={[t('Name'), t('Customer'), t('Frequency'), t('Next'), { label: t('Amount'), right: true }, t('Mode'), '']} empty={t('No recurring invoices.')}>
-        {data.rec.map((r) => {
+        {search(data.rec).map((r) => {
           const total = r.template.lines.reduce((s, l) => s + Math.round(l.qty * l.unit_price * (1 + (l.tax_rate || 0) / 100)), 0);
           return (<tr key={r.id} className={r.active ? '' : 'opacity-50'}><td className="td font-medium">{r.name}</td><td className="td">{r.contact_name}</td><td className="td">{FREQ[r.frequency]}</td><td className="td">{date(r.next_date)}</td><td className="td num text-right">{money(total)}</td>
             <td className="td">{r.auto_post ? <Badge status="sent">{t('Auto-issues')}</Badge> : <Badge status="draft">{t('Draft')}</Badge>}</td>

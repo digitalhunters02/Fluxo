@@ -1,5 +1,6 @@
 import { t } from '../i18n.jsx';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { money, STATUS } from '../format.js';
 
 /* ---------- carregamento de dados ---------- */
@@ -80,13 +81,14 @@ export const ErrorBox = ({ error, retry }) => (
   <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error} {retry && <button className="ml-2 underline" onClick={retry}>{t('Try again')}</button>}</div>
 );
 export const Empty = ({ children }) => <div className="p-10 text-center text-sm text-slate-400">{children}</div>;
-export const Stat = ({ label, value, sub, tone = 'default' }) => (
-  <div className="card p-4">
+export const Stat = ({ label, value, sub, tone = 'default', to }) => {
+  const body = (<>
     <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
     <div className={`num mt-1 break-words text-lg font-semibold sm:text-2xl ${tone === 'bad' ? 'text-rose-600' : tone === 'good' ? 'text-emerald-700' : 'text-slate-900'}`}>{value}</div>
     {sub && <div className="mt-0.5 text-xs text-slate-500">{sub}</div>}
-  </div>
-);
+  </>);
+  return to ? <Link to={to} className="card block p-4 transition hover:border-brand-500 hover:shadow">{body}</Link> : <div className="card p-4">{body}</div>;
+};
 export function Table({ head, children, empty = t('Nothing here yet.') }) {
   const rows = Array.isArray(children) ? children.flat().filter(Boolean) : children;
   return (

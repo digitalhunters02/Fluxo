@@ -50,7 +50,7 @@ export default function Expenses() {
   });
   const [edit, setEdit] = useState(null);
   const [run] = useAction();
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(() => { try { return new URLSearchParams(location.search).get('q') || ''; } catch { return ''; } });
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} retry={reload} />;
   const rows = data.rows.filter((e) => !q || `${e.description} ${e.category} ${e.contact_name || ''}`.toLowerCase().includes(q.toLowerCase()));

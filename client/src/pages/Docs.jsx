@@ -51,7 +51,7 @@ export default function Docs({ type }) {
   const { can } = useAuth();
   const nav = useNavigate();
   const { data, loading, error, reload } = useLoad(() => api.get(`/docs/${type}`), [type]);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(() => { try { return new URLSearchParams(location.search).get('q') || ''; } catch { return ''; } });
   const [status, setStatus] = useState('');
   const [title, newLabel, who] = TITLES[type];
   const mod = ['bill', 'po'].includes(type) ? 'purchases' : 'sales';

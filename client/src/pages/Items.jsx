@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { api } from '../api.js';
 import { fromCents, money, number, toCents, today } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, useAction, useLoad } from '../components/ui.jsx';
+import { SearchBox, useSearch } from '../components/search.jsx';
 import { useAuth } from '../App.jsx';
 
 function ItemModal({ item, accounts, onClose, onSaved }) {
@@ -60,14 +61,16 @@ export default function Items() {
   const [adj, setAdj] = useState(null);
   const [run] = useAction();
   const [tab, setTab] = useState('all');
+  const [q, setQ, search] = useSearch();
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} retry={reload} />;
-  const rows = data.items.filter((i) => tab === 'all' || (tab === 'stock' ? i.track_inventory : tab === 'low' ? i.track_inventory && i.qty_on_hand <= i.reorder_point : i.kind === 'service'));
+  const rows = search(data.items).filter((i) => tab === 'all' || (tab === 'stock' ? i.track_inventory : tab === 'low' ? i.track_inventory && i.qty_on_hand <= i.reorder_point : i.kind === 'service'));
   const value = data.items.filter((i) => i.track_inventory).reduce((s, i) => s + Math.round(i.qty_on_hand * i.cost), 0);
   return (
     <>
       <PageHeader title={t('Products & inventory')} subtitle={t('Inventory value (average cost): {0}', [money(value)])}>{can('inventory', true) && <Button onClick={() => setEdit({})}>{t('+ New item')}</Button>}</PageHeader>
-      <div className="no-print mb-3 flex gap-2">{[['all', t('All')], ['stock', t('Stocked')], ['low', t('Low stock')], ['service', t('Services')]].map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`rounded-full px-3 py-1 text-sm ${tab === k ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200'}`}>{l}</button>)}</div>
+      <SearchBox className="mb-3 max-w-sm" value={q} onChange={setQ} placeholder={t('Search items or SKU…')} />
+      <div className="no-print mb-3 flex flex-wrap gap-2">{[['all', t('All')], ['stock', t('Stocked')], ['low', t('Low stock')], ['service', t('Services')]].map(([k, l]) => <button key={k} onClick={() => setTab(k)} className={`rounded-full px-3 py-1 text-sm ${tab === k ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200'}`}>{l}</button>)}</div>
       <Card pad={false}>
         <Table head={[t('Item'), 'SKU', t('Type'), { label: t('Price'), right: true }, { label: t('Cost'), right: true }, { label: t('Inventory'), right: true }, '']} empty={t('No items.')}>
           {rows.map((i) => (

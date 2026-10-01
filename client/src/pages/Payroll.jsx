@@ -5,6 +5,7 @@ import { api, qs } from '../api.js';
 import { addDays, date, fromCents, money, number, toCents, today } from '../format.js';
 import { download } from '../csv.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad } from '../components/ui.jsx';
+import { SearchBox, useSearch } from '../components/search.jsx';
 import { useAuth } from '../App.jsx';
 
 const COMPONENT = {
@@ -58,14 +59,15 @@ function Employees() {
   const { can } = useAuth();
   const { data, loading, error, reload } = useLoad(() => api.get('/payroll/employees'));
   const [edit, setEdit] = useState(null);
+  const [q, setQ, search] = useSearch();
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} retry={reload} />;
   return (
     <>
-      {can('payroll', true) && <div className="mb-3 flex justify-end"><Button onClick={() => setEdit({})}>{t('+ New employee')}</Button></div>}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><SearchBox className="w-full max-w-sm" value={q} onChange={setQ} placeholder={t('Search employees…')} />{can('payroll', true) && <Button onClick={() => setEdit({})}>{t('+ New employee')}</Button>}</div>
       <Card pad={false}>
         <Table head={[t('Name'), t('Job title'), t('Pay'), t('Frequency'), t('Filing status'), t('Status'), '']} empty={t('No employees yet.')}>
-          {data.map((e) => (
+          {search(data).map((e) => (
             <tr key={e.id} className={e.active ? 'hover:bg-slate-50' : 'opacity-50'}>
               <td className="td font-medium">{e.name}</td><td className="td">{e.position}</td>
               <td className="td num">{money(e.pay_rate)}{e.pay_basis === 'hour' ? t('/hour') : t('/year')}</td><td className="td">{FREQ[e.frequency]}</td>

@@ -20,6 +20,7 @@ import Reports from './pages/Reports.jsx';
 import Settings from './pages/Settings.jsx';
 import Payroll from './pages/Payroll.jsx';
 import Admin from './pages/Admin.jsx';
+import GlobalSearch from './components/GlobalSearch.jsx';
 import Reminders, { useReminderCount } from './pages/Reminders.jsx';
 import PublicDoc from './pages/PublicDoc.jsx';
 import { Gate, Lock } from './components/plan.jsx';
@@ -115,6 +116,14 @@ function Shell({ user, settings, logout }) {
   }, [open]);
   const can = (m) => user.permissions.read.includes(m);
   const link = ({ isActive }) => `block rounded-lg px-3 py-2 text-sm md:py-1.5 ${isActive ? 'bg-white/15 font-medium text-white' : 'text-indigo-100 hover:bg-white/10'}`;
+  const [searching, setSearching] = useState(false);
+  useEffect(() => { // atalhos: barra (/) ou Ctrl/Cmd+K abrem a busca
+    const k = (e) => {
+      const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
+      if ((e.key === '/' && !typing && !e.metaKey && !e.ctrlKey) || ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k')) { e.preventDefault(); setSearching(true); }
+    };
+    window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k);
+  }, []);
   const reminders = useReminderCount(loc.pathname);
   const home = can('reports') ? '/' : can('sales') ? '/invoices' : '/settings';
   return (
@@ -123,7 +132,7 @@ function Shell({ user, settings, logout }) {
       <header className="no-print sticky top-0 z-40 flex items-center gap-1 bg-brand-900 px-2 pb-2 text-white safe-top md:hidden">
         <button className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-2xl hover:bg-white/10" onClick={() => setOpen(!open)} aria-label={t('Menu')} aria-expanded={open} aria-controls="sidebar">☰</button>
         <Link to={home} className="flex items-center gap-2 font-semibold"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500 text-sm font-bold">F</span>Fluxo</Link>
-        <div className="ml-auto flex items-center">{reminders > 0 && <Link to="/reminders" className="relative inline-flex h-11 w-11 items-center justify-center rounded-lg text-xl hover:bg-white/10" aria-label={t('{0} open reminders', [reminders])}>🔔<span className="absolute right-1 top-1 rounded-full bg-rose-500 px-1.5 text-[11px] font-semibold">{reminders}</span></Link>}<ThemeToggle /></div>
+        <div className="ml-auto flex items-center"><button type="button" onClick={() => setSearching(true)} aria-label={t('Search')} className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-xl hover:bg-white/10">🔍</button>{reminders > 0 && <Link to="/reminders" className="relative inline-flex h-11 w-11 items-center justify-center rounded-lg text-xl hover:bg-white/10" aria-label={t('{0} open reminders', [reminders])}>🔔<span className="absolute right-1 top-1 rounded-full bg-rose-500 px-1.5 text-[11px] font-semibold">{reminders}</span></Link>}<ThemeToggle /></div>
       </header>
       {open && <div className="no-print fixed inset-0 z-40 bg-black/50 md:hidden" onClick={() => setOpen(false)} aria-hidden="true" />}
       <aside id="sidebar" className={`no-print fixed inset-y-0 left-0 z-50 w-72 shrink-0 overflow-y-auto bg-brand-900 p-4 pb-8 safe-top transition-transform md:sticky md:top-0 md:z-30 md:h-screen md:w-60 md:translate-x-0 md:pt-4 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
@@ -133,6 +142,7 @@ function Shell({ user, settings, logout }) {
           <ThemeToggle className="hidden text-white md:inline-flex" />
           <button className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-xl text-white hover:bg-white/10 md:hidden" onClick={() => setOpen(false)} aria-label={t('Close')}>✕</button>
         </div>
+        <button type="button" onClick={() => setSearching(true)} className="mb-4 flex w-full items-center gap-2 rounded-lg bg-white/10 px-3 py-2 text-sm text-indigo-100 hover:bg-white/15" aria-label={t('Search')}><span aria-hidden="true">🔍</span><span className="flex-1 text-left">{t('Search…')}</span><kbd className="hidden rounded bg-white/10 px-1.5 text-[11px] md:inline">/</kbd></button>
         <nav className="space-y-4">
           {NAV.map((n, i) => n.group ? (
             <div key={i}>
@@ -147,6 +157,7 @@ function Shell({ user, settings, logout }) {
           <button onClick={logout} className="mt-3 block underline hover:text-white">{t('Sign out')}</button>
         </div>
       </aside>
+      {searching && <GlobalSearch onClose={() => setSearching(false)} />}
       <main className="min-w-0 flex-1 p-4 md:p-8">
         {user.planInfo.billing?.status === 'past_due' && <div className="no-print mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{t('Your last payment failed.')} <NavLink to="/settings/plan" className="font-semibold underline">{t('Update your payment method')}</NavLink></div>}
         <Routes>
