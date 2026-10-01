@@ -1,23 +1,27 @@
 import { t } from '../i18n.jsx';
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { date, money, number, setFormat } from '../format.js';
-import { Button, ErrorBox, Loading, useLoad } from '../components/ui.jsx';
+import { Button, ErrorBox, Field, Input, Loading, useAction, useLoad } from '../components/ui.jsx';
 
 export default function PublicDoc() {
   const { token } = useParams();
-  const { data, loading, error } = useLoad(async () => { const r = await api.get(`/public/doc/${token}`); setFormat(r.company); return r; }, [token]);
+  const [act, busy] = useAction();
+  const [who, setWho] = useState('');
+  const { data, loading, error, reload } = useLoad(async () => { const r = await api.get(`/public/doc/${token}`); setFormat(r.company); return r; }, [token]);
   if (loading) return <Loading />;
   if (error) return <div className="mx-auto mt-20 max-w-md"><ErrorBox error={error} /></div>;
   const { doc: d, customer: c, company } = data;
-  const name = { invoice: t('INVOICE'), estimate: t('ESTIMATE') }[d.type];
+  const name = { invoice: t('INVOICE'), estimate: t('ESTIMATE'), credit: t('CREDIT MEMO') }[d.type];
+  const brand = /^#[0-9a-fA-F]{6}$/.test(company.brand_color || '') ? company.brand_color : '#4338CA';
   return (
     <div className="mx-auto max-w-3xl p-4 md:p-8">
-      <div className="no-print mb-4 flex justify-end"><Button onClick={() => window.print()}>{t('Print / save as PDF')}</Button></div>
+      <div className="no-print mb-4 flex justify-end"><Button style={{ background: brand }} onClick={() => window.print()}>{t('Print / save as PDF')}</Button></div>
       <div className="card p-6 md:p-8">
         <div className="flex flex-wrap justify-between gap-4 border-b border-slate-100 pb-5">
-          <div><div className="text-lg font-semibold">{company.company_name}</div><div className="text-sm text-slate-500">{company.company_tax_id}</div><div className="whitespace-pre-line text-sm text-slate-500">{company.company_address}</div></div>
-          <div className="text-right"><div className="text-xl font-semibold">{name}</div><div className="text-slate-500">{d.number}</div>
+          <div>{company.company_logo && <img src={company.company_logo} alt="" className="mb-2 max-h-16" />}<div className="text-lg font-semibold" style={{ color: brand }}>{company.company_name}</div><div className="text-sm text-slate-500">{company.company_tax_id}</div><div className="whitespace-pre-line text-sm text-slate-500">{company.company_address}</div></div>
+          <div className="text-right"><div className="text-xl font-semibold" style={{ color: brand }}>{name}</div><div className="text-slate-500">{d.number}</div>
             {d.status === 'paid' && <div className="mt-1 inline-block rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">{t('PAID')}</div>}</div>
         </div>
         <div className="grid gap-4 py-5 text-sm sm:grid-cols-3">
@@ -34,6 +38,19 @@ export default function PublicDoc() {
           {d.type === 'invoice' && <div className="flex justify-between font-semibold"><dt>{t('To pay')}</dt><dd className="num">{money(d.total - d.paid)}</dd></div>}
         </dl>
         {d.notes && <p className="mt-5 whitespace-pre-line border-t pt-4 text-sm text-slate-600">{d.notes}</p>}
+        {d.type === 'estimate' && d.status === 'accepted' && (
+          <p className="mt-6 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{t('Accepted by {0} on {1}', [d.accepted_by || '', date((d.accepted_at || '').slice(0, 10))])}</p>
+        )}
+        {d.type === 'estimate' && d.status === 'sent' && (
+          <div className="no-print mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <h3 className="font-semibold">{t('Accept this estimate')}</h3>
+            <p className="mb-3 text-sm text-slate-500">{t('Type your full name to accept. This works as your electronic signature.')}</p>
+            <div className="flex flex-wrap items-end gap-3">
+              <Field label={t('Full name')}><Input value={who} onChange={(e) => setWho(e.target.value)} autoComplete="name" /></Field>
+              <button className="btn btn-primary" style={{ background: brand }} disabled={busy || who.trim().length < 2} onClick={() => act(async () => { await api.post(`/public/doc/${token}/accept`, { name: who }); reload(); }, t('Estimate accepted'))}>{t('Accept estimate')}</button>
+            </div>
+          </div>
+        )}
         <p className="mt-6 text-center text-xs text-slate-400">{company.invoice_footer}</p>
       </div>
     </div>

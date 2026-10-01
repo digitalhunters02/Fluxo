@@ -105,7 +105,10 @@ test('dados de exemplo: balanço fecha e relatórios são coerentes', async () =
   assert.equal(cf.closing - cf.opening, cf.netChange);
   assert.equal(cf.operating.total + cf.investing.total + cf.financing.total, cf.netChange);
   const ar = rep.aging('receivable', t);
-  assert.equal(ar.totals.total, get("SELECT COALESCE(SUM(total-paid),0) AS v FROM docs WHERE type='invoice' AND status IN ('sent','partial')").v);
+  const openInvoices = get("SELECT COALESCE(SUM(total-paid),0) AS v FROM docs WHERE type='invoice' AND status IN ('sent','partial')").v;
+  const openCredits = get("SELECT COALESCE(SUM(total-paid),0) AS v FROM docs WHERE type='credit' AND status IN ('open','partial')").v;
+  assert.ok(openCredits > 0, 'o exemplo inclui uma nota de crédito em aberto');
+  assert.equal(ar.totals.total, openInvoices - openCredits);        // contas a receber líquidas das notas de crédito
   assert.equal(ar.totals.total, -bal('2000') * 0 + bal('1200'));
   const dash = rep.dashboard(); assert.ok(dash.series.length === 6);
 });

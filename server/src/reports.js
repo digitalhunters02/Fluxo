@@ -88,6 +88,11 @@ export function aging(kind, asof = today()) {
   const type = kind === 'receivable' ? 'invoice' : 'bill';
   const rows = all(`SELECT d.id, d.number, d.due_date, d.total - d.paid AS balance, d.contact_id, c.name AS contact_name FROM docs d JOIN contacts c ON c.id=d.contact_id
     WHERE d.type=? AND d.status IN ('sent','open','partial') AND d.total-d.paid>0 ORDER BY d.due_date`, type);
+  if (kind === 'receivable') {
+    // notas de crédito ainda não usadas reduzem o saldo a receber do cliente
+    for (const c of all(`SELECT d.id, d.number, d.issue_date AS due_date, -(d.total - d.paid) AS balance, d.contact_id, c.name AS contact_name FROM docs d JOIN contacts c ON c.id=d.contact_id
+      WHERE d.type='credit' AND d.status IN ('open','partial') AND d.total-d.paid>0`)) rows.push(c);
+  }
   const buckets = ['current', 'd1_30', 'd31_60', 'd61_90', 'd90p'];
   const byContact = new Map();
   for (const r of rows) {
@@ -189,4 +194,37 @@ export function dashboard() {
     cash, receivable: ar, receivableOverdue: arOver, payable: ap, payableOverdue: apOver, month: { income: month.totalIncome, expense: month.totalCogs + month.totalOpex, profit: month.netIncome },
     forecast30: cash + arSoon - apSoon, series: monthlySeries(6), topExpenses: expensesByCategory(monthStart, t).slice(0, 5), pendingBank, lowStock, upcoming,
   };
+}
+
+/** Orçamento x realizado no período (meses inteiros entre from e to). */
+export function budgetVsActual(from, to) {
+  const months = [];
+  for (let m = from.slice(0, 7); m <= to.slice(0, 7); m = addMonths(m + '-01', 1).slice(0, 7)) months.push(m);
+  const budgets = Object.fromEntries(all(`SELECT account_id, SUM(amount) AS v FROM budgets WHERE month>=? AND month<=? GROUP BY account_id`, months[0], months[months.length - 1]).map((r) => [r.account_id, r.v]));
+  const actual = periodRows(from, to);
+  const rows = actual.filter((r) => budgets[r.id] || r.balance).map((r) => {
+    const budget = budgets[r.id] || 0;
+    return { id: r.id, code: r.code, name: r.name, type: r.type, budget, actual: r.balance, variance: r.type === 'income' ? r.balance - budget : budget - r.balance };
+  });
+  const sum = (type, k) => rows.filter((r) => r.type === type).reduce((s, r) => s + r[k], 0);
+  return { from, to, income: rows.filter((r) => r.type === 'income'), expense: rows.filter((r) => r.type === 'expense'),
+    totals: { incomeBudget: sum('income', 'budget'), incomeActual: sum('income', 'actual'), expenseBudget: sum('expense', 'budget'), expenseActual: sum('expense', 'actual') } };
+}
+
+/** DRE por classe: uma coluna por classe (mais "sem classe"). */
+export function plByClass(from, to) {
+  const classes = [...all('SELECT id, name FROM classes WHERE active=1 ORDER BY name'), { id: null, name: null }];
+  const lines = all(`SELECT a.id, a.code, a.name, a.type, jl.class_id, SUM(jl.debit) AS debit, SUM(jl.credit) AS credit FROM journal_lines jl JOIN journal_entries je ON je.id=jl.entry_id
+    JOIN accounts a ON a.id=jl.account_id WHERE a.type IN ('income','expense') AND je.date>=? AND je.date<=? GROUP BY a.id, jl.class_id`, from, to);
+  const accounts = new Map();
+  for (const l of lines) {
+    const a = accounts.get(l.id) || { id: l.id, code: l.code, name: l.name, type: l.type, byClass: {}, total: 0 };
+    const v = l.type === 'income' ? l.credit - l.debit : l.debit - l.credit;
+    const key = l.class_id ?? 'none';
+    a.byClass[key] = (a.byClass[key] || 0) + v; a.total += v; accounts.set(l.id, a);
+  }
+  const rows = [...accounts.values()].sort((x, y) => x.code.localeCompare(y.code));
+  const net = {};
+  for (const c of classes) { const k = c.id ?? 'none'; net[k] = rows.reduce((s, r) => s + (r.type === 'income' ? 1 : -1) * (r.byClass[k] || 0), 0); }
+  return { from, to, classes: classes.map((c) => ({ id: c.id ?? 'none', name: c.name })), income: rows.filter((r) => r.type === 'income'), expense: rows.filter((r) => r.type === 'expense'), net };
 }

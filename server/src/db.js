@@ -14,7 +14,7 @@ db.exec(`
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE,
-  password_hash TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'viewer', active INTEGER NOT NULL DEFAULT 1,
+  password_hash TEXT NOT NULL, role TEXT NOT NULL DEFAULT 'viewer', custom_role_id INTEGER, active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS sessions (
@@ -44,11 +44,11 @@ CREATE TABLE IF NOT EXISTS projects (
   notes TEXT DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS docs (
-  id INTEGER PRIMARY KEY, type TEXT NOT NULL CHECK (type IN ('invoice','estimate','bill')),
+  id INTEGER PRIMARY KEY, type TEXT NOT NULL CHECK (type IN ('invoice','estimate','bill','credit','po')),
   number TEXT NOT NULL, contact_id INTEGER NOT NULL REFERENCES contacts(id), project_id INTEGER REFERENCES projects(id),
   issue_date TEXT NOT NULL, due_date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'draft',
   subtotal INTEGER NOT NULL DEFAULT 0, tax INTEGER NOT NULL DEFAULT 0, total INTEGER NOT NULL DEFAULT 0, paid INTEGER NOT NULL DEFAULT 0,
-  notes TEXT DEFAULT '', share_token TEXT UNIQUE, converted_to INTEGER, recurring_id INTEGER,
+  notes TEXT DEFAULT '', share_token TEXT UNIQUE, converted_to INTEGER, recurring_id INTEGER, accepted_by TEXT, accepted_at TEXT,
   created_by INTEGER, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE (type, number)
 );
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS doc_lines (
   id INTEGER PRIMARY KEY, doc_id INTEGER NOT NULL REFERENCES docs(id) ON DELETE CASCADE, position INTEGER NOT NULL DEFAULT 0,
   item_id INTEGER REFERENCES items(id), description TEXT NOT NULL DEFAULT '', qty REAL NOT NULL DEFAULT 1,
   unit_price INTEGER NOT NULL DEFAULT 0, tax_rate REAL NOT NULL DEFAULT 0, account_id INTEGER REFERENCES accounts(id),
-  amount INTEGER NOT NULL DEFAULT 0, tax_amount INTEGER NOT NULL DEFAULT 0, time_entry_id INTEGER
+  amount INTEGER NOT NULL DEFAULT 0, tax_amount INTEGER NOT NULL DEFAULT 0, time_entry_id INTEGER, class_id INTEGER
 );
 CREATE TABLE IF NOT EXISTS payments (
   id INTEGER PRIMARY KEY, doc_id INTEGER NOT NULL REFERENCES docs(id) ON DELETE CASCADE, date TEXT NOT NULL,
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS payments (
 CREATE TABLE IF NOT EXISTS expenses (
   id INTEGER PRIMARY KEY, date TEXT NOT NULL, contact_id INTEGER REFERENCES contacts(id), account_id INTEGER NOT NULL REFERENCES accounts(id),
   paid_from_id INTEGER NOT NULL REFERENCES accounts(id), amount INTEGER NOT NULL, description TEXT DEFAULT '', ref TEXT DEFAULT '',
-  project_id INTEGER REFERENCES projects(id), receipt TEXT, created_by INTEGER, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  project_id INTEGER REFERENCES projects(id), class_id INTEGER, receipt TEXT, created_by INTEGER, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS journal_entries (
   id INTEGER PRIMARY KEY, date TEXT NOT NULL, memo TEXT DEFAULT '', source_type TEXT NOT NULL DEFAULT 'manual', source_id INTEGER,
@@ -77,7 +77,7 @@ CREATE INDEX IF NOT EXISTS idx_je_date ON journal_entries(date);
 CREATE TABLE IF NOT EXISTS journal_lines (
   id INTEGER PRIMARY KEY, entry_id INTEGER NOT NULL REFERENCES journal_entries(id) ON DELETE CASCADE,
   account_id INTEGER NOT NULL REFERENCES accounts(id), debit INTEGER NOT NULL DEFAULT 0, credit INTEGER NOT NULL DEFAULT 0,
-  contact_id INTEGER REFERENCES contacts(id), reconciliation_id INTEGER
+  contact_id INTEGER REFERENCES contacts(id), reconciliation_id INTEGER, class_id INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_jl_account ON journal_lines(account_id);
 CREATE INDEX IF NOT EXISTS idx_jl_entry ON journal_lines(entry_id);
@@ -111,6 +111,15 @@ CREATE TABLE IF NOT EXISTS recurring (
 CREATE TABLE IF NOT EXISTS audit_log (
   id INTEGER PRIMARY KEY, at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, user_id INTEGER, user_name TEXT,
   action TEXT NOT NULL, entity TEXT NOT NULL, entity_id INTEGER, detail TEXT DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS classes (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, active INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE IF NOT EXISTS budgets (
+  id INTEGER PRIMARY KEY, account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE, month TEXT NOT NULL, amount INTEGER NOT NULL DEFAULT 0, UNIQUE (account_id, month)
+);
+CREATE TABLE IF NOT EXISTS roles (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, read TEXT NOT NULL DEFAULT '[]', write TEXT NOT NULL DEFAULT '[]');
+CREATE TABLE IF NOT EXISTS credit_applications (
+  id INTEGER PRIMARY KEY, credit_id INTEGER NOT NULL REFERENCES docs(id) ON DELETE CASCADE, invoice_id INTEGER REFERENCES docs(id) ON DELETE CASCADE,
+  amount INTEGER NOT NULL, date TEXT NOT NULL, account_id INTEGER REFERENCES accounts(id), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS employees (
   id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT DEFAULT '', tax_id TEXT DEFAULT '', position TEXT DEFAULT '', hire_date TEXT NOT NULL,
@@ -237,7 +246,8 @@ export function ensureDefaults() {
     run("UPDATE accounts SET subtype='payroll_wages', is_system=1 WHERE code='6100' AND subtype=''");
   });
   const defaults = { ...LANG_DEFAULTS.en, lang: 'en', next_invoice: '1001', next_estimate: '1001', next_bill: '1001', default_tax_rate: '0', default_terms_days: '15',
-    payroll_suta_rate: '0', payroll_suta_base: '0', default_tax_rate: '0' };
+    payroll_suta_rate: '0', payroll_suta_base: '0', default_tax_rate: '0', credit_prefix: 'CM-', po_prefix: 'PO-', next_credit: '1001', next_po: '1001',
+    plan: 'advanced', addon_payroll: '1', lock_date: '', company_logo: '', brand_color: '#4338CA' };
   for (const [k, v] of Object.entries(defaults)) if (get('SELECT 1 FROM settings WHERE key=?', k) === undefined) setSetting(k, v);
 }
 ensureDefaults();

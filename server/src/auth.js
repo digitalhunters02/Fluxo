@@ -15,10 +15,23 @@ const READ = {
   accounting: ['owner', 'accountant', 'viewer'], reports: ['owner', 'accountant', 'viewer'], projects: ['owner', 'accountant', 'sales', 'viewer'],
   inventory: ['owner', 'accountant', 'sales', 'viewer'], settings: ['owner', 'accountant', 'sales', 'viewer'], users: ['owner'], payroll: ['owner', 'accountant'],
 };
+export const MODULES = ['sales', 'purchases', 'banking', 'accounting', 'reports', 'projects', 'inventory', 'payroll', 'settings'];
 export const permissionsFor = (role) => ({
   read: Object.keys(READ).filter((m) => READ[m].includes(role)),
   write: Object.keys(WRITE).filter((m) => WRITE[m].includes(role)),
 });
+/** Permissões de um usuário: papel personalizado (plano Advanced) ou um dos quatro papéis padrão. */
+export function effectivePerms(u) {
+  if (u.custom_role_id) {
+    const r = get('SELECT * FROM roles WHERE id=?', u.custom_role_id);
+    if (r) {
+      const clean = (list) => JSON.parse(list).filter((m) => MODULES.includes(m) && m !== 'settings');
+      const write = clean(r.write), read = [...new Set([...clean(r.read), ...write, 'settings'])];
+      return { read, write };
+    }
+  }
+  return permissionsFor(u.role);
+}
 
 export function hashPassword(pw) {
   const salt = crypto.randomBytes(16);
@@ -37,7 +50,7 @@ export function createSession(user_id) {
   return token;
 }
 
-export const publicUser = (u) => ({ id: u.id, name: u.name, email: u.email, role: u.role, active: !!u.active, permissions: permissionsFor(u.role) });
+export const publicUser = (u) => ({ id: u.id, name: u.name, email: u.email, role: u.role, custom_role_id: u.custom_role_id || null, active: !!u.active, permissions: effectivePerms(u) });
 
 export function authenticate(req, _res, next) {
   const h = req.headers.authorization || '';
@@ -54,7 +67,7 @@ export const requireAuth = (req, _res, next) => (req.user ? next() : next(new Ht
 /** can('sales') exige leitura; can('sales', true) exige escrita. */
 export const can = (module, write = false) => (req, _res, next) => {
   if (!req.user) return next(new HttpError(401, 'Session expired, please sign in again'));
-  const ok = (write ? WRITE : READ)[module]?.includes(req.user.role);
+  const ok = effectivePerms(req.user)[write ? 'write' : 'read'].includes(module);
   next(ok ? undefined : new HttpError(403, 'You do not have permission for this action'));
 };
 

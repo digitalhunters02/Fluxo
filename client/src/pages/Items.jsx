@@ -6,6 +6,7 @@ import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader
 import { useAuth } from '../App.jsx';
 
 function ItemModal({ item, accounts, onClose, onSaved }) {
+  const { has } = useAuth();
   const [run, busy] = useAction();
   const [f, setF] = useState({ name: '', sku: '', kind: 'service', price: '', cost: '', track_inventory: false, qty_on_hand: '0', reorder_point: '0', income_account_id: '', tax_rate: '0',
     ...(item ? { ...item, price: fromCents(item.price), cost: fromCents(item.cost), track_inventory: !!item.track_inventory, income_account_id: item.income_account_id || '' } : {}) });
@@ -24,7 +25,8 @@ function ItemModal({ item, accounts, onClose, onSaved }) {
         <Field label={t('Default tax (%)')}><Input inputMode="decimal" value={f.tax_rate} onChange={set('tax_rate')} /></Field>
         <Field label={t('Income account')} className="col-span-2"><Select value={f.income_account_id} onChange={set('income_account_id')}><option value="">{t('Automatic')}</option>{accounts.filter((a) => a.type === 'income').map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></Field>
         {f.kind === 'product' && <>
-          <label className="col-span-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={f.track_inventory} onChange={set('track_inventory')} disabled={!!item?.track_inventory && item.qty_on_hand !== 0} />{' '}{t('Track inventory (average cost)')}</label>
+          {!has('inventory') && !item?.track_inventory && <p className="col-span-2 rounded bg-amber-50 p-2 text-xs text-amber-800">🔒 {t('Inventory tracking is available from the Plus plan.')}</p>}
+          {(has('inventory') || item?.track_inventory) && <label className="col-span-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={f.track_inventory} onChange={set('track_inventory')} disabled={!!item?.track_inventory && item.qty_on_hand !== 0} />{' '}{t('Track inventory (average cost)')}</label>}
           {f.track_inventory && <>
             {!item && <Field label={t('Opening stock')} hint={t('Posted against Owner Capital')}><Input inputMode="decimal" value={f.qty_on_hand} onChange={set('qty_on_hand')} /></Field>}
             {!item && <Field label={t('Opening unit cost')}><Input inputMode="decimal" value={f.cost} onChange={set('cost')} /></Field>}

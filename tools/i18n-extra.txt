@@ -305,3 +305,170 @@ Quarter must be 1–4 || O trimestre deve ser 1–4 || El trimestre debe ser 1�
 Set the project hourly rate || Defina o valor/hora do projeto || Defina la tarifa por hora del proyecto
 The account has entries; deactivate it instead of deleting it || A conta possui lançamentos; desative-a em vez de excluir || La cuenta tiene asientos; desactívela en lugar de eliminarla
 Regular§run || Normal || Regular
+Plan || Plano || Plan
+You can change it later in Settings || Você pode mudar depois em Configurações || Puede cambiarlo después en Configuración
+Credit memos || Notas de crédito || Notas de crédito
+Purchase orders || Ordens de compra || Órdenes de compra
+Starter || Starter || Starter
+Essentials || Essentials || Essentials
+Plus || Plus || Plus
+Advanced || Advanced || Advanced
+Payroll add-on || Módulo de folha || Complemento de nómina
+The payroll add-on is not active || O módulo de folha não está ativo || El complemento de nómina no está activo
+This feature is not in your plan || Este recurso não está no seu plano || Esta función no está en su plan
+Turn on the payroll add-on to run payroll. || Ative o módulo de folha para processar a folha. || Active el complemento de nómina para procesar la nómina.
+Available from the {0} plan. You are on {1}. || Disponível a partir do plano {0}. Você está no {1}. || Disponible desde el plan {0}. Usted está en {1}.
+See plans || Ver planos || Ver planes
+Locked || Bloqueado || Bloqueado
+Used || Usada || Usada
+Billed || Convertida em conta || Convertida en cuenta
+Budget saved || Orçamento salvo || Presupuesto guardado
+Save budget || Salvar orçamento || Guardar presupuesto
+Fill year || Preencher o ano || Llenar el año
+Enter whole-dollar or cent amounts. “Fill year” copies January to every month. Compare with actuals in Reports → Budget vs actual. || Informe valores em dólares ou centavos. “Preencher o ano” copia janeiro para todos os meses. Compare com o realizado em Relatórios → Orçado x realizado. || Ingrese valores en dólares o centavos. “Llenar el año” copia enero a todos los meses. Compare con lo real en Informes → Presupuesto vs real.
+Classes tag income and expenses by department, location or product line, so you can see profit for each one in Reports → Profit & loss by class. || Classes marcam receitas e despesas por departamento, local ou linha de produto, para você ver o lucro de cada uma em Relatórios → DRE por classe. || Las clases etiquetan ingresos y gastos por departamento, ubicación o línea de producto, para ver la utilidad de cada una en Informes → Estado de resultados por clase.
+New class || Nova classe || Nueva clase
+Class created || Classe criada || Clase creada
+No classes yet. || Nenhuma classe ainda. || Aún no hay clases.
+Active || Ativo || Activo
+Budgets || Orçamentos || Presupuestos
+Classes || Classes || Clases
+New credit memo || Nova nota de crédito || Nueva nota de crédito
+Edit credit memo || Editar nota de crédito || Editar nota de crédito
+New purchase order || Nova ordem de compra || Nueva orden de compra
+Edit purchase order || Editar ordem de compra || Editar orden de compra
+Save and record payment || Salvar e registrar pagamento || Guardar y registrar pago
+Class || Classe || Clase
+Payment received now (sales receipt) || Pagamento recebido agora (recibo de venda) || Pago recibido ahora (recibo de venta)
+Issues the invoice and records the full payment || Emite a fatura e registra o pagamento total || Emite la factura y registra el pago total
+No, bill the customer later || Não, cobrar do cliente depois || No, cobrar al cliente después
+Credit memo || Nota de crédito || Nota de crédito
+Purchase order || Ordem de compra || Orden de compra
+Apply credit to an invoice || Aplicar crédito a uma fatura || Aplicar crédito a una factura
+Credit applied || Crédito aplicado || Crédito aplicado
+Apply || Aplicar || Aplicar
+This customer has no open invoices. || Este cliente não tem faturas em aberto. || Este cliente no tiene facturas abiertas.
+Credit balance: || Saldo do crédito: || Saldo del crédito:
+Refund the customer || Reembolsar o cliente || Reembolsar al cliente
+Refund recorded || Reembolso registrado || Reembolso registrado
+Record refund || Registrar reembolso || Registrar reembolso
+This records the money going out in your books. Send the actual refund from your bank. || Isso registra a saída do dinheiro na contabilidade. Faça o reembolso de verdade pelo seu banco. || Esto registra la salida del dinero en su contabilidad. Haga el reembolso real desde su banco.
+Document issued || Documento emitido || Documento emitido
+Apply to invoice || Aplicar a fatura || Aplicar a factura
+Refund || Reembolso || Reembolso
+Converted to bill (draft) || Convertida em conta a pagar (rascunho) || Convertida en cuenta por pagar (borrador)
+Convert to bill || Converter em conta a pagar || Convertir en cuenta por pagar
+Where this credit went || Onde este crédito foi usado || Dónde se usó este crédito
+Credits applied || Créditos aplicados || Créditos aplicados
+Applied to || Aplicado a || Aplicado a
+Remove this credit application? || Remover esta aplicação de crédito? || ¿Quitar esta aplicación de crédito?
+Removed || Removido || Quitado
+Invoices created || Faturas criadas || Facturas creadas
+Batch invoices || Faturas em lote || Facturas por lote
+Create {0} invoice(s) || Criar {0} fatura(s) || Crear {0} factura(s)
+Search customers… || Buscar clientes… || Buscar clientes…
+Blank = each customer’s own terms || Vazio = prazo de cada cliente || Vacío = plazo de cada cliente
+Issue now (otherwise save as drafts) || Emitir agora (senão salva como rascunho) || Emitir ahora (si no, se guardan como borrador)
+Unused credit || Crédito não usado || Crédito sin usar
+credit memo(s) || nota(s) de crédito || nota(s) de crédito
+Inventory tracking is available from the Plus plan. || O controle de estoque está disponível a partir do plano Plus. || El control de inventario está disponible desde el plan Plus.
+Project profitability is available from the Plus plan. || A lucratividade por projeto está disponível a partir do plano Plus. || La rentabilidad por proyecto está disponible desde el plan Plus.
+Plus plan || Plano Plus || Plan Plus
+CREDIT MEMO || NOTA DE CRÉDITO || NOTA DE CRÉDITO
+Accepted by {0} on {1} || Aceito por {0} em {1} || Aceptado por {0} el {1}
+Accept this estimate || Aceitar este orçamento || Aceptar este presupuesto
+Type your full name to accept. This works as your electronic signature. || Digite seu nome completo para aceitar. Isso vale como sua assinatura eletrônica. || Escriba su nombre completo para aceptar. Esto funciona como su firma electrónica.
+Full name || Nome completo || Nombre completo
+Accept estimate || Aceitar orçamento || Aceptar presupuesto
+Budget || Orçado || Presupuesto
+Actual || Realizado || Real
+Variance || Variação || Variación
+No budget set for this period. Set one under Accounting → Budgets. || Nenhum orçamento definido para este período. Defina em Contabilidade → Orçamentos. || No hay presupuesto para este período. Defínalo en Contabilidad → Presupuestos.
+No class || Sem classe || Sin clase
+Budget vs actual || Orçado x realizado || Presupuesto vs real
+Profit & loss by class || DRE por classe || Estado de resultados por clase
+Logo (PNG, JPEG or WebP, max 300 KB) || Logotipo (PNG, JPEG ou WebP, máx. 300 KB) || Logotipo (PNG, JPEG o WebP, máx. 300 KB)
+No logo || Sem logotipo || Sin logotipo
+Logo || Logotipo || Logotipo
+Logo must be a PNG, JPEG or WebP under 300 KB || O logotipo deve ser PNG, JPEG ou WebP com menos de 300 KB || El logotipo debe ser PNG, JPEG o WebP de menos de 300 KB
+Brand color || Cor da marca || Color de la marca
+Close the books || Fechar o período contábil || Cerrar el período contable
+Nothing can be posted, edited or deleted on or before this date. Use it after your accountant finishes a period. || Nada pode ser lançado, editado ou excluído até esta data. Use depois que seu contador terminar um período. || No se puede registrar, editar ni eliminar nada hasta esta fecha. Úselo cuando su contador termine un período.
+Books closed through || Contabilidade fechada até || Contabilidad cerrada hasta
+Closing date saved || Data de fechamento salva || Fecha de cierre guardada
+Books reopened || Períodos reabertos || Períodos reabiertos
+Reopen all periods || Reabrir todos os períodos || Reabrir todos los períodos
+Available from the Plus plan. || Disponível a partir do plano Plus. || Disponible desde el plan Plus.
+Invoices, estimates & credit memos || Faturas, orçamentos e notas de crédito || Facturas, presupuestos y notas de crédito
+Expenses, receipts & sales receipts || Despesas, comprovantes e recibos de venda || Gastos, comprobantes y recibos de venta
+Bank CSV import & reconciliation || Importação de CSV do banco e conciliação || Importación de CSV bancario y conciliación
+Core financial reports || Relatórios financeiros essenciais || Informes financieros básicos
+Logo & brand color on invoices || Logotipo e cor da marca nas faturas || Logotipo y color de marca en las facturas
+Bills & vendor payments || Contas a pagar e pagamentos a fornecedores || Cuentas por pagar y pagos a proveedores
+Recurring invoices || Faturas recorrentes || Facturas recurrentes
+Time tracking || Controle de horas || Control de horas
+Full report set & audit log || Todos os relatórios e auditoria || Todos los informes y auditoría
+Inventory (average cost) || Estoque (custo médio) || Inventario (costo promedio)
+Project profitability || Lucratividade por projeto || Rentabilidad por proyecto
+Budgets & budget vs actual || Orçamentos e orçado x realizado || Presupuestos y presupuesto vs real
+Classes & P&L by class || Classes e DRE por classe || Clases y estado de resultados por clase
+1099 contractor report || Relatório de prestadores 1099 || Informe de contratistas 1099
+Close the books (period lock) || Fechamento de período || Cierre de período
+Custom roles & permissions || Papéis e permissões personalizados || Roles y permisos personalizados
+Batch invoicing || Faturamento em lote || Facturación por lote
+Plan updated || Plano atualizado || Plan actualizado
+Your plan decides which features are available. Everyone on your team is included: there is no per-user fee. || Seu plano define quais recursos estão disponíveis. Toda a equipe está incluída: não há cobrança por usuário. || Su plan define qué funciones están disponibles. Todo su equipo está incluido: no hay cargo por usuario.
+Current plan || Plano atual || Plan actual
+/month || /mês || /mes
+Switch to the {0} plan? || Mudar para o plano {0}? || ¿Cambiar al plan {0}?
+Upgrade || Fazer upgrade || Mejorar plan
+Downgrade || Reduzir plano || Reducir plan
+U.S. payroll: ${0}/month + ${1} per employee. Calculates and records payroll, pay stubs, W-2 and 941 summaries. || Folha dos EUA: US${0}/mês + US${1} por funcionário. Calcula e registra a folha, holerites e resumos de W-2 e 941. || Nómina de EE. UU.: US${0}/mes + US${1} por empleado. Calcula y registra la nómina, talones y resúmenes de W-2 y 941.
+Turn off || Desligar || Desactivar
+Turn on || Ligar || Activar
+Online billing is not connected yet: the owner switches plans here by hand. || A cobrança online ainda não está conectada: o proprietário troca de plano aqui manualmente. || El cobro en línea aún no está conectado: el propietario cambia de plan aquí manualmente.
+Role saved || Papel salvo || Rol guardado
+Edit role || Editar papel || Editar rol
+New role || Novo papel || Nuevo rol
+Role name || Nome do papel || Nombre del rol
+e.g. Bookkeeper || ex.: Auxiliar contábil || p. ej.: Auxiliar contable
+Area || Área || Área
+Can view || Pode ver || Puede ver
+Can change || Pode alterar || Puede modificar
+Users and settings are always limited to the owner. || Usuários e configurações ficam sempre restritos ao proprietário. || Usuarios y configuración quedan siempre limitados al propietario.
+Create roles with exactly the access each person needs, then assign them under Users. || Crie papéis com exatamente o acesso que cada pessoa precisa e depois atribua em Usuários. || Cree roles con exactamente el acceso que cada persona necesita y luego asígnelos en Usuarios.
++ New role || + Novo papel || + Nuevo rol
+No custom roles yet. || Nenhum papel personalizado ainda. || Aún no hay roles personalizados.
+Delete this role? || Excluir este papel? || ¿Eliminar este rol?
+Roles || Papéis || Roles
+Your plan does not include this feature || Seu plano não inclui este recurso || Su plan no incluye esta función
+Invalid plan || Plano inválido || Plan inválido
+Books are closed through {0} || A contabilidade está fechada até {0} || La contabilidad está cerrada hasta {0}
+Purchase order not found || Ordem de compra não encontrada || Orden de compra no encontrada
+Purchase order already converted || Ordem de compra já convertida || Orden de compra ya convertida
+A declined or voided purchase order cannot be converted || Uma ordem de compra recusada ou anulada não pode ser convertida || Una orden de compra rechazada o anulada no se puede convertir
+Issue the credit memo first || Emita a nota de crédito primeiro || Emita primero la nota de crédito
+Choose an issued invoice || Escolha uma fatura emitida || Elija una factura emitida
+The credit and the invoice belong to different customers || O crédito e a fatura são de clientes diferentes || El crédito y la factura son de clientes distintos
+Amount is larger than the credit balance || O valor é maior que o saldo do crédito || El importe supera el saldo del crédito
+Application not found || Aplicação não encontrada || Aplicación no encontrada
+Select at least one customer || Selecione ao menos um cliente || Seleccione al menos un cliente
+A batch can have at most 200 customers || Um lote pode ter no máximo 200 clientes || Un lote puede tener como máximo 200 clientes
+Remove the credit applications before voiding || Remova as aplicações de crédito antes de anular || Quite las aplicaciones de crédito antes de anular
+Type your full name to accept || Digite seu nome completo para aceitar || Escriba su nombre completo para aceptar
+This estimate can no longer be accepted || Este orçamento não pode mais ser aceito || Este presupuesto ya no se puede aceptar
+Invalid color || Cor inválida || Color inválido
+A class with this name already exists || Já existe uma classe com este nome || Ya existe una clase con este nombre
+Class not found || Classe não encontrada || Clase no encontrada
+Role not found || Papel não encontrado || Rol no encontrado
+A role with this name already exists || Já existe um papel com este nome || Ya existe un rol con este nombre
+Reassign the users of this role first || Reatribua os usuários deste papel primeiro || Reasigne primero a los usuarios de este rol
+refunded || reembolsou || reembolsó
+applied || aplicou || aplicó
+budget || orçamento || presupuesto
+class || classe || clase
+role || papel || rol
+credit || nota de crédito || nota de crédito
+po || ordem de compra || orden de compra
+apply || aplicou crédito em || aplicó crédito en
+refund || reembolsou || reembolsó

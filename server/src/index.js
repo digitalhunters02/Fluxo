@@ -7,7 +7,8 @@ import * as acc from './accounting.js';
 import * as bank from './banking.js';
 import * as rep from './reports.js';
 import * as pay from './payroll.js';
-import { authenticate, requireAuth, can, audit, hashPassword, verifyPassword, createSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
+import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE } from './plans.js';
+import { authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
 
 const { HttpError, today, isDate, cents } = acc;
 const bad = (m) => new HttpError(400, m);
@@ -34,6 +35,7 @@ api.get('/status', wrap((_req, res) => ok(res, { needsSetup: !get('SELECT 1 FROM
 api.post('/setup', wrap((req, res) => {
   if (get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(403, 'System is already set up');
   const { company_name, name, email, password, demo, currency } = req.body;
+  if (req.body.plan) setPlan({ plan: req.body.plan });
   const lang = LANGS.includes(req.body.lang) ? req.body.lang : 'en';
   need(name, 'Enter your name'); need(email, 'Enter the email');
   if (!password || password.length < 8) throw bad('The password must be at least 8 characters');
@@ -55,18 +57,34 @@ api.post('/login', wrap((req, res) => {
 
 // visualização pública de documento (link compartilhável)
 api.get('/public/doc/:token', wrap((req, res) => {
-  const row = get('SELECT id FROM docs WHERE share_token=? AND type<>\'bill\'', req.params.token);
+  const row = get("SELECT id FROM docs WHERE share_token=? AND type IN ('invoice','estimate','credit')", req.params.token);
   if (!row) throw new HttpError(404, 'Document not found');
   const d = acc.loadDoc(row.id);
   const c = get('SELECT name,email,phone,tax_id,address FROM contacts WHERE id=?', d.contact_id);
-  const company = Object.fromEntries(all('SELECT key,value FROM settings').filter((s) => ['company_name', 'currency', 'locale', 'invoice_footer', 'company_tax_id', 'company_address', 'company_email', 'company_phone'].includes(s.key)).map((s) => [s.key, s.value]));
+  const company = Object.fromEntries(all('SELECT key,value FROM settings').filter((s) => ['company_name', 'currency', 'locale', 'invoice_footer', 'company_tax_id', 'company_address', 'company_email', 'company_phone', 'company_logo', 'brand_color'].includes(s.key)).map((s) => [s.key, s.value]));
   const { share_token, created_by, ...safe } = d;
   ok(res, { doc: safe, customer: c, company });
 }));
 
+// o cliente aceita um orçamento pelo link público (assinatura digitada)
+api.post('/public/doc/:token/accept', wrap((req, res) => {
+  rateLimitLogin(`accept|${req.params.token}|${req.ip}`);
+  const row = get("SELECT id,status,number FROM docs WHERE share_token=? AND type='estimate'", req.params.token);
+  if (!row) throw new HttpError(404, 'Document not found');
+  const who = String(req.body.name || '').trim().slice(0, 120);
+  if (who.length < 2) throw bad('Type your full name to accept');
+  if (!['sent', 'draft'].includes(row.status)) throw bad('This estimate can no longer be accepted');
+  run("UPDATE docs SET status='accepted', accepted_by=?, accepted_at=? WHERE id=?", who, new Date().toISOString(), row.id);
+  run("INSERT INTO audit_log(user_name,action,entity,entity_id,detail) VALUES(?,?,?,?,?)", who, 'accept', 'estimate', row.id, `${row.number} (public link)`);
+  ok(res, { status: 'accepted' });
+}));
+
 api.use(requireAuth);
 api.post('/logout', wrap((req, res) => { run('DELETE FROM sessions WHERE token=?', req.headers.authorization.slice(7)); ok(res, {}); }));
-api.get('/me', wrap((req, res) => ok(res, publicUser(req.user))));
+const planInfo = () => ({ plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, lockDate: getSetting('lock_date', '') });
+api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), planInfo: planInfo() })));
+api.get('/plan', wrap((_req, res) => ok(res, planInfo())));
+api.put('/plan', can('users', true), wrap((req, res) => { setPlan({ plan: req.body.plan, payroll: req.body.payroll }); audit(req, 'update', 'settings', null, `plan ${currentPlan()}`); ok(res, planInfo()); }));
 api.post('/me/password', wrap((req, res) => {
   if (!verifyPassword(String(req.body.current || ''), req.user.password_hash)) throw bad('Current password is incorrect');
   if (!req.body.next || req.body.next.length < 8) throw bad('The new password must be at least 8 characters');
@@ -76,35 +94,42 @@ api.post('/me/password', wrap((req, res) => {
 }));
 
 /* ------------------------------- configurações ---------------------------- */
-const PUBLIC_SETTINGS = ['lang', 'payroll_suta_rate', 'payroll_suta_base', 'company_name', 'company_tax_id', 'company_address', 'company_email', 'company_phone', 'currency', 'locale', 'invoice_prefix', 'estimate_prefix', 'bill_prefix', 'default_tax_rate', 'default_terms_days', 'invoice_footer'];
+const PUBLIC_SETTINGS = ['lock_date', 'company_logo', 'brand_color', 'lang', 'payroll_suta_rate', 'payroll_suta_base', 'company_name', 'company_tax_id', 'company_address', 'company_email', 'company_phone', 'currency', 'locale', 'invoice_prefix', 'estimate_prefix', 'bill_prefix', 'default_tax_rate', 'default_terms_days', 'invoice_footer'];
 api.get('/settings', can('settings'), wrap((_req, res) => ok(res, Object.fromEntries(PUBLIC_SETTINGS.map((k) => [k, getSetting(k)])))));
 api.put('/settings', can('settings', true), wrap((req, res) => {
-  for (const k of PUBLIC_SETTINGS) if (k in req.body) setSetting(k, req.body[k]);
+  if ('company_logo' in req.body && req.body.company_logo !== '' && !(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(req.body.company_logo) && req.body.company_logo.length <= 400_000)) throw bad('Logo must be a PNG, JPEG or WebP under 300 KB');
+  if ('brand_color' in req.body && !/^#[0-9a-fA-F]{6}$/.test(req.body.brand_color)) throw bad('Invalid color');
+  for (const k of PUBLIC_SETTINGS) if (k !== 'lock_date' && k in req.body) setSetting(k, req.body[k]);
   audit(req, 'update', 'settings'); ok(res, {});
 }));
 
-api.get('/users', can('users'), wrap((_req, res) => ok(res, { users: listUsers(), roles: ROLES })));
+api.get('/users', can('users'), wrap((_req, res) => ok(res, { users: listUsers(), roles: ROLES, customRoles: hasFeature('custom_roles') ? all('SELECT id,name FROM roles ORDER BY name') : [] })));
 api.post('/users', can('users', true), wrap((req, res) => {
-  const { name, email, password, role } = req.body;
+  const { name, email, password } = req.body;
+  const custom = req.body.custom_role_id ? Number(req.body.custom_role_id) : null;
+  if (custom) { assertFeature('custom_roles'); if (!get('SELECT 1 FROM roles WHERE id=?', custom)) throw bad('Invalid role'); }
+  const role = custom ? 'viewer' : req.body.role;
   need(name, 'Enter the name'); need(email, 'Enter the email');
   if (!ROLES[role]) throw bad('Invalid role');
   if (!password || password.length < 8) throw bad('Password must be at least 8 characters');
   if (get('SELECT 1 FROM users WHERE email=?', email.trim().toLowerCase())) throw bad('Email already registered');
-  const uid = insert('INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)', name.trim(), email.trim().toLowerCase(), hashPassword(password), role);
+  const uid = insert('INSERT INTO users(name,email,password_hash,role,custom_role_id) VALUES(?,?,?,?,?)', name.trim(), email.trim().toLowerCase(), hashPassword(password), role, custom);
   audit(req, 'create', 'user', uid, `${email} (${role})`); ok(res, publicUser(get('SELECT * FROM users WHERE id=?', uid)));
 }));
 api.put('/users/:id', can('users', true), wrap((req, res) => {
   const uid = id(req); const u = get('SELECT * FROM users WHERE id=?', uid);
   if (!u) throw new HttpError(404, 'User not found');
-  const role = req.body.role ?? u.role, active = req.body.active ?? !!u.active;
+  let custom = u.custom_role_id;
+  if ('custom_role_id' in req.body) { custom = req.body.custom_role_id ? Number(req.body.custom_role_id) : null; if (custom) { assertFeature('custom_roles'); if (!get('SELECT 1 FROM roles WHERE id=?', custom)) throw bad('Invalid role'); } }
+  const role = custom ? 'viewer' : (req.body.role ?? u.role), active = req.body.active ?? !!u.active;
   if (!ROLES[role]) throw bad('Invalid role');
   if (u.role === 'owner' && (role !== 'owner' || !active) && get('SELECT COUNT(*) AS n FROM users WHERE role=\'owner\' AND active=1').n <= 1) throw bad('At least one active owner is required');
-  run('UPDATE users SET name=?, role=?, active=? WHERE id=?', req.body.name || u.name, role, active ? 1 : 0, uid);
+  run('UPDATE users SET name=?, role=?, custom_role_id=?, active=? WHERE id=?', req.body.name || u.name, role, custom, active ? 1 : 0, uid);
   if (req.body.password) { if (req.body.password.length < 8) throw bad('Password must be at least 8 characters'); run('UPDATE users SET password_hash=? WHERE id=?', hashPassword(req.body.password), uid); }
   if (!active) run('DELETE FROM sessions WHERE user_id=?', uid);
-  audit(req, 'update', 'user', uid, `${u.email} → ${role}${active ? '' : ' (inativo)'}`); ok(res, publicUser(get('SELECT * FROM users WHERE id=?', uid)));
+  audit(req, 'update', 'user', uid, `${u.email} → ${role}${active ? '' : ' (inactive)'}`); ok(res, publicUser(get('SELECT * FROM users WHERE id=?', uid)));
 }));
-api.get('/audit', can('users'), wrap((_req, res) => ok(res, all('SELECT * FROM audit_log ORDER BY id DESC LIMIT 300'))));
+api.get('/audit', can('users'), requireFeature('audit_log'), wrap((_req, res) => ok(res, all('SELECT * FROM audit_log ORDER BY id DESC LIMIT 300'))));
 
 /* ---------------------------------- contas -------------------------------- */
 api.get('/accounts', can('accounting'), wrap((_req, res) => ok(res, all(`SELECT a.*,
@@ -165,7 +190,7 @@ api.get('/contacts', can('sales'), wrap((req, res) => {
     FROM contacts c WHERE active=1 ORDER BY name`);
   ok(res, kind ? rows.filter((c) => c.kind === kind || c.kind === 'both') : rows);
 }));
-const contactFields = (b) => { need(b.name, 'Enter the name'); if (!['customer', 'vendor', 'both'].includes(b.kind || 'customer')) throw bad('Invalid type'); return [b.kind || 'customer', b.name.trim(), b.email || '', b.phone || '', b.tax_id || '', b.address || '', b.notes || '', Number.isInteger(+b.terms_days) ? +b.terms_days : 15, b.is_1099 ? 1 : 0]; };
+const contactFields = (b) => { need(b.name, 'Enter the name'); if (!['customer', 'vendor', 'both'].includes(b.kind || 'customer')) throw bad('Invalid type'); return [b.kind || 'customer', b.name.trim(), b.email || '', b.phone || '', b.tax_id || '', b.address || '', b.notes || '', Number.isInteger(+b.terms_days) ? +b.terms_days : 15, b.is_1099 && hasFeature('contractors_1099') ? 1 : 0]; };
 api.post('/contacts', can('sales', true), wrap((req, res) => {
   const nid = insert('INSERT INTO contacts(kind,name,email,phone,tax_id,address,notes,terms_days,is_1099) VALUES(?,?,?,?,?,?,?,?,?)', ...contactFields(req.body));
   audit(req, 'create', 'contact', nid, req.body.name); ok(res, get('SELECT * FROM contacts WHERE id=?', nid));
@@ -192,6 +217,7 @@ api.get('/items/lookup', wrap((_req, res) => ok(res, all('SELECT id,name,sku,kin
 const itemFields = (b) => {
   need(b.name, 'Enter the name');
   const kind = b.kind === 'product' ? 'product' : 'service';
+  if (kind === 'product' && b.track_inventory) assertFeature('inventory');
   return [b.name.trim(), b.sku || '', kind, cents(b.price || 0), cents(b.cost || 0), kind === 'product' && b.track_inventory ? 1 : 0, Number(b.reorder_point || 0), b.income_account_id || null, Number(b.tax_rate || 0)];
 };
 api.post('/items', can('inventory', true), wrap((req, res) => {
@@ -211,43 +237,52 @@ api.put('/items/:id', can('inventory', true), wrap((req, res) => {
   audit(req, 'update', 'item', iid); ok(res, get('SELECT * FROM items WHERE id=?', iid));
 }));
 api.delete('/items/:id', can('inventory', true), wrap((req, res) => { run('UPDATE items SET active=0 WHERE id=?', id(req)); audit(req, 'delete', 'item', id(req)); ok(res, {}); }));
-api.post('/items/:id/adjust', can('inventory', true), wrap((req, res) => {
+api.post('/items/:id/adjust', can('inventory', true), requireFeature('inventory'), wrap((req, res) => {
   const r = acc.adjustStock({ item_id: id(req), qty_delta: req.body.qty_delta, date: req.body.date, offset_account_id: req.body.offset_account_id }, req.user);
   audit(req, 'adjust', 'item', id(req), `Δ ${req.body.qty_delta}`); ok(res, r);
 }));
 
 /* -------------------------------- documentos ------------------------------ */
-const docModule = (type) => (type === 'bill' ? 'purchases' : 'sales');
-const typeParam = (req) => { const t = req.params.type; if (!['invoice', 'estimate', 'bill'].includes(t)) throw new HttpError(404, 'Invalid type'); return t; };
+const docModule = (type) => (['bill', 'po'].includes(type) ? 'purchases' : 'sales');
+const TYPE_FEATURE = { bill: 'bills', po: 'purchase_orders' };
+const gateType = (type) => { if (TYPE_FEATURE[type]) assertFeature(TYPE_FEATURE[type]); };
+api.param('type', (_req, _res, next, val) => { try { gateType(val); next(); } catch (e) { next(e); } });
+const typeParam = (req) => { const t = req.params.type; if (!['invoice', 'estimate', 'bill', 'credit', 'po'].includes(t)) throw new HttpError(404, 'Invalid type'); return t; };
 
 api.get('/docs/:type', (req, res, next) => can(docModule(req.params.type))(req, res, next), wrap((req, res) => {
   const t = typeParam(req);
   const rows = all(`SELECT d.id,d.type,d.number,d.contact_id,c.name AS contact_name,d.issue_date,d.due_date,d.status,d.total,d.paid,d.total-d.paid AS balance,d.project_id
     FROM docs d JOIN contacts c ON c.id=d.contact_id WHERE d.type=? ORDER BY d.issue_date DESC, d.id DESC LIMIT 1000`, t);
   const td = today();
-  ok(res, rows.map((r) => ({ ...r, overdue: t !== 'estimate' && ['sent', 'open', 'partial'].includes(r.status) && r.due_date < td && r.balance > 0 })));
+  ok(res, rows.map((r) => ({ ...r, overdue: ['invoice', 'bill'].includes(t) && ['sent', 'open', 'partial'].includes(r.status) && r.due_date < td && r.balance > 0 })));
 }));
 api.get('/doc/:id', wrap((req, res) => {
   const d = acc.loadDoc(id(req));
   if (!d) throw new HttpError(404, 'Document not found');
-  can(docModule(d.type))(req, res, (e) => { if (e) throw e; });
+  gateType(d.type); can(docModule(d.type))(req, res, (e) => { if (e) throw e; });
   ok(res, d);
 }));
+api.post('/docs/invoice/batch', can('sales', true), requireFeature('batch_invoices'), wrap((req, res) => {
+  const ids = acc.batchInvoices(req.body, req.user);
+  audit(req, 'create', 'invoice', null, `batch of ${ids.length}`); ok(res, { ids });
+}));
 api.post('/docs/:type', (req, res, next) => can(docModule(req.params.type), true)(req, res, next), wrap((req, res) => {
-  const d = acc.saveDoc({ ...req.body, id: undefined, type: typeParam(req) }, req.user);
+  const pay = req.params.type === 'invoice' ? req.body.pay_now : null; // recibo de venda: fatura emitida e paga na hora
+  let d = acc.saveDoc({ ...req.body, id: undefined, type: typeParam(req), post: pay ? true : req.body.post }, req.user);
+  if (pay) d = acc.addPayment(d.id, { date: pay.date || d.issue_date, amount: d.total, account_id: pay.account_id, method: pay.method || '', ref: pay.ref || '' }, req.user);
   audit(req, 'create', d.type, d.id, d.number); ok(res, d);
 }));
 api.put('/doc/:id', wrap((req, res) => {
   const cur = get('SELECT type FROM docs WHERE id=?', id(req));
   if (!cur) throw new HttpError(404, 'Document not found');
-  can(docModule(cur.type), true)(req, res, (e) => { if (e) throw e; });
+  gateType(cur.type); can(docModule(cur.type), true)(req, res, (e) => { if (e) throw e; });
   const d = acc.saveDoc({ ...req.body, id: id(req), type: cur.type }, req.user);
   audit(req, 'update', d.type, d.id, d.number); ok(res, d);
 }));
 const docAction = (action) => wrap((req, res) => {
   const cur = get('SELECT type,number FROM docs WHERE id=?', id(req));
   if (!cur) throw new HttpError(404, 'Document not found');
-  can(docModule(cur.type), true)(req, res, (e) => { if (e) throw e; });
+  gateType(cur.type); can(docModule(cur.type), true)(req, res, (e) => { if (e) throw e; });
   const d = acc.setDocStatus(id(req), action, req.user);
   audit(req, action, cur.type, d.id, cur.number); ok(res, d);
 });
@@ -255,14 +290,18 @@ for (const a of ['post', 'void', 'accept', 'decline', 'send']) api.post(`/doc/:i
 api.delete('/doc/:id', wrap((req, res) => {
   const cur = get('SELECT type,number FROM docs WHERE id=?', id(req));
   if (!cur) throw new HttpError(404, 'Document not found');
-  can(docModule(cur.type), true)(req, res, (e) => { if (e) throw e; });
+  gateType(cur.type); can(docModule(cur.type), true)(req, res, (e) => { if (e) throw e; });
   acc.deleteDoc(id(req)); audit(req, 'delete', cur.type, id(req), cur.number); ok(res, {});
 }));
+api.post('/doc/:id/convert-po', can('purchases', true), requireFeature('purchase_orders'), wrap((req, res) => { const d = acc.convertPO(id(req), req.user); audit(req, 'convert', 'po', id(req), `→ ${d.number}`); ok(res, d); }));
+api.post('/doc/:id/apply-credit', can('sales', true), wrap((req, res) => { const d = acc.applyCredit(id(req), req.body); audit(req, 'apply', 'credit', d.id, d.number); ok(res, d); }));
+api.post('/doc/:id/refund', can('sales', true), wrap((req, res) => { const d = acc.refundCredit(id(req), req.body, req.user); audit(req, 'refund', 'credit', d.id, d.number); ok(res, d); }));
+api.delete('/credit-applications/:id', can('sales', true), wrap((req, res) => { const d = acc.removeCreditApplication(id(req)); audit(req, 'delete', 'credit', d.id, d.number); ok(res, d); }));
 api.post('/doc/:id/convert', can('sales', true), wrap((req, res) => { const d = acc.convertEstimate(id(req), req.user); audit(req, 'convert', 'estimate', id(req), `→ ${d.number}`); ok(res, d); }));
 api.post('/doc/:id/payments', wrap((req, res) => {
   const cur = get('SELECT type FROM docs WHERE id=?', id(req));
   if (!cur) throw new HttpError(404, 'Document not found');
-  can(docModule(cur.type), true)(req, res, (e) => { if (e) throw e; });
+  gateType(cur.type); can(docModule(cur.type), true)(req, res, (e) => { if (e) throw e; });
   const d = acc.addPayment(id(req), req.body, req.user);
   audit(req, 'payment', d.type, d.id, `${d.number}: ${req.body.amount}`); ok(res, d);
 }));
@@ -319,7 +358,9 @@ api.post('/transfers', can('banking', true), wrap((req, res) => {
 }));
 
 /* ----------------------------- projetos e tempo --------------------------- */
-api.get('/projects', can('projects'), wrap((_req, res) => ok(res, rep.projectProfitability())));
+api.use('/projects', requireFeature('time_tracking'));
+api.use('/time', requireFeature('time_tracking'));
+api.get('/projects', can('projects'), wrap((_req, res) => ok(res, rep.projectProfitability().map((p) => (hasFeature('project_profit') ? p : { ...p, invoiced: 0, costs: 0, profit: 0, profitHidden: true })))));
 const projFields = (b) => { need(b.name, 'Enter the name'); return [b.name.trim(), b.contact_id || null, cents(b.hourly_rate || 0), cents(b.budget || 0), ['active', 'completed', 'archived'].includes(b.status) ? b.status : 'active', b.notes || '']; };
 api.post('/projects', can('projects', true), wrap((req, res) => { const nid = insert('INSERT INTO projects(name,contact_id,hourly_rate,budget,status,notes) VALUES(?,?,?,?,?,?)', ...projFields(req.body)); audit(req, 'create', 'project', nid, req.body.name); ok(res, { id: nid }); }));
 api.put('/projects/:id', can('projects', true), wrap((req, res) => { run('UPDATE projects SET name=?,contact_id=?,hourly_rate=?,budget=?,status=?,notes=? WHERE id=?', ...projFields(req.body), id(req)); ok(res, {}); }));
@@ -349,6 +390,7 @@ api.post('/projects/:id/invoice-time', can('sales', true), wrap((req, res) => {
 }));
 
 /* ------------------------------- recorrências ----------------------------- */
+api.use('/recurring', requireFeature('recurring'));
 api.get('/recurring', can('sales'), wrap((_req, res) => ok(res, all('SELECT r.*, c.name AS contact_name FROM recurring r LEFT JOIN contacts c ON c.id=json_extract(r.template,\'$.contact_id\') ORDER BY r.active DESC, r.next_date').map((r) => ({ ...r, template: JSON.parse(r.template) })))));
 api.post('/recurring', can('sales', true), wrap((req, res) => {
   const b = req.body; need(b.name, 'Enter a name');
@@ -366,6 +408,7 @@ api.post('/recurring/run', can('sales', true), wrap((req, res) => { const c = ac
 
 
 /* ------------------------------ folha de pagamento ------------------------ */
+api.use('/payroll', requireFeature('payroll'));
 const empFields = (b) => {
   need(b.name, 'Enter the name');
   if (!isDate(b.hire_date)) throw bad('Invalid hire date');
@@ -400,9 +443,72 @@ api.post('/payroll/remit', can('payroll', true), wrap((req, res) => { const r = 
 api.get('/payroll/reports/summary', can('payroll'), wrap((req, res) => { const [f, t] = range(req); ok(res, pay.payrollSummary(f, t)); }));
 api.get('/payroll/reports/941', can('payroll'), wrap((req, res) => ok(res, pay.form941(Number(req.query.year) || new Date().getFullYear(), Number(req.query.quarter) || 1))));
 api.get('/payroll/reports/w2', can('payroll'), wrap((req, res) => ok(res, pay.w2Summary(Number(req.query.year) || new Date().getFullYear()))));
-api.get('/reports/1099', can('reports'), wrap((req, res) => ok(res, pay.report1099(Number(req.query.year) || new Date().getFullYear()))));
+api.get('/reports/1099', can('reports'), requireFeature('contractors_1099'), wrap((req, res) => ok(res, pay.report1099(Number(req.query.year) || new Date().getFullYear()))));
+
+/* ------------------- orçamento, classes, papéis, fechamento -------------------- */
+api.get('/budgets', can('accounting'), requireFeature('budgets'), wrap((req, res) => {
+  const year = Number(req.query.year) || new Date().getFullYear();
+  const rows = all("SELECT id, code, name, type FROM accounts WHERE type IN ('income','expense') AND active=1 ORDER BY code").map((a) => {
+    const months = Array(12).fill(0);
+    for (const b of all('SELECT month, amount FROM budgets WHERE account_id=? AND month LIKE ?', a.id, `${year}-%`)) months[Number(b.month.slice(5, 7)) - 1] = b.amount;
+    return { ...a, months };
+  });
+  ok(res, { year, rows });
+}));
+api.put('/budgets', can('accounting', true), requireFeature('budgets'), wrap((req, res) => {
+  const year = Number(req.body.year); if (!(year >= 2000 && year <= 2100)) throw bad('Invalid period');
+  tx(() => {
+    for (const r of req.body.rows || []) {
+      if (!get("SELECT 1 FROM accounts WHERE id=? AND type IN ('income','expense')", r.account_id)) throw bad('Account not found');
+      (r.months || []).slice(0, 12).forEach((v, i) => {
+        const month = `${year}-${String(i + 1).padStart(2, '0')}`, amt = cents(v || 0);
+        if (amt < 0) throw bad('Amounts cannot be negative');
+        if (amt === 0) run('DELETE FROM budgets WHERE account_id=? AND month=?', r.account_id, month);
+        else run('INSERT INTO budgets(account_id,month,amount) VALUES(?,?,?) ON CONFLICT(account_id,month) DO UPDATE SET amount=excluded.amount', r.account_id, month, amt);
+      });
+    }
+  });
+  audit(req, 'update', 'budget', null, String(year)); ok(res, {});
+}));
+api.get('/classes', wrap((_req, res) => ok(res, hasFeature('classes') ? all('SELECT * FROM classes ORDER BY name') : [])));
+api.post('/classes', can('accounting', true), requireFeature('classes'), wrap((req, res) => {
+  need(req.body.name, 'Enter the name');
+  if (get('SELECT 1 FROM classes WHERE name=?', req.body.name.trim())) throw bad('A class with this name already exists');
+  const nid = insert('INSERT INTO classes(name) VALUES(?)', req.body.name.trim()); audit(req, 'create', 'class', nid, req.body.name); ok(res, get('SELECT * FROM classes WHERE id=?', nid));
+}));
+api.put('/classes/:id', can('accounting', true), requireFeature('classes'), wrap((req, res) => {
+  const c = get('SELECT * FROM classes WHERE id=?', id(req)); if (!c) throw new HttpError(404, 'Class not found');
+  run('UPDATE classes SET name=?, active=? WHERE id=?', (req.body.name || c.name).trim(), req.body.active === undefined ? c.active : (req.body.active ? 1 : 0), c.id); ok(res, get('SELECT * FROM classes WHERE id=?', c.id));
+}));
+const roleBody = (b) => {
+  need(b.name, 'Enter the name');
+  const clean = (l) => [...new Set((l || []).filter((m) => MODULES.includes(m) && m !== 'settings'))];
+  return [b.name.trim(), JSON.stringify(clean(b.read)), JSON.stringify(clean(b.write))];
+};
+api.get('/roles', can('users'), requireFeature('custom_roles'), wrap((_req, res) => ok(res, { modules: MODULES.filter((m) => m !== 'settings'), roles: all('SELECT * FROM roles ORDER BY name').map((r) => ({ ...r, read: JSON.parse(r.read), write: JSON.parse(r.write) })) })));
+api.post('/roles', can('users', true), requireFeature('custom_roles'), wrap((req, res) => {
+  const b = roleBody(req.body); if (get('SELECT 1 FROM roles WHERE name=?', b[0])) throw bad('A role with this name already exists');
+  const nid = insert('INSERT INTO roles(name,read,write) VALUES(?,?,?)', ...b); audit(req, 'create', 'role', nid, b[0]); ok(res, { id: nid });
+}));
+api.put('/roles/:id', can('users', true), requireFeature('custom_roles'), wrap((req, res) => {
+  if (!get('SELECT 1 FROM roles WHERE id=?', id(req))) throw new HttpError(404, 'Role not found');
+  run('UPDATE roles SET name=?, read=?, write=? WHERE id=?', ...roleBody(req.body), id(req)); audit(req, 'update', 'role', id(req)); ok(res, {});
+}));
+api.delete('/roles/:id', can('users', true), requireFeature('custom_roles'), wrap((req, res) => {
+  if (get('SELECT 1 FROM users WHERE custom_role_id=?', id(req))) throw bad('Reassign the users of this role first');
+  run('DELETE FROM roles WHERE id=?', id(req)); audit(req, 'delete', 'role', id(req)); ok(res, {});
+}));
+api.put('/lock-date', can('accounting', true), requireFeature('period_lock'), wrap((req, res) => {
+  const d = req.body.date || '';
+  if (d && !isDate(d)) throw bad('Invalid date');
+  setSetting('lock_date', d); audit(req, 'update', 'settings', null, `books closed through ${d || 'none'}`); ok(res, { lockDate: d });
+}));
 
 /* -------------------------------- relatórios ------------------------------ */
+const REPORT_FEATURE = { 'ap-aging': 'reports_full', 'expenses-by-vendor': 'reports_full', tax: 'reports_full', 'trial-balance': 'reports_full', inventory: 'inventory', budget: 'budgets', 'pnl-class': 'classes', '1099': 'contractors_1099' };
+api.use('/reports/:name', (req, res, next) => { const f = REPORT_FEATURE[req.params.name]; return f ? requireFeature(f)(req, res, next) : next(); });
+api.get('/reports/budget', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.budgetVsActual(f, t)); }));
+api.get('/reports/pnl-class', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.plByClass(f, t)); }));
 api.get('/dashboard', can('reports'), wrap((_req, res) => ok(res, rep.dashboard())));
 api.get('/reports/pnl', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.profitAndLoss(f, t)); }));
 api.get('/reports/balance-sheet', can('reports'), wrap((req, res) => ok(res, rep.balanceSheet(req.query.asof || today()))));
@@ -434,7 +540,7 @@ if (fs.existsSync(dist)) {
 }
 
 app.use((err, _req, res, _next) => {
-  if (err instanceof HttpError) return res.status(err.status).json({ error: err.message });
+  if (err instanceof HttpError) return res.status(err.status).json({ error: err.message, ...(err.extra || {}) });
   if (err.type === 'entity.too.large') return res.status(413).json({ error: 'File too large' });
   if (String(err.message).includes('UNIQUE')) return res.status(409).json({ error: 'Duplicate record' });
   console.error(err);

@@ -14,17 +14,17 @@ const TXT = {
     rent: 'Office rent', hosting: 'Hosting & servers', ads: 'Online ads', util: 'Internet & electricity', fees: 'Monthly bank fee', licenses: 'Project licenses', portal: 'Student portal', rec: 'Monthly support —',
     project: 'Scheduling app —', time: ['Requirements', 'Prototype', 'Back end', 'Integrations', 'Testing', 'Review meeting'], rent_manual: 'Rent (entered manually)',
     pay: ['ACH', 'Check', 'Card', 'Wire'], bank: ['ACH PAYMENT CEDAR PROPERTIES', 'MONTHLY SERVICE FEE', 'UBER *TRIP 1288', 'OFFICE DEPOT #0042', 'INTEREST EARNED', 'DEPOSIT UNIDENTIFIED CLIENT'], rules: ['service fee', 'uber', 'office depot'],
-    contractor: 'Logo design', title: 'Software Engineer', title2: 'Designer', title3: 'Office Manager', company: 'Harbor Digital Studio' },
+    contractor: 'Logo design', cls: ['Services', 'Products'], credit_line: 'Service credit', title: 'Software Engineer', title2: 'Designer', title3: 'Office Manager', company: 'Harbor Digital Studio' },
   pt: { capital: 'Aporte inicial de capital', item_site: 'Desenvolvimento de site', item_hour: 'Consultoria (hora)', item_plan: 'Plano de suporte mensal', item_kit: 'Kit Roteador Wi-Fi 6', item_cam: 'Câmera IP Externa',
     rent: 'Aluguel do escritório', hosting: 'Hospedagem e servidores', ads: 'Anúncios online', util: 'Internet e energia', fees: 'Tarifa bancária mensal', licenses: 'Licenças do projeto', portal: 'Portal do aluno', rec: 'Suporte mensal —',
     project: 'App de agendamento —', time: ['Levantamento de requisitos', 'Protótipo', 'Back-end', 'Integrações', 'Testes', 'Reunião de revisão'], rent_manual: 'Aluguel (lançado manualmente)',
     pay: ['ACH', 'Cheque', 'Cartão', 'Transferência'], bank: ['ACH PAYMENT CEDAR PROPERTIES', 'MONTHLY SERVICE FEE', 'UBER *TRIP 1288', 'OFFICE DEPOT #0042', 'INTEREST EARNED', 'DEPOSIT UNIDENTIFIED CLIENT'], rules: ['service fee', 'uber', 'office depot'],
-    contractor: 'Design de logotipo', title: 'Engenheiro de software', title2: 'Designer', title3: 'Gerente de escritório', company: 'Harbor Digital Studio' },
+    contractor: 'Design de logotipo', cls: ['Serviços', 'Produtos'], credit_line: 'Crédito de serviço', title: 'Engenheiro de software', title2: 'Designer', title3: 'Gerente de escritório', company: 'Harbor Digital Studio' },
   es: { capital: 'Aporte inicial de capital', item_site: 'Diseño y desarrollo de sitio web', item_hour: 'Consultoría (hora)', item_plan: 'Plan de soporte mensual', item_kit: 'Kit de router Wi-Fi 6', item_cam: 'Cámara IP exterior',
     rent: 'Alquiler de la oficina', hosting: 'Hosting y servidores', ads: 'Anuncios en línea', util: 'Internet y electricidad', fees: 'Comisión bancaria mensual', licenses: 'Licencias del proyecto', portal: 'Portal del estudiante', rec: 'Soporte mensual —',
     project: 'App de citas —', time: ['Requisitos', 'Prototipo', 'Back end', 'Integraciones', 'Pruebas', 'Reunión de revisión'], rent_manual: 'Alquiler (registrado manualmente)',
     pay: ['ACH', 'Cheque', 'Tarjeta', 'Transferencia'], bank: ['ACH PAYMENT CEDAR PROPERTIES', 'MONTHLY SERVICE FEE', 'UBER *TRIP 1288', 'OFFICE DEPOT #0042', 'INTEREST EARNED', 'DEPOSIT UNIDENTIFIED CLIENT'], rules: ['service fee', 'uber', 'office depot'],
-    contractor: 'Diseño de logotipo', title: 'Ingeniero de software', title2: 'Diseñador', title3: 'Gerente de oficina', company: 'Harbor Digital Studio' },
+    contractor: 'Diseño de logotipo', cls: ['Servicios', 'Productos'], credit_line: 'Crédito por servicio', title: 'Ingeniero de software', title2: 'Diseñador', title3: 'Gerente de oficina', company: 'Harbor Digital Studio' },
 };
 
 /** Carrega uma empresa fictícia (EUA) com ~6 meses de movimento, apenas se estiver vazia. */
@@ -74,15 +74,16 @@ export function loadDemo(lang = getSetting('lang', 'en')) {
   acc.saveExpense({ date: day(3, 12), contact_id: vend.free, account_id: A('6400'), paid_from_id: bankAcc, amount: D(1200), description: x.contractor }, user);
   acc.saveExpense({ date: day(1, 12), contact_id: vend.free, account_id: A('6400'), paid_from_id: bankAcc, amount: D(1100), description: x.contractor }, user);
 
+  const clsServices = insert('INSERT INTO classes(name) VALUES(?)', x.cls[0]), clsProducts = insert('INSERT INTO classes(name) VALUES(?)', x.cls[1]);
   const keys = Object.keys(cust);
   for (let m = 5; m >= 0; m--) {
     for (let i = 0; i < 4; i++) {
       const c = cust[keys[(m + i) % keys.length]];
       const terms = get('SELECT terms_days FROM contacts WHERE id=?', c).terms_days;
       const issue = day(m, 3 + i * 6), due = acc.addDays(issue, terms);
-      const lines = [{ item_id: it.site, description: x.item_site, qty: 1, unit_price: D(3500 + 600 * i), tax_rate: 0 }];
-      if (i % 2 === 0) lines.push({ item_id: it.kit, description: x.item_kit, qty: 1 + (m % 3), unit_price: D(199), tax_rate: 6 });
-      if (i === 3) lines.push({ item_id: it.cam, description: x.item_cam, qty: 2, unit_price: D(149), tax_rate: 6 });
+      const lines = [{ item_id: it.site, description: x.item_site, qty: 1, unit_price: D(3500 + 600 * i), tax_rate: 0, class_id: clsServices }];
+      if (i % 2 === 0) lines.push({ item_id: it.kit, description: x.item_kit, qty: 1 + (m % 3), unit_price: D(199), tax_rate: 6, class_id: clsProducts });
+      if (i === 3) lines.push({ item_id: it.cam, description: x.item_cam, qty: 2, unit_price: D(149), tax_rate: 6, class_id: clsProducts });
       const inv = acc.saveDoc({ type: 'invoice', contact_id: c, issue_date: issue, due_date: due, post: true, lines }, user);
       const payDate = acc.addDays(due, i === 2 ? 6 : -1);
       if (m >= 1 && !(m === 1 && i === 2) && payDate <= t) acc.addPayment(inv.id, { date: payDate, amount: inv.total, account_id: bankAcc, method: x.pay[i % 4] }, user);
@@ -91,6 +92,13 @@ export function loadDemo(lang = getSetting('lang', 'en')) {
   }
   acc.saveDoc({ type: 'estimate', contact_id: cust.e, issue_date: day(0, 1), due_date: acc.addDays(day(0, 1), 30), post: true,
     lines: [{ item_id: it.site, description: x.portal, qty: 1, unit_price: D(9800), tax_rate: 0 }, { item_id: it.consult, description: x.item_hour, qty: 12, unit_price: D(150), tax_rate: 0 }] }, user);
+
+  // nota de crédito parcial, ordem de compra e orçamento anual
+  acc.saveDoc({ type: 'credit', contact_id: cust.a, issue_date: day(0, 2), due_date: day(0, 2), post: true, lines: [{ description: x.credit_line, qty: 1, unit_price: D(300), tax_rate: 0 }] }, user);
+  acc.saveDoc({ type: 'po', contact_id: vend.forn, issue_date: day(0, 1), due_date: acc.addDays(day(0, 1), 14), post: true, lines: [{ item_id: it.kit, description: x.item_kit, qty: 15, unit_price: D(112) }] }, user);
+  const year = t.slice(0, 4);
+  const budget = (code, amount) => { for (let m = 1; m <= 12; m++) run('INSERT INTO budgets(account_id,month,amount) VALUES(?,?,?)', A(code), `${year}-${String(m).padStart(2, '0')}`, D(amount)); };
+  budget('4100', 14000); budget('4000', 2500); budget('6000', 3200); budget('6200', 1100); budget('6300', 700); budget('6100', 0);
 
   const proj = insert('INSERT INTO projects(name,contact_id,hourly_rate,budget) VALUES(?,?,?,?)', `${x.project} Brightside Dental`, cust.a, D(150), D(15000));
   for (let i = 0; i < 6; i++) insert('INSERT INTO time_entries(project_id,user_id,date,hours,description,billable) VALUES(?,?,?,?,?,1)', proj, user?.id ?? null, acc.addDays(t, -i * 2), 3 + (i % 3), x.time[i]);

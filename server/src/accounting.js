@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { all, get, run, insert, tx, getSetting, setSetting } from './db.js';
 
 export class HttpError extends Error {
-  constructor(status, message) { super(message); this.status = status; }
+  constructor(status, message, extra) { super(message); this.status = status; this.extra = extra; }
 }
 const bad = (m) => new HttpError(400, m);
 
@@ -11,10 +11,13 @@ const MEMOS = {
   invoice: { en: 'Invoice', pt: 'Fatura', es: 'Factura' }, bill: { en: 'Bill', pt: 'Conta a pagar', es: 'Cuenta por pagar' },
   payment: { en: 'Payment', pt: 'Pagamento', es: 'Pago' }, expense: { en: 'Expense', pt: 'Despesa', es: 'Gasto' },
   stock: { en: 'Stock adjustment', pt: 'Ajuste de estoque', es: 'Ajuste de inventario' }, transfer: { en: 'Transfer', pt: 'Transferência', es: 'Transferencia' },
+  credit: { en: 'Credit memo', pt: 'Nota de crédito', es: 'Nota de crédito' }, refund: { en: 'Refund', pt: 'Reembolso', es: 'Reembolso' },
   payroll: { en: 'Payroll', pt: 'Folha de pagamento', es: 'Nómina' }, payroll_tax: { en: 'Payroll tax payment', pt: 'Pagamento de impostos da folha', es: 'Pago de impuestos de nómina' },
 };
 /** Texto de memorando gerado pelo sistema, no idioma da empresa. */
 export const memoText = (key) => { const l = getSetting('lang', 'en'); return MEMOS[key][l] || MEMOS[key].en; };
+const QUOTES = ['estimate', 'po']; // documentos que não geram lançamento contábil
+export const isQuote = (type) => QUOTES.includes(type);
 export const today = () => new Date().toISOString().slice(0, 10);
 export const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 export const addMonths = (iso, n) => {
@@ -40,9 +43,16 @@ export const getAccount = (id) => {
 
 /* ------------------------------ lançamentos ------------------------------ */
 
+/** Fechamento de período: nada pode ser lançado ou desfeito em data anterior ou igual à data de bloqueio. */
+export function assertOpenPeriod(date) {
+  const lock = getSetting('lock_date', '');
+  if (lock && date <= lock) throw bad(`Books are closed through ${lock}`);
+}
+
 export function postEntry({ date, memo = '', source_type = 'manual', source_id = null, lines, user_id = null }) {
   if (!isDate(date)) throw bad('Invalid date');
-  const ls = lines.map((l) => ({ account_id: l.account_id, debit: cents(l.debit || 0), credit: cents(l.credit || 0), contact_id: l.contact_id || null }))
+  assertOpenPeriod(date);
+  const ls = lines.map((l) => ({ account_id: l.account_id, debit: cents(l.debit || 0), credit: cents(l.credit || 0), contact_id: l.contact_id || null, class_id: l.class_id || null }))
     .filter((l) => l.debit !== 0 || l.credit !== 0);
   if (ls.some((l) => l.debit < 0 || l.credit < 0 || (l.debit && l.credit))) throw bad('Invalid journal line');
   const d = ls.reduce((s, l) => s + l.debit, 0), c = ls.reduce((s, l) => s + l.credit, 0);
@@ -51,13 +61,14 @@ export function postEntry({ date, memo = '', source_type = 'manual', source_id =
     const id = insert('INSERT INTO journal_entries(date,memo,source_type,source_id,created_by) VALUES(?,?,?,?,?)', date, memo, source_type, source_id, user_id);
     for (const l of ls) {
       getAccount(l.account_id);
-      run('INSERT INTO journal_lines(entry_id,account_id,debit,credit,contact_id) VALUES(?,?,?,?,?)', id, l.account_id, l.debit, l.credit, l.contact_id);
+      run('INSERT INTO journal_lines(entry_id,account_id,debit,credit,contact_id,class_id) VALUES(?,?,?,?,?,?)', id, l.account_id, l.debit, l.credit, l.contact_id, l.class_id);
     }
     return id;
   });
 }
 
 export function removeEntries(source_type, source_id) {
+  for (const e of all('SELECT date FROM journal_entries WHERE source_type=? AND source_id=?', source_type, source_id)) assertOpenPeriod(e.date);
   const locked = get(`SELECT 1 FROM journal_lines jl JOIN journal_entries je ON je.id=jl.entry_id
     WHERE je.source_type=? AND je.source_id=? AND jl.reconciliation_id IS NOT NULL LIMIT 1`, source_type, source_id);
   if (locked) throw bad('This entry has already been reconciled with the bank statement and cannot be changed');
@@ -73,7 +84,7 @@ export function computeLines(type, lines) {
     const qty = Number(l.qty ?? 1), unit = cents(l.unit_price ?? 0);
     if (!Number.isFinite(qty) || qty <= 0) throw bad(`Invalid quantity on line ${i + 1}`);
     const amount = Math.round(qty * unit);
-    const rate = type === 'bill' ? 0 : Number(l.tax_rate || 0);
+    const rate = ['bill', 'po'].includes(type) ? 0 : Number(l.tax_rate || 0);
     if (!(rate >= 0 && rate <= 100)) throw bad('Invalid tax rate');
     const tax_amount = Math.round((amount * rate) / 100);
     subtotal += amount; tax += tax_amount;
@@ -88,12 +99,14 @@ export function loadDoc(id) {
   if (!d) return null;
   d.lines = all('SELECT l.*, i.name AS item_name FROM doc_lines l LEFT JOIN items i ON i.id=l.item_id WHERE doc_id=? ORDER BY position, id', id);
   d.payments = all('SELECT p.*, a.name AS account_name FROM payments p JOIN accounts a ON a.id=p.account_id WHERE doc_id=? ORDER BY date, id', id);
+  d.applications = all(`SELECT ca.*, cd.number AS credit_number, inv.number AS invoice_number, a.name AS account_name FROM credit_applications ca JOIN docs cd ON cd.id=ca.credit_id
+    LEFT JOIN docs inv ON inv.id=ca.invoice_id LEFT JOIN accounts a ON a.id=ca.account_id WHERE ca.credit_id=? OR ca.invoice_id=? ORDER BY ca.date, ca.id`, id, id);
   d.balance = d.total - d.paid;
-  d.overdue = d.type !== 'estimate' && ['sent', 'open', 'partial'].includes(d.status) && d.due_date < today() && d.balance > 0;
+  d.overdue = ['invoice', 'bill'].includes(d.type) && ['sent', 'open', 'partial'].includes(d.status) && d.due_date < today() && d.balance > 0;
   return d;
 }
 
-const isPosted = (d) => d.type !== 'estimate' && !['draft', 'void'].includes(d.status);
+const isPosted = (d) => !isQuote(d.type) && !['draft', 'void'].includes(d.status);
 
 function stockMove(item, qty_delta, unit_cost, source_type, source_id, date) {
   run('INSERT INTO stock_moves(item_id,qty_delta,unit_cost,source_type,source_id,date) VALUES(?,?,?,?,?,?)', item.id, qty_delta, unit_cost, source_type, source_id, date);
@@ -107,11 +120,11 @@ function revertStock(source_type, source_id) {
 }
 
 function postDoc(doc, user_id) {
-  if (doc.type === 'estimate') return;
+  if (isQuote(doc.type)) return;
   const group = new Map();
-  const add = (account_id, debit, credit, contact_id = null) => {
-    const k = `${account_id}:${contact_id}`;
-    const g = group.get(k) || { account_id, debit: 0, credit: 0, contact_id };
+  const add = (account_id, debit, credit, contact_id = null, class_id = null) => {
+    const k = `${account_id}:${contact_id}:${class_id}`;
+    const g = group.get(k) || { account_id, debit: 0, credit: 0, contact_id, class_id };
     g.debit += debit; g.credit += credit; group.set(k, g);
   };
   const salesAcc = () => get('SELECT id FROM accounts WHERE subtype=\'sales\' AND active=1 ORDER BY code LIMIT 1')?.id;
@@ -124,7 +137,7 @@ function postDoc(doc, user_id) {
     for (const l of doc.lines) {
       const item = l.item_id ? get('SELECT * FROM items WHERE id=?', l.item_id) : null;
       const acc = l.account_id || item?.income_account_id || (item?.kind === 'product' ? salesAcc() : svcAcc()) || salesAcc();
-      add(acc, 0, l.amount);
+      add(acc, 0, l.amount, null, l.class_id);
       if (item?.track_inventory) {
         const cogs = Math.round(l.qty * item.cost);
         stockMove(item, -l.qty, item.cost, 'doc', doc.id, doc.issue_date);
@@ -132,6 +145,14 @@ function postDoc(doc, user_id) {
       }
     }
     if (doc.tax) add(sysAccount('tax').id, 0, doc.tax);
+  } else if (doc.type === 'credit') {
+    add(sysAccount('ar').id, 0, doc.total, doc.contact_id);
+    for (const l of doc.lines) {
+      const item = l.item_id ? get('SELECT * FROM items WHERE id=?', l.item_id) : null;
+      const acc = l.account_id || item?.income_account_id || (item?.kind === 'product' ? salesAcc() : svcAcc()) || salesAcc();
+      add(acc, l.amount, 0, null, l.class_id);
+    }
+    if (doc.tax) add(sysAccount('tax').id, doc.tax, 0);
   } else {
     const invAcc = sysAccount('inventory').id;
     for (const l of doc.lines) {
@@ -143,7 +164,7 @@ function postDoc(doc, user_id) {
         run('UPDATE items SET cost=? WHERE id=?', newCost, item.id);
         add(invAcc, l.amount, 0);
       } else {
-        add(l.account_id || miscExp(), l.amount, 0);
+        add(l.account_id || miscExp(), l.amount, 0, null, l.class_id);
       }
     }
     add(sysAccount('ap').id, 0, doc.total, doc.contact_id);
@@ -158,9 +179,10 @@ function unpostDoc(doc) {
 
 export function recomputeStatus(id) {
   const d = get('SELECT * FROM docs WHERE id=?', id);
-  if (!d || d.type === 'estimate' || ['draft', 'void'].includes(d.status)) return;
+  if (!d || isQuote(d.type) || ['draft', 'void'].includes(d.status)) return;
   const base = d.type === 'invoice' ? 'sent' : 'open';
-  const status = d.total > 0 && d.paid >= d.total ? 'paid' : d.paid > 0 ? 'partial' : base;
+  const full = d.type === 'credit' ? 'used' : 'paid';
+  const status = d.total > 0 && d.paid >= d.total ? full : d.paid > 0 ? 'partial' : base;
   run('UPDATE docs SET status=? WHERE id=?', status, id);
 }
 
@@ -176,7 +198,7 @@ function nextNumber(type) {
 
 export function saveDoc(input, user) {
   const type = input.type;
-  if (!['invoice', 'estimate', 'bill'].includes(type)) throw bad('Invalid document type');
+  if (!['invoice', 'estimate', 'bill', 'credit', 'po'].includes(type)) throw bad('Invalid document type');
   if (!get('SELECT 1 FROM contacts WHERE id=?', input.contact_id)) throw bad('Select a contact');
   if (!isDate(input.issue_date)) throw bad('Invalid issue date');
   const due = input.due_date || input.issue_date;
@@ -198,10 +220,11 @@ export function saveDoc(input, user) {
       }
     }
     const wantPost = type === 'bill' ? input.post !== false : !!input.post;
+    const postedStatus = { invoice: 'sent', estimate: 'sent', po: 'sent', bill: 'open', credit: 'open' }[type];
     let status;
     if (existing && isPosted(existing)) status = existing.status;
     else if (existing && existing.status === 'accepted') status = 'accepted';
-    else status = wantPost ? (type === 'bill' ? 'open' : 'sent') : 'draft';
+    else status = wantPost ? postedStatus : 'draft';
     if (existing && isPosted(existing) && !wantPost && existing.paid > 0) status = existing.status;
 
     const fields = [input.contact_id, input.project_id || null, input.issue_date, due, calc.subtotal, calc.tax, calc.total, input.notes || '', status];
@@ -214,8 +237,8 @@ export function saveDoc(input, user) {
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, ...fields, type, nextNumber(type), crypto.randomBytes(12).toString('hex'), user?.id ?? null, input.recurring_id ?? null);
     }
     for (const l of calc.lines) {
-      run('INSERT INTO doc_lines(doc_id,position,item_id,description,qty,unit_price,tax_rate,account_id,amount,tax_amount,time_entry_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
-        id, l.position, l.item_id || null, l.description || '', l.qty, l.unit_price, l.tax_rate, l.account_id || null, l.amount, l.tax_amount, l.time_entry_id || null);
+      run('INSERT INTO doc_lines(doc_id,position,item_id,description,qty,unit_price,tax_rate,account_id,amount,tax_amount,time_entry_id,class_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+        id, l.position, l.item_id || null, l.description || '', l.qty, l.unit_price, l.tax_rate, l.account_id || null, l.amount, l.tax_amount, l.time_entry_id || null, l.class_id || null);
       if (l.time_entry_id) run('UPDATE time_entries SET invoice_id=? WHERE id=?', id, l.time_entry_id);
     }
     const doc = loadDoc(id);
@@ -229,16 +252,17 @@ export function setDocStatus(id, action, user) {
     const d = loadDoc(id);
     if (!d) throw new HttpError(404, 'Document not found');
     if (action === 'post') {
-      if (d.type === 'estimate' || d.status !== 'draft') throw bad('Only drafts can be issued');
-      run('UPDATE docs SET status=? WHERE id=?', d.type === 'bill' ? 'open' : 'sent', id);
+      if (isQuote(d.type) || d.status !== 'draft') throw bad('Only drafts can be issued');
+      run('UPDATE docs SET status=? WHERE id=?', ['bill', 'credit'].includes(d.type) ? 'open' : 'sent', id);
       postDoc(loadDoc(id), user?.id); recomputeStatus(id);
     } else if (action === 'void') {
       if (d.status === 'void') throw bad('Already voided');
       if (d.payments.length) throw bad('Remove the payments before voiding');
+      if (get('SELECT 1 FROM credit_applications WHERE credit_id=? OR invoice_id=?', id, id)) throw bad('Remove the credit applications before voiding');
       if (isPosted(d)) unpostDoc(d);
       run('UPDATE time_entries SET invoice_id=NULL WHERE invoice_id=?', id);
       run('UPDATE docs SET status=\'void\' WHERE id=?', id);
-    } else if (['accept', 'decline', 'send'].includes(action) && d.type === 'estimate') {
+    } else if (['accept', 'decline', 'send'].includes(action) && isQuote(d.type)) {
       run('UPDATE docs SET status=? WHERE id=?', { accept: 'accepted', decline: 'declined', send: 'sent' }[action], id);
     } else throw bad('Invalid action');
     return loadDoc(id);
@@ -269,12 +293,87 @@ export function convertEstimate(id, user) {
   });
 }
 
+export function convertPO(id, user) {
+  return tx(() => {
+    const p = loadDoc(id);
+    if (!p || p.type !== 'po') throw new HttpError(404, 'Purchase order not found');
+    if (p.converted_to) throw bad('Purchase order already converted');
+    if (['declined', 'void'].includes(p.status)) throw bad('A declined or voided purchase order cannot be converted');
+    const terms = get('SELECT terms_days FROM contacts WHERE id=?', p.contact_id)?.terms_days ?? 15;
+    const bill = saveDoc({ type: 'bill', contact_id: p.contact_id, project_id: p.project_id, issue_date: today(), due_date: addDays(today(), terms), notes: p.notes, lines: p.lines, post: false }, user);
+    run("UPDATE docs SET converted_to=?, status='billed' WHERE id=?", bill.id, id);
+    return bill;
+  });
+}
+
+/* ------------------------ notas de crédito e reembolsos ------------------- */
+
+export function applyCredit(credit_id, { invoice_id, amount, date }) {
+  return tx(() => {
+    const c = loadDoc(credit_id), inv = loadDoc(invoice_id);
+    if (!c || c.type !== 'credit' || !isPosted(c)) throw bad('Issue the credit memo first');
+    if (!inv || inv.type !== 'invoice' || !isPosted(inv)) throw bad('Choose an issued invoice');
+    if (c.contact_id !== inv.contact_id) throw bad('The credit and the invoice belong to different customers');
+    const amt = cents(amount);
+    if (amt <= 0) throw bad('Amount must be positive');
+    if (amt > c.balance) throw bad('Amount is larger than the credit balance');
+    if (amt > inv.balance) throw bad('Amount is larger than the open balance');
+    if (!isDate(date)) throw bad('Invalid date');
+    insert('INSERT INTO credit_applications(credit_id,invoice_id,amount,date) VALUES(?,?,?,?)', credit_id, invoice_id, amt, date);
+    run('UPDATE docs SET paid = paid + ? WHERE id IN (?,?)', amt, credit_id, invoice_id);
+    recomputeStatus(credit_id); recomputeStatus(invoice_id);
+    return loadDoc(credit_id);
+  });
+}
+
+export function refundCredit(credit_id, { amount, account_id, date }, user) {
+  return tx(() => {
+    const c = loadDoc(credit_id);
+    if (!c || c.type !== 'credit' || !isPosted(c)) throw bad('Issue the credit memo first');
+    const amt = cents(amount);
+    if (amt <= 0) throw bad('Amount must be positive');
+    if (amt > c.balance) throw bad('Amount is larger than the credit balance');
+    if (!isDate(date)) throw bad('Invalid date');
+    const acc = getAccount(account_id);
+    if (acc.type !== 'asset' || acc.subtype !== 'bank') throw bad('Invalid payment account');
+    const aid = insert('INSERT INTO credit_applications(credit_id,invoice_id,amount,date,account_id) VALUES(?,NULL,?,?,?)', credit_id, amt, date, account_id);
+    postEntry({ date, memo: `${memoText('refund')} ${c.number}`, source_type: 'refund', source_id: aid, user_id: user?.id,
+      lines: [{ account_id: sysAccount('ar').id, debit: amt, contact_id: c.contact_id }, { account_id, credit: amt }] });
+    run('UPDATE docs SET paid = paid + ? WHERE id=?', amt, credit_id);
+    recomputeStatus(credit_id);
+    return loadDoc(credit_id);
+  });
+}
+
+export function removeCreditApplication(app_id) {
+  return tx(() => {
+    const a = get('SELECT * FROM credit_applications WHERE id=?', app_id);
+    if (!a) throw new HttpError(404, 'Application not found');
+    if (!a.invoice_id) removeEntries('refund', app_id);
+    run('DELETE FROM credit_applications WHERE id=?', app_id);
+    run('UPDATE docs SET paid = paid - ? WHERE id=?', a.amount, a.credit_id);
+    if (a.invoice_id) run('UPDATE docs SET paid = paid - ? WHERE id=?', a.amount, a.invoice_id);
+    recomputeStatus(a.credit_id); if (a.invoice_id) recomputeStatus(a.invoice_id);
+    return loadDoc(a.credit_id);
+  });
+}
+
+/** Cria uma fatura para vários clientes de uma vez, a partir das mesmas linhas. */
+export function batchInvoices({ contact_ids, issue_date, terms_days, lines, notes = '', post }, user) {
+  if (!Array.isArray(contact_ids) || !contact_ids.length) throw bad('Select at least one customer');
+  if (contact_ids.length > 200) throw bad('A batch can have at most 200 customers');
+  return tx(() => contact_ids.map((cid) => {
+    const terms = terms_days ?? get('SELECT terms_days FROM contacts WHERE id=?', cid)?.terms_days ?? 15;
+    return saveDoc({ type: 'invoice', contact_id: cid, issue_date, due_date: addDays(issue_date, Number(terms)), notes, lines, post: !!post }, user).id;
+  }));
+}
+
 /* -------------------------------- pagamentos ------------------------------ */
 
 export function addPayment(doc_id, { date, amount, account_id, method = '', ref = '' }, user) {
   return tx(() => {
     const d = loadDoc(doc_id);
-    if (!d || !isPosted(d)) throw bad('This document cannot take payments (issue it first)');
+    if (!d || !isPosted(d) || !['invoice', 'bill'].includes(d.type)) throw bad('This document cannot take payments (issue it first)');
     const amt = cents(amount);
     if (!isDate(date)) throw bad('Invalid date');
     if (amt <= 0) throw bad('Amount must be positive');
@@ -322,12 +421,14 @@ export function saveExpense(input, user) {
       removeEntries('expense', id);
       run('UPDATE expenses SET date=?,contact_id=?,account_id=?,paid_from_id=?,amount=?,description=?,ref=?,project_id=?,receipt=COALESCE(?,receipt) WHERE id=?',
         input.date, input.contact_id || null, input.account_id, input.paid_from_id, amount, input.description || '', input.ref || '', input.project_id || null, input.receipt ?? null, id);
+      run('UPDATE expenses SET class_id=? WHERE id=?', input.class_id || null, id);
     } else {
       id = insert('INSERT INTO expenses(date,contact_id,account_id,paid_from_id,amount,description,ref,project_id,receipt,created_by) VALUES(?,?,?,?,?,?,?,?,?,?)',
         input.date, input.contact_id || null, input.account_id, input.paid_from_id, amount, input.description || '', input.ref || '', input.project_id || null, input.receipt || null, user?.id ?? null);
+      run('UPDATE expenses SET class_id=? WHERE id=?', input.class_id || null, id);
     }
     postEntry({ date: input.date, memo: input.description || memoText('expense'), source_type: 'expense', source_id: id, user_id: user?.id,
-      lines: [{ account_id: input.account_id, debit: amount, contact_id: input.contact_id || null }, { account_id: input.paid_from_id, credit: amount }] });
+      lines: [{ account_id: input.account_id, debit: amount, contact_id: input.contact_id || null, class_id: input.class_id || null }, { account_id: input.paid_from_id, credit: amount }] });
     return get('SELECT * FROM expenses WHERE id=?', id);
   });
 }

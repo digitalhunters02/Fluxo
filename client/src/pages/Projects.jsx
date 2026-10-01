@@ -62,8 +62,8 @@ export default function Projects() {
           {data.projects.map((p) => (
             <tr key={p.id} className="hover:bg-slate-50"><td className="td font-medium">{p.name} {p.status !== 'active' && <Badge status="void">{p.status === 'completed' ? t('Completed') : t('Archived')}</Badge>}
               {p.budget > 0 && <div className="mt-1 h-1 w-32 rounded bg-slate-100"><div className={`h-1 rounded ${p.invoiced > p.budget ? 'bg-rose-500' : 'bg-brand-500'}`} style={{ width: `${Math.min(100, (p.invoiced / p.budget) * 100)}%` }} /></div>}</td>
-              <td className="td">{p.contact_name}</td><td className="td num text-right">{number(p.hours, 1)}</td><td className="td num text-right">{money(p.unbilled)}</td><td className="td num text-right">{money(p.invoiced)}</td><td className="td num text-right">{money(p.costs)}</td>
-              <td className={`td num text-right font-medium ${p.profit < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{money(p.profit)}</td>
+              <td className="td">{p.contact_name}</td><td className="td num text-right">{number(p.hours, 1)}</td><td className="td num text-right">{money(p.unbilled)}</td>{p.profitHidden ? <td className="td text-right text-xs text-slate-400" colSpan={3} title={t('Project profitability is available from the Plus plan.')}>🔒 {t('Plus plan')}</td> : <><td className="td num text-right">{money(p.invoiced)}</td><td className="td num text-right">{money(p.costs)}</td>
+              <td className={`td num text-right font-medium ${p.profit < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{money(p.profit)}</td></>}
               <td className="td whitespace-nowrap text-right">{w && <>{p.unbilled > 0 && can('sales', true) && <button className="text-xs text-brand-700 hover:underline" onClick={() => run(async () => { const d = await api.post(`/projects/${p.id}/invoice-time`); nav(`/document/${d.id}`); }, t('Invoice created from the hours'))}>{t('Invoice hours')}</button>}
                 <button className="ml-3 text-xs text-brand-700 hover:underline" onClick={() => setEditP(p)}>{t('Edit')}</button></>}</td></tr>
           ))}

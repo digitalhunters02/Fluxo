@@ -19,6 +19,7 @@ import Reports from './pages/Reports.jsx';
 import Settings from './pages/Settings.jsx';
 import Payroll from './pages/Payroll.jsx';
 import PublicDoc from './pages/PublicDoc.jsx';
+import { Gate, Lock } from './components/plan.jsx';
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
@@ -34,7 +35,7 @@ function LangSwitch({ dark = false }) {
 
 function AuthScreen({ status, onAuth }) {
   const [run, busy] = useAction();
-  const [f, setF] = useState({ company_name: '', name: '', email: '', password: '', demo: true, currency: 'USD' });
+  const [f, setF] = useState({ company_name: '', name: '', email: '', password: '', demo: true, currency: 'USD', plan: 'advanced' });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   const submit = async (e) => {
     e.preventDefault();
@@ -51,7 +52,7 @@ function AuthScreen({ status, onAuth }) {
         <div className="mb-4 flex justify-end"><LangSwitch /></div>
         <h1 className="mb-4 text-base font-semibold">{status.needsSetup ? t('Create your owner account') : t('Sign in to {0}', [status.company])}</h1>
         <div className="space-y-3">
-          {status.needsSetup && <><Field label={t('Company name')}><Input value={f.company_name} onChange={set('company_name')} placeholder={t('My Company LLC')} /></Field><Field label={t('Currency')}><Select value={f.currency} onChange={set('currency')}>{['USD', 'EUR', 'GBP', 'CAD', 'MXN'].map((c) => <option key={c}>{c}</option>)}</Select></Field><Field label={t('Your name')}><Input required value={f.name} onChange={set('name')} /></Field></>}
+          {status.needsSetup && <><Field label={t('Company name')}><Input value={f.company_name} onChange={set('company_name')} placeholder={t('My Company LLC')} /></Field><Field label={t('Currency')}><Select value={f.currency} onChange={set('currency')}>{['USD', 'EUR', 'GBP', 'CAD', 'MXN'].map((c) => <option key={c}>{c}</option>)}</Select></Field><Field label={t('Plan')} hint={t('You can change it later in Settings')}><Select value={f.plan} onChange={set('plan')}><option value="starter">Starter — $29</option><option value="essentials">Essentials — $65</option><option value="plus">Plus — $109</option><option value="advanced">Advanced — $269</option></Select></Field><Field label={t('Your name')}><Input required value={f.name} onChange={set('name')} /></Field></>}
           <Field label={t('Email')}><Input type="email" required autoComplete="username" value={f.email} onChange={set('email')} /></Field>
           <Field label={t('Password')} hint={status.needsSetup ? t('At least 8 characters') : ''}><Input type="password" required minLength={status.needsSetup ? 8 : 1} autoComplete={status.needsSetup ? 'new-password' : 'current-password'} value={f.password} onChange={set('password')} /></Field>
           {status.needsSetup && <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={f.demo} onChange={set('demo')} />{' '}{t('Load sample data (6 months of activity)')}</label>}
@@ -64,14 +65,15 @@ function AuthScreen({ status, onAuth }) {
 
 const NAV = [
   { to: '/', label: t('Dashboard'), icon: '◧', read: 'reports', end: true },
-  { group: t('Sales'), items: [['/invoices', t('Invoices'), 'sales'], ['/estimates', t('Estimates'), 'sales'], ['/recurring', t('Recurring'), 'sales'], ['/customers', t('Customers'), 'sales']] },
-  { group: t('Purchases'), items: [['/bills', t('Bills'), 'purchases'], ['/expenses', t('Expenses'), 'purchases'], ['/vendors', t('Vendors'), 'sales']] },
+  { group: t('Sales'), items: [['/invoices', t('Invoices'), 'sales'], ['/estimates', t('Estimates'), 'sales'], ['/credit-memos', t('Credit memos'), 'sales'], ['/recurring', t('Recurring'), 'sales', 'recurring'], ['/customers', t('Customers'), 'sales']] },
+  { group: t('Purchases'), items: [['/bills', t('Bills'), 'purchases', 'bills'], ['/purchase-orders', t('Purchase orders'), 'purchases', 'purchase_orders'], ['/expenses', t('Expenses'), 'purchases'], ['/vendors', t('Vendors'), 'sales']] },
   { group: t('Banking'), items: [['/banking', t('Transactions & reconciliation'), 'banking']] },
-  { group: t('Management'), items: [['/products', t('Products & inventory'), 'inventory'], ['/projects', t('Projects & time'), 'projects'], ['/payroll', t('Payroll'), 'payroll'], ['/reports', t('Reports'), 'reports'], ['/accounting', t('Accounting'), 'accounting']] },
+  { group: t('Management'), items: [['/products', t('Products & inventory'), 'inventory'], ['/projects', t('Projects & time'), 'projects', 'time_tracking'], ['/payroll', t('Payroll'), 'payroll', 'payroll'], ['/reports', t('Reports'), 'reports'], ['/accounting', t('Accounting'), 'accounting']] },
   { to: '/settings', label: t('Settings'), icon: '⚙', read: 'settings' },
 ];
 
 function Shell({ user, settings, logout }) {
+  const { has } = useAuth();
   const [open, setOpen] = useState(false);
   const loc = useLocation();
   useEffect(() => setOpen(false), [loc.pathname]);
@@ -90,7 +92,7 @@ function Shell({ user, settings, logout }) {
           {NAV.map((n, i) => n.group ? (
             <div key={i}>
               {n.items.some(([, , m]) => can(m)) && <div className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-indigo-300">{n.group}</div>}
-              {n.items.filter(([, , m]) => can(m)).map(([to, label]) => <NavLink key={to} to={to} className={link}>{label}</NavLink>)}
+              {n.items.filter(([, , m]) => can(m)).map(([to, label, , feat]) => <NavLink key={to} to={to} className={link}>{label}{feat && !has(feat) && <Lock />}</NavLink>)}
             </div>
           ) : can(n.read) && <NavLink key={n.to} to={n.to} end={n.end} className={link}>{n.label}</NavLink>)}
         </nav>
@@ -105,21 +107,23 @@ function Shell({ user, settings, logout }) {
           <Route path="/" element={can('reports') ? <Dashboard /> : <Navigate to={home} replace />} />
           <Route path="/invoices" element={<Docs type="invoice" />} />
           <Route path="/estimates" element={<Docs type="estimate" />} />
-          <Route path="/bills" element={<Docs type="bill" />} />
+          <Route path="/credit-memos" element={<Docs type="credit" />} />
+          <Route path="/bills" element={<Gate feature="bills"><Docs type="bill" /></Gate>} />
+          <Route path="/purchase-orders" element={<Gate feature="purchase_orders"><Docs type="po" /></Gate>} />
           <Route path="/document/:type/new" element={<DocEditor />} />
           <Route path="/document/:type/:id/edit" element={<DocEditor />} />
           <Route path="/document/:id" element={<DocView />} />
-          <Route path="/recurring" element={<Recurring />} />
+          <Route path="/recurring" element={<Gate feature="recurring"><Recurring /></Gate>} />
           <Route path="/customers" element={<Contacts kind="customer" />} />
           <Route path="/vendors" element={<Contacts kind="vendor" />} />
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/banking" element={<Banking />} />
           <Route path="/products" element={<Items />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/payroll/:tab?" element={<Payroll />} />
+          <Route path="/projects" element={<Gate feature="time_tracking"><Projects /></Gate>} />
+          <Route path="/payroll/:tab?" element={<Gate feature="payroll"><Payroll /></Gate>} />
           <Route path="/reports/:report?" element={<Reports />} />
           <Route path="/accounting" element={<Accounting />} />
-          <Route path="/settings" element={<Settings reloadSettings={settings.reload} />} />
+          <Route path="/settings/:tab?" element={<Settings reloadSettings={settings.reload} />} />
           <Route path="*" element={<Navigate to={home} replace />} />
         </Routes>
       </main>
@@ -148,7 +152,7 @@ export default function App() {
   useEffect(() => { boot(); }, [boot]);
   useEffect(() => { setUnauthorizedHandler(() => { setToken(null); setUser(null); }); }, []);
 
-  if (loc.pathname.startsWith('/p/')) return <Routes><Route path="/p/:token" element={<PublicDoc />} /></Routes>;
+  if (loc.pathname.startsWith('/p/')) return <ToastProvider><Routes><Route path="/p/:token" element={<PublicDoc />} /></Routes></ToastProvider>;
   if (!status) return <Loading />;
   if (status.error) return <div className="p-10 text-center text-rose-600">{t('Could not connect to the server.')}</div>;
   const logout = async () => { try { await api.post('/logout'); } catch { /* ignore */ } setToken(null); setUser(null); setSettings(null); nav('/'); boot(); };
@@ -156,7 +160,7 @@ export default function App() {
     <ToastProvider>
       {!user || !settings
         ? <AuthScreen status={status} onAuth={boot} />
-        : <AuthCtx.Provider value={{ user, settings, can: (m, w) => user.permissions[w ? 'write' : 'read'].includes(m) }}>
+        : <AuthCtx.Provider value={{ user, settings, planInfo: user.planInfo, has: (f) => !!user.planInfo.features[f], refresh: boot, can: (m, w) => user.permissions[w ? 'write' : 'read'].includes(m) }}>
             <Shell user={user} settings={{ ...settings, reload: async () => { const s = await api.get('/settings'); setFormat(s); setSettings(s); } }} logout={logout} />
           </AuthCtx.Provider>}
     </ToastProvider>

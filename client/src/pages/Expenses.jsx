@@ -7,12 +7,13 @@ import { Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Selec
 import { useAuth } from '../App.jsx';
 
 function ExpenseModal({ exp, lookups, onClose, onSaved }) {
+  const { has } = useAuth();
   const [run, busy] = useAction();
-  const { accounts, contacts, projects } = lookups;
+  const { accounts, contacts, projects, classes } = lookups;
   const bank = accounts.filter((a) => a.subtype === 'bank' || a.subtype === 'credit_card');
   const cats = accounts.filter((a) => a.type === 'expense');
   const [f, setF] = useState({ date: exp?.date || today(), contact_id: exp?.contact_id || '', account_id: exp?.account_id || cats[0]?.id || '', paid_from_id: exp?.paid_from_id || bank[0]?.id || '',
-    amount: exp ? fromCents(exp.amount) : '', description: exp?.description || '', ref: exp?.ref || '', project_id: exp?.project_id || '', receipt: undefined });
+    amount: exp ? fromCents(exp.amount) : '', description: exp?.description || '', ref: exp?.ref || '', project_id: exp?.project_id || '', class_id: exp?.class_id || '', receipt: undefined });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const onFile = (e) => {
     const file = e.target.files[0]; if (!file) return;
@@ -20,7 +21,7 @@ function ExpenseModal({ exp, lookups, onClose, onSaved }) {
     const r = new FileReader(); r.onload = () => setF((x) => ({ ...x, receipt: r.result })); r.readAsDataURL(file);
   };
   const save = async () => {
-    const body = { ...f, amount: toCents(f.amount), account_id: Number(f.account_id), paid_from_id: Number(f.paid_from_id), contact_id: f.contact_id ? Number(f.contact_id) : null, project_id: f.project_id ? Number(f.project_id) : null };
+    const body = { ...f, amount: toCents(f.amount), account_id: Number(f.account_id), paid_from_id: Number(f.paid_from_id), contact_id: f.contact_id ? Number(f.contact_id) : null, project_id: f.project_id ? Number(f.project_id) : null, class_id: f.class_id ? Number(f.class_id) : null };
     const r = await run(() => (exp ? api.put(`/expenses/${exp.id}`, body) : api.post('/expenses', body)), t('Expense saved'));
     if (r) onSaved();
   };
@@ -28,13 +29,14 @@ function ExpenseModal({ exp, lookups, onClose, onSaved }) {
     <Modal title={exp ? t('Edit expense') : t('New expense')} onClose={onClose} footer={<><Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button><Button disabled={busy} onClick={save}>{t('Save')}</Button></>}>
       <div className="grid grid-cols-2 gap-3">
         <Field label={t('Date')}><Input type="date" value={f.date} onChange={set('date')} /></Field>
-        <Field label={t('Amount')}><Input inputMode="decimal" placeholder="0,00" value={f.amount} onChange={set('amount')} /></Field>
+        <Field label={t('Amount')}><Input inputMode="decimal" placeholder="0.00" value={f.amount} onChange={set('amount')} /></Field>
         <Field label={t('Description')} className="col-span-2"><Input value={f.description} onChange={set('description')} /></Field>
         <Field label={t('Category')}><Select value={f.account_id} onChange={set('account_id')}>{cats.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></Field>
         <Field label={t('Paid with')}><Select value={f.paid_from_id} onChange={set('paid_from_id')}>{bank.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></Field>
         <Field label={t('Vendor')}><Select value={f.contact_id} onChange={set('contact_id')}><option value="">—</option>{contacts.filter((c) => c.kind !== 'customer').map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></Field>
         <Field label={t('Project')}><Select value={f.project_id} onChange={set('project_id')}><option value="">—</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field>
-        <Field label={t('Receipt (image or PDF)')} className="col-span-2" hint={exp?.has_receipt ? t('A receipt already exists; uploading another replaces it.') : ''}><input type="file" accept="image/*,application/pdf" onChange={onFile} className="text-sm" /></Field>
+        {has('classes') && classes.length > 0 && <Field label={t('Class')}><Select value={f.class_id} onChange={set('class_id')}><option value="">—</option>{classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></Field>}
+        <Field label={t('Receipt (image or PDF)')} className="col-span-2" hint={exp?.has_receipt ? t('A receipt already exists; uploading another replaces it.') : ''}><input type="file" accept="image/*,application/pdf" capture="environment" onChange={onFile} className="text-sm" aria-label={t('Receipt (image or PDF)')} /></Field>
       </div>
     </Modal>
   );
@@ -43,8 +45,8 @@ function ExpenseModal({ exp, lookups, onClose, onSaved }) {
 export default function Expenses() {
   const { can } = useAuth();
   const { data, loading, error, reload } = useLoad(async () => {
-    const [rows, accounts, contacts, projects] = await Promise.all([api.get('/expenses'), api.get('/accounts/lookup'), api.get('/contacts'), api.get('/projects').catch(() => [])]);
-    return { rows, lookups: { accounts, contacts, projects } };
+    const [rows, accounts, contacts, projects, classes] = await Promise.all([api.get('/expenses'), api.get('/accounts/lookup'), api.get('/contacts'), api.get('/projects').catch(() => []), api.get('/classes').catch(() => [])]);
+    return { rows, lookups: { accounts, contacts, projects, classes: classes.filter((c) => c.active) } };
   });
   const [edit, setEdit] = useState(null);
   const [run] = useAction();

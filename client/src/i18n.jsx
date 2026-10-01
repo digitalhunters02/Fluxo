@@ -54,6 +54,7 @@ const PATTERNS = [
   [/^Invalid date: (.+)$/, 'Invalid date: {0}'],
   [/^The reconciliation does not balance: off by (-?\d+) cents$/, 'The reconciliation does not balance: off by {0} cents'],
   [/^System account "(.+)" not found in the chart of accounts$/, 'System account "{0}" not found in the chart of accounts'],
+  [/^Books are closed through (.+)$/, 'Books are closed through {0}'],
   [/^Deductions exceed gross pay for (.+)$/, 'Deductions exceed gross pay for {0}'],
   [/^(.+) appears twice in this pay run$/, '{0} appears twice in this pay run'],
 ];

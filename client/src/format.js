@@ -31,6 +31,7 @@ export const STATUS = {
   draft: [t('Draft'), 'bg-slate-100 text-slate-600'], sent: [t('Sent'), 'bg-sky-100 text-sky-700'], open: [t('Open'), 'bg-sky-100 text-sky-700'],
   partial: [t('Partial'), 'bg-amber-100 text-amber-700'], paid: [t('Paid§f'), 'bg-emerald-100 text-emerald-700'], void: [t('Voided'), 'bg-slate-200 text-slate-500'],
   accepted: [t('Accepted'), 'bg-emerald-100 text-emerald-700'], declined: [t('Declined'), 'bg-rose-100 text-rose-700'], invoiced: [t('Invoiced§m'), 'bg-violet-100 text-violet-700'],
+  used: [t('Used'), 'bg-violet-100 text-violet-700'], billed: [t('Billed'), 'bg-violet-100 text-violet-700'],
   final: [t('Finalized'), 'bg-emerald-100 text-emerald-700'],
   overdue: [t('Overdue§f'), 'bg-rose-100 text-rose-700'],
 };

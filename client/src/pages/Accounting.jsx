@@ -4,6 +4,8 @@ import { api, qs } from '../api.js';
 import { addDays, date, money, toCents, today } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
+import { Gate, Lock } from '../components/plan.jsx';
+import { fromCents } from '../format.js';
 
 const TYPES = { asset: t('Asset'), liability: t('Liability'), equity: t('Equity'), income: t('Income§type'), expense: t('Expense') };
 
@@ -111,13 +113,74 @@ function Journal() {
   );
 }
 
+function Budgets() {
+  const { can } = useAuth();
+  const [year, setYear] = useState(new Date().getFullYear());
+  const { data, loading, error, reload } = useLoad(() => api.get(`/budgets?year=${year}`), [year]);
+  const [edits, setEdits] = useState({});
+  const [act, busy] = useAction();
+  if (loading) return <Loading />;
+  if (error) return <ErrorBox error={error} retry={reload} />;
+  const val = (r, i) => edits[`${r.id}:${i}`] ?? (r.months[i] ? fromCents(r.months[i]) : '');
+  const set = (r, i, v) => setEdits({ ...edits, [`${r.id}:${i}`]: v });
+  const fillRow = (r) => { const first = val(r, 0); const n = { ...edits }; for (let i = 1; i < 12; i++) n[`${r.id}:${i}`] = first; setEdits(n); };
+  const save = () => act(async () => {
+    const rows = data.rows.map((r) => ({ account_id: r.id, months: r.months.map((_, i) => toCents(val(r, i))) }));
+    await api.put('/budgets', { year, rows }); setEdits({}); reload();
+  }, t('Budget saved'));
+  const months = Array.from({ length: 12 }, (_, i) => new Date(2000, i, 1).toLocaleString(undefined, { month: 'short' }));
+  const writable = can('accounting', true);
+  return (
+    <>
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
+        <Field label={t('Year')}><Input type="number" className="field w-28" value={year} onChange={(e) => { setYear(Number(e.target.value) || year); setEdits({}); }} /></Field>
+        {writable && <Button disabled={busy || !Object.keys(edits).length} onClick={save}>{t('Save budget')}</Button>}
+      </div>
+      <Card pad={false}>
+        <div className="overflow-x-auto"><table className="w-full min-w-[1100px] text-sm">
+          <thead className="border-b bg-slate-50/60"><tr><th className="th">{t('Account')}</th>{months.map((m) => <th key={m} className="th w-20 !text-right">{m}</th>)}<th className="th" /></tr></thead>
+          <tbody className="divide-y divide-slate-100">{['income', 'expense'].map((ty) => [
+            <tr key={ty} className="bg-slate-50"><td className="td font-semibold" colSpan={14}>{ty === 'income' ? t('Income') : t('Expenses')}</td></tr>,
+            ...data.rows.filter((r) => r.type === ty).map((r) => (
+              <tr key={r.id}><td className="td whitespace-nowrap">{r.name}</td>
+                {r.months.map((_, i) => <td key={i} className="px-1 py-1"><input className="field !px-2 !py-1 text-right" inputMode="decimal" disabled={!writable} value={val(r, i)} onChange={(e) => set(r, i, e.target.value)} aria-label={`${r.name} ${months[i]}`} /></td>)}
+                <td className="td">{writable && <button className="text-xs text-brand-700 hover:underline whitespace-nowrap" onClick={() => fillRow(r)}>{t('Fill year')}</button>}</td></tr>))])}</tbody>
+        </table></div>
+      </Card>
+      <p className="mt-2 text-xs text-slate-400">{t('Enter whole-dollar or cent amounts. “Fill year” copies January to every month. Compare with actuals in Reports → Budget vs actual.')}</p>
+    </>
+  );
+}
+
+function Classes() {
+  const { can } = useAuth();
+  const { data, loading, error, reload } = useLoad(() => api.get('/classes'));
+  const [name, setName] = useState('');
+  const [act, busy] = useAction();
+  if (loading) return <Loading />;
+  if (error) return <ErrorBox error={error} retry={reload} />;
+  return (
+    <>
+      <p className="mb-3 max-w-2xl text-sm text-slate-500">{t('Classes tag income and expenses by department, location or product line, so you can see profit for each one in Reports → Profit & loss by class.')}</p>
+      {can('accounting', true) && <div className="mb-3 flex items-end gap-3"><Field label={t('New class')}><Input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && name.trim() && act(async () => { await api.post('/classes', { name }); setName(''); reload(); }, t('Class created'))} /></Field>
+        <Button disabled={busy || !name.trim()} onClick={() => act(async () => { await api.post('/classes', { name }); setName(''); reload(); }, t('Class created'))}>{t('Add')}</Button></div>}
+      <Card pad={false}><Table head={[t('Name'), t('Status'), '']} empty={t('No classes yet.')}>
+        {data.map((c) => <tr key={c.id}><td className="td font-medium">{c.name}</td><td className="td">{c.active ? t('Active') : t('Inactive')}</td>
+          <td className="td text-right">{can('accounting', true) && <button className="text-xs text-brand-700 hover:underline" onClick={() => act(async () => { await api.put(`/classes/${c.id}`, { active: !c.active }); reload(); })}>{c.active ? t('Deactivate') : t('Activate')}</button>}</td></tr>)}
+      </Table></Card>
+    </>
+  );
+}
+
 export default function Accounting() {
+  const { has } = useAuth();
   const [tab, setTab] = useState('chart');
   return (
     <>
       <PageHeader title={t('Accounting')} subtitle={t('Chart of accounts and double-entry journal. Everything you do in the other screens creates entries here automatically.')} />
-      <Tabs tabs={[['chart', t('Chart of accounts')], ['journal', t('General journal')]]} value={tab} onChange={setTab} />
-      {tab === 'chart' ? <Chart /> : <Journal />}
+      <Tabs tabs={[['chart', t('Chart of accounts')], ['journal', t('General journal')], ['budgets', <>{t('Budgets')}{!has('budgets') && <Lock />}</>], ['classes', <>{t('Classes')}{!has('classes') && <Lock />}</>]]} value={tab} onChange={setTab} />
+      {tab === 'chart' && <Chart />}{tab === 'journal' && <Journal />}
+      {tab === 'budgets' && <Gate feature="budgets"><Budgets /></Gate>}{tab === 'classes' && <Gate feature="classes"><Classes /></Gate>}
     </>
   );
 }

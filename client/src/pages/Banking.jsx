@@ -138,7 +138,7 @@ function Reconcile({ account }) {
     <>
       <Card className="mb-4"><div className="grid gap-4 md:grid-cols-4">
         <Field label={t('Statement date')}><Input type="date" value={stmtDate} onChange={(e) => { setStmtDate(e.target.value); setSel(new Set()); }} /></Field>
-        <Field label={t('Statement ending balance')}><Input inputMode="decimal" placeholder="0,00" value={balance} onChange={(e) => setBalance(e.target.value)} /></Field>
+        <Field label={t('Statement ending balance')}><Input inputMode="decimal" placeholder="0.00" value={balance} onChange={(e) => setBalance(e.target.value)} /></Field>
         <div className="text-sm"><div className="text-xs text-slate-500">{t('Already reconciled balance')}</div><div className="num mt-1 text-lg font-semibold">{money(data.beginning)}</div>{data.last && <div className="text-xs text-slate-400">{t('last:')}{' '}{date(data.last.statement_date)}</div>}</div>
         <div className="text-sm"><div className="text-xs text-slate-500">{t('Difference')}</div><div className={`num mt-1 text-lg font-semibold ${diff === 0 && balance ? 'text-emerald-700' : 'text-rose-600'}`}>{balance ? money(diff) : '—'}</div></div>
       </div></Card>
