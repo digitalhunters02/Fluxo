@@ -110,3 +110,6 @@ One instance serves many small companies. Scaling beyond a single machine means 
 - **Team access by tab** (Starter and up): choose which tabs each person can view or change. Named reusable roles stay on Advanced.
 - **Mobile**: top bar with a menu button and the Fluxo logo, kept below the iPhone clock/notch; the menu slides in from the left.
 - **Dark mode**: toggle in the sidebar (or top bar on phones); follows the device until you choose.
+
+## Password recovery
+"Forgot your password?" on the sign-in page emails a one-time link (valid 1 hour, stored only as a hash, invalidates open sessions when used). The reply never reveals whether an account exists, and requests are rate-limited. It needs an email provider (`SMTP_HOST…` or `RESEND_API_KEY`, plus `MAIL_FROM`) **and** `APP_URL`; until both are set the page tells people to ask the account owner, who can set a new password under Settings > Users. In multi-company mode the link carries the company, so it only ever touches that company's database. Use `FLUXO_MAIL_FILE=/tmp/emails.jsonl` to try it locally without sending anything.

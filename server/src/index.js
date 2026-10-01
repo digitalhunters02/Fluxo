@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import express from 'express';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -6,6 +7,7 @@ import { all, get, run, insert, tx, getSetting, setSetting, applyLanguage, LANGS
 import * as tenants from './tenants.js';
 import * as auto from './automations.js';
 import * as admin from './admin.js';
+import * as mailer from './mailer.js';
 import * as acc from './accounting.js';
 import * as bank from './banking.js';
 import * as rep from './reports.js';
@@ -70,8 +72,8 @@ const range = (req) => {
 
 /* ---------------------------------- auth ---------------------------------- */
 api.get('/status', wrap((_req, res) => ok(res, multi()
-  ? { needsSetup: false, multi: true, company: '', billing: billing.stripeConfigured(), requirePayment: false }
-  : { needsSetup: !get('SELECT 1 FROM users LIMIT 1'), company: getSetting('company_name'), billing: billing.stripeConfigured(), requirePayment: process.env.FLUXO_REQUIRE_PAYMENT === '1' })));
+  ? { needsSetup: false, multi: true, company: '', billing: billing.stripeConfigured(), requirePayment: false, recovery: mailer.recoveryReady() }
+  : { needsSetup: !get('SELECT 1 FROM users LIMIT 1'), company: getSetting('company_name'), billing: billing.stripeConfigured(), requirePayment: process.env.FLUXO_REQUIRE_PAYMENT === '1', recovery: mailer.recoveryReady() })));
 
 api.post('/setup', wrap(async (req, res) => {
   if (multi()) rateLimitLogin(`signup|${req.ip}`); // cada chamada cria uma empresa nova: limita por IP
@@ -116,6 +118,53 @@ api.post('/login', wrap((req, res) => {
   if (!slug) throw new HttpError(401, 'Incorrect email or password');
   if (tenants.isSuspended(slug)) throw new HttpError(403, 'This account is suspended. Please contact support.');
   ok(res, tenants.inTenant(slug, attempt));
+}));
+
+/* ------------------------------ recuperação de senha ------------------------------ */
+const sha = (x) => crypto.createHash('sha256').update(x).digest('hex');
+/** Pede o link por e-mail. A resposta é sempre a mesma (não revela se o e-mail existe) e o trabalho roda depois dela, para o tempo de resposta também não revelar. */
+api.post('/forgot', wrap((req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase().slice(0, 200);
+  rateLimitLogin(`forgot|${req.ip}`); rateLimitLogin(`forgot-email|${email}`);
+  ok(res, { sent: true });
+  if (!mailer.recoveryReady() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return;
+  setImmediate(async () => {
+    try {
+      const slug = multi() ? tenants.slugForEmail(email) : '';
+      if (multi() && (!slug || tenants.isSuspended(slug))) return;
+      const job = async () => {
+        const u = get('SELECT * FROM users WHERE email=? AND active=1', email);
+        if (!u) return;
+        const raw = crypto.randomBytes(32).toString('hex');
+        run("DELETE FROM password_resets WHERE user_id=? OR expires_at < datetime('now','-1 day')", u.id);
+        run("INSERT INTO password_resets(token_hash,user_id,expires_at) VALUES(?,?,datetime('now','+1 hour'))", sha(raw), u.id);
+        const link = `${mailer.appUrl()}/reset?token=${encodeURIComponent(slug ? `${slug}.${raw}` : raw)}`;
+        const mail = mailer.resetEmail(getSetting('lang', 'en'), link);
+        await mailer.sendMail({ to: email, ...mail });
+      };
+      await (multi() ? tenants.inTenant(slug, job) : job());
+    } catch (e) { console.error('password reset email failed:', e.message); }
+  });
+}));
+api.post('/reset', wrap((req, res) => {
+  rateLimitLogin(`reset|${req.ip}`);
+  const password = String(req.body?.password || '');
+  if (password.length < 8) throw bad('The password must be at least 8 characters');
+  const [slug, raw] = multi() ? splitRef(req.body?.token || '') : ['', String(req.body?.token || '')];
+  const bump = () => {
+    const r = get("SELECT * FROM password_resets WHERE token_hash=? AND used_at IS NULL AND expires_at > datetime('now')", sha(raw));
+    const u = r && get('SELECT * FROM users WHERE id=? AND active=1', r.user_id);
+    if (!u) throw new HttpError(400, 'This link is invalid or has expired. Ask for a new one.');
+    tx(() => {
+      run('UPDATE users SET password_hash=? WHERE id=?', hashPassword(password), u.id);
+      run("UPDATE password_resets SET used_at=datetime('now') WHERE token_hash=?", r.token_hash);
+      run('DELETE FROM sessions WHERE user_id=?', u.id); // quem estava logado com a senha antiga sai
+    });
+    run('INSERT INTO audit_log(user_id,user_name,action,entity,entity_id,detail) VALUES(?,?,?,?,?,?)', u.id, u.name, 'reset', 'user', u.id, 'password reset by email link');
+    clearAttempts(`${u.email}|${req.ip}`);
+  };
+  if (multi()) { if (!tenants.tenantExists(slug) || tenants.isSuspended(slug)) throw new HttpError(400, 'This link is invalid or has expired. Ask for a new one.'); tenants.inTenant(slug, bump); } else bump();
+  ok(res, { ok: true });
 }));
 
 // painel do administrador da plataforma (só no modo multi-empresa e com FLUXO_ADMIN_EMAIL/PASSWORD definidos)

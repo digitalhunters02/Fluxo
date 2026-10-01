@@ -20,6 +20,7 @@ import Reports from './pages/Reports.jsx';
 import Settings from './pages/Settings.jsx';
 import Payroll from './pages/Payroll.jsx';
 import Admin from './pages/Admin.jsx';
+import { Forgot, Reset } from './pages/Recover.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import Reminders, { useReminderCount } from './pages/Reminders.jsx';
 import PublicDoc from './pages/PublicDoc.jsx';
@@ -88,6 +89,7 @@ function AuthScreen({ status, onAuth }) {
           {status.needsSetup && <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={f.demo} onChange={set('demo')} />{' '}{t('Load sample data (6 months of activity)')}</label>}
         </div>
         <Button className="mt-5 w-full" disabled={busy}>{busy ? t('Please wait…') : status.needsSetup ? t('Get started') : t('Sign in')}</Button>
+        {!status.needsSetup && <a href="/forgot" className="mt-3 block text-center text-sm text-brand-700 hover:underline">{t('Forgot your password?')}</a>}
       </form>
     </div>
   );
@@ -211,6 +213,8 @@ export default function App() {
   useEffect(() => { boot(); }, [boot]);
   useEffect(() => { setUnauthorizedHandler(() => { setToken(null); setUser(null); }); }, []);
 
+  if (loc.pathname === '/forgot') return <ToastProvider><Forgot /></ToastProvider>;
+  if (loc.pathname === '/reset') return <ToastProvider><Reset /></ToastProvider>;
   if (loc.pathname === '/admin') return <ToastProvider><Admin /></ToastProvider>;
   if (loc.pathname === '/pricing') return <Pricing />;
   if (loc.pathname === '/welcome') return <Welcome />;

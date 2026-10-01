@@ -129,6 +129,23 @@ test('painel do administrador: login, visão geral e suspensão de empresa', asy
   assert.equal(r.status, 200); assert.notEqual(r.body.token.split('.')[0], 'admin');
 });
 
+test('recuperação de senha no modo multi-empresa: o link leva a empresa e só mexe nela', async () => {
+  const mailer = await import('../src/mailer.js');
+  const sent = []; mailer.setTransport(async (m) => { sent.push(m); }); process.env.APP_URL = 'https://app.fluxo.test';
+  const wait = () => new Promise((r) => setTimeout(r, 80));
+  await call('/forgot', 'POST', { email: 'b@beta.com' }); await wait();
+  assert.equal(sent.length, 1);
+  const token = decodeURIComponent(/token=([^\s]+)/.exec(sent[0].text)[1]);
+  assert.match(token, /^beta-inc\./);
+  assert.equal((await call('/reset', 'POST', { token: token.replace('beta-inc', 'alfa-ltda'), password: 'nova-senha-123' })).status, 400);   // empresa trocada: não vale
+  assert.equal((await call('/reset', 'POST', { token, password: 'nova-senha-123' })).status, 200);
+  assert.equal((await call('/login', 'POST', { email: 'b@beta.com', password: 'nova-senha-123' })).status, 200);
+  assert.equal((await call('/login', 'POST', { email: 'a@alfa.com', password: 'senha1234' })).status, 200);                                 // a outra empresa não mudou
+  await call('/forgot', 'POST', { email: 'ninguem@nada.com' }); await wait(); assert.equal(sent.length, 1);
+  await call('/admin/login', 'POST', { email: 'root@fluxo.com', password: 'uma-senha-bem-longa' }).then(async (l) => { await call('/admin/tenants/gama-sa/suspend', 'POST', {}, l.body.token); });
+  await call('/forgot', 'POST', { email: 'dona@gama.com' }); await wait(); assert.equal(sent.length, 1);                                     // empresa suspensa não recebe
+});
+
 test('tarefas em segundo plano percorrem cada empresa', async () => {
   const seen = [];
   await tenants.eachTenant(() => { seen.push(tenants.currentSlug()); });

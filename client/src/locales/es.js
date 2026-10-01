@@ -1286,5 +1286,19 @@ export default {
  "Invalid request": "Solicitud no válida",
  "This record is in use and cannot be deleted. Deactivate it instead.": "Este registro está en uso y no se puede eliminar. Desactívelo.",
  "The receipt must be an image or a PDF": "El comprobante debe ser una imagen o un PDF",
- "This receipt cannot be shown.": "Este comprobante no se puede mostrar."
+ "This receipt cannot be shown.": "Este comprobante no se puede mostrar.",
+ "Forgot your password?": "¿Olvidó su contraseña?",
+ "If that email has an account, we sent a link to choose a new password. It works for 1 hour.": "Si ese correo tiene una cuenta, enviamos un enlace para elegir una contraseña nueva. Vale por 1 hora.",
+ "Nothing arrived? Check your spam folder, or ask the account owner to reset it for you in Settings → Users.": "¿No llegó nada? Revise el spam o pida al propietario de la cuenta que la restablezca en Configuración → Usuarios.",
+ "Back to sign in": "Volver al inicio de sesión",
+ "Email password reset is not set up on this server.": "El restablecimiento de contraseña por correo no está configurado en este servidor.",
+ "Ask the account owner to set a new password for you in Settings → Users. If you are the owner, ask the server administrator.": "Pida al propietario de la cuenta que defina una contraseña nueva en Configuración → Usuarios. Si usted es el propietario, hable con el administrador del servidor.",
+ "Enter the email you sign in with and we will send you a link to choose a new password.": "Ingrese el correo con el que inicia sesión y le enviaremos un enlace para elegir una contraseña nueva.",
+ "Send the link": "Enviar el enlace",
+ "Choose a new password": "Elija una contraseña nueva",
+ "Your password was changed. Sign in with the new one.": "Su contraseña fue cambiada. Inicie sesión con la nueva.",
+ "Ask for a new link": "Pedir un enlace nuevo",
+ "Repeat the new password": "Repita la contraseña nueva",
+ "The passwords do not match": "Las contraseñas no coinciden",
+ "This link is invalid or has expired. Ask for a new one.": "Este enlace no es válido o venció. Pida uno nuevo."
 };

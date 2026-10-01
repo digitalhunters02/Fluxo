@@ -1286,5 +1286,19 @@ export default {
  "Invalid request": "Requisição inválida",
  "This record is in use and cannot be deleted. Deactivate it instead.": "Este registro está em uso e não pode ser excluído. Desative-o.",
  "The receipt must be an image or a PDF": "O comprovante deve ser uma imagem ou um PDF",
- "This receipt cannot be shown.": "Este comprovante não pode ser exibido."
+ "This receipt cannot be shown.": "Este comprovante não pode ser exibido.",
+ "Forgot your password?": "Esqueceu a senha?",
+ "If that email has an account, we sent a link to choose a new password. It works for 1 hour.": "Se esse e-mail tiver uma conta, enviamos um link para escolher uma nova senha. Ele vale por 1 hora.",
+ "Nothing arrived? Check your spam folder, or ask the account owner to reset it for you in Settings → Users.": "Nada chegou? Veja a caixa de spam ou peça ao proprietário da conta para redefinir em Configurações → Usuários.",
+ "Back to sign in": "Voltar ao login",
+ "Email password reset is not set up on this server.": "A redefinição de senha por e-mail não está configurada neste servidor.",
+ "Ask the account owner to set a new password for you in Settings → Users. If you are the owner, ask the server administrator.": "Peça ao proprietário da conta para definir uma nova senha em Configurações → Usuários. Se você é o proprietário, fale com o administrador do servidor.",
+ "Enter the email you sign in with and we will send you a link to choose a new password.": "Informe o e-mail com que você entra e enviaremos um link para escolher uma nova senha.",
+ "Send the link": "Enviar o link",
+ "Choose a new password": "Escolha uma nova senha",
+ "Your password was changed. Sign in with the new one.": "Sua senha foi alterada. Entre com a nova.",
+ "Ask for a new link": "Pedir um novo link",
+ "Repeat the new password": "Repita a nova senha",
+ "The passwords do not match": "As senhas não são iguais",
+ "This link is invalid or has expired. Ask for a new one.": "Este link é inválido ou venceu. Peça um novo."
 };
