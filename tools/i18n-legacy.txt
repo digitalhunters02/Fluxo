@@ -1,0 +1,539 @@
+Finanças e contabilidade sem complicação || Simple finance and accounting || Finanzas y contabilidad sin complicaciones
+Crie sua conta de proprietário || Create your owner account || Cree su cuenta de propietario
+Entrar em {0} || Sign in to {0} || Iniciar sesión en {0}
+Nome da empresa || Company name || Nombre de la empresa
+Minha Empresa Ltda || My Company LLC || Mi Empresa LLC
+Seu nome || Your name || Su nombre
+E-mail || Email || Correo electrónico
+Senha || Password || Contraseña
+Mínimo de 8 caracteres || At least 8 characters || Mínimo 8 caracteres
+Carregar dados de exemplo (6 meses de movimento) || Load sample data (6 months of activity) || Cargar datos de ejemplo (6 meses de movimiento)
+Aguarde… || Please wait… || Espere…
+Começar || Get started || Comenzar
+Entrar || Sign in || Iniciar sesión
+Painel || Dashboard || Panel
+Vendas || Sales || Ventas
+Faturas || Invoices || Facturas
+Orçamentos || Estimates || Presupuestos
+Recorrentes || Recurring || Recurrentes
+Clientes || Customers || Clientes
+Compras || Purchases || Compras
+Contas a pagar || Bills || Cuentas por pagar
+Despesas || Expenses || Gastos
+Fornecedores || Vendors || Proveedores
+Banco || Banking || Bancos
+Transações e conciliação || Transactions & reconciliation || Transacciones y conciliación
+Gestão || Management || Gestión
+Produtos e estoque || Products & inventory || Productos e inventario
+Projetos e horas || Projects & time || Proyectos y horas
+Relatórios || Reports || Informes
+Contabilidade || Accounting || Contabilidad
+Configurações || Settings || Configuración
+Menu || Menu || Menú
+Sair || Sign out || Cerrar sesión
+Não foi possível conectar ao servidor. || Could not connect to the server. || No se pudo conectar con el servidor.
+Erro {0} || Error {0} || Error {0}
+Carregando… || Loading… || Cargando…
+Tentar de novo || Try again || Reintentar
+Nada por aqui ainda. || Nothing here yet. || Aún no hay nada aquí.
+Fechar || Close || Cerrar
+Rascunho || Draft || Borrador
+Enviada || Sent || Enviada
+Em aberto || Open || Abierta
+Parcial || Partial || Parcial
+Paga || Paid§f || Pagada
+Anulada || Voided || Anulada
+Aceito || Accepted || Aceptado
+Recusado || Declined || Rechazado
+Faturado || Invoiced§m || Facturado
+Vencida || Overdue§f || Vencida
+Ativo || Asset || Activo
+Passivo || Liability || Pasivo
+Patrimônio líquido || Equity || Patrimonio neto
+Receita || Income§type || Ingresos
+Despesa || Expense || Gasto
+Conta salva || Account saved || Cuenta guardada
+Editar conta || Edit account || Editar cuenta
+Nova conta || New account || Nueva cuenta
+Cancelar || Cancel || Cancelar
+Salvar || Save || Guardar
+Código || Code || Código
+Tipo || Type || Tipo
+Nome || Name || Nombre
+Função || Function || Función
+Comum || Regular || Común
+Conta bancária / caixa || Bank account / cash || Cuenta bancaria / caja
+Imobilizado || Fixed asset || Activo fijo
+Cartão de crédito || Credit card || Tarjeta de crédito
+Empréstimo || Loan || Préstamo
+Razão — {0} {1} || Ledger — {0} {1} || Mayor — {0} {1}
+De || From || Desde
+Até || To || Hasta
+Data || Date || Fecha
+Histórico || Memo§ledger || Concepto
+Débito || Debit || Débito
+Crédito || Credit || Crédito
+Saldo || Balance || Saldo
+Saldo inicial || Opening balance || Saldo inicial
++ Nova conta || + New account || + Nueva cuenta
+sistema || system || sistema
+Editar || Edit || Editar
+Desativar || Deactivate || Desactivar
+Ativar || Activate || Activar
+Lançamento criado || Entry created || Asiento creado
+Novo lançamento manual || New manual entry || Nuevo asiento manual
+Lançar || Post || Registrar
+Conta || Account || Cuenta
+Selecione… || Select… || Seleccione…
++ Linha || + Line || + Línea
+Débitos || Debits || Débitos
+· Créditos || · Credits || · Créditos
+(dif. {0}) || (diff. {0}) || (dif. {0})
+Documento || Document || Documento
+Pagamento || Payment || Pago
+Manual || Manual || Manual
+Estoque || Inventory || Inventario
++ Lançamento manual || + Manual entry || + Asiento manual
+Sem lançamentos no período. || No entries in this period. || Sin asientos en el período.
+Excluir lançamento? || Delete this entry? || ¿Eliminar este asiento?
+Excluído || Deleted || Eliminado
+Excluir || Delete || Eliminar
+Plano de contas e lançamentos em partidas dobradas. Tudo que você faz nas outras telas gera lançamentos aqui automaticamente. || Chart of accounts and double-entry journal. Everything you do in the other screens creates entries here automatically. || Plan de cuentas y asientos de partida doble. Todo lo que hace en las otras pantallas genera asientos aquí automáticamente.
+Plano de contas || Chart of accounts || Plan de cuentas
+Livro diário || General journal || Libro diario
+Arquivo vazio ou inválido || Empty or invalid file || Archivo vacío o inválido
+— não usar — || — don't use — || — no usar —
+Coluna {0} || Column {0} || Columna {0}
+Importar extrato — {0} || Import statement — {0} || Importar extracto — {0}
+Extrato importado || Statement imported || Extracto importado
+{0} nova(s) transação(ões), {1} duplicada(s) ignorada(s). || {0} new transaction(s), {1} duplicate(s) skipped. || {0} transacción(es) nueva(s), {1} duplicada(s) omitida(s).
+Importar || Import || Importar
+linha(s) || row(s) || fila(s)
+Importar para a conta || Import into account || Importar a la cuenta
+Exporte o extrato do seu banco em CSV. Valores negativos são saídas. Duplicatas são ignoradas automaticamente. || Export your bank statement as CSV. Negative amounts are money out. Duplicates are skipped automatically. || Exporte el extracto de su banco en CSV. Los valores negativos son salidas. Los duplicados se omiten automáticamente.
+Coluna da data || Date column || Columna de fecha
+Coluna da descrição || Description column || Columna de descripción
+Coluna do valor || Amount column || Columna de importe
+Coluna de débito || Debit column || Columna de débito
+Coluna de crédito || Credit column || Columna de crédito
+Inverter sinais (use em faturas de cartão em que compras aparecem positivas) || Flip signs (use for card statements where purchases show as positive) || Invertir signos (use en extractos de tarjeta donde las compras aparecen positivas)
+Descrição || Description || Descripción
+Valor || Amount || Importe
+data inválida || invalid date || fecha inválida
+Categorizada || Categorized§one || Categorizada
+Categorizar transação || Categorize transaction || Categorizar transacción
+Confirmar || Confirm || Confirmar
+Categoria / conta || Category / account || Categoría / cuenta
+Contato (opcional) || Contact (optional) || Contacto (opcional)
+Memorando || Memo || Nota
+Lembrar: categorizar automaticamente transações parecidas || Remember: auto-categorize similar transactions || Recordar: categorizar automáticamente transacciones parecidas
+Para revisar || To review || Por revisar
+Categorizadas || Categorized || Categorizadas
+Pareadas || Matched || Conciliadas con asiento
+Ignoradas || Ignored || Ignoradas
+Sugestões aceitas || Suggestions accepted || Sugerencias aceptadas
+✓ Aceitar || ✓ Accept || ✓ Aceptar
+sugestão(ões) || suggestion(s) || sugerencia(s)
+Importar extrato CSV || Import CSV statement || Importar extracto CSV
+Sugestão || Suggestion || Sugerencia
+Status || Status || Estado
+Tudo em dia! Nenhuma transação pendente. 🎉 || All caught up! No pending transactions. 🎉 || ¡Todo al día! No hay transacciones pendientes. 🎉
+Nada aqui. || Nothing here. || Nada aquí.
+Pareada || Matched§one || Conciliada
+Ignorada || Ignored§one || Ignorada
+(lançamento existente) || (existing entry) || (asiento existente)
+Parear || Match || Emparejar
+Revisar || Review || Revisar
+Categorizar || Categorize || Categorizar
+Ignorar || Ignore || Ignorar
+Desfeita || Undone || Deshecha
+Desfazer || Undo || Deshacer
+Data do extrato || Statement date || Fecha del extracto
+Saldo final do extrato || Statement ending balance || Saldo final del extracto
+Saldo já conciliado || Already reconciled balance || Saldo ya conciliado
+última: || last: || última:
+Diferença || Difference || Diferencia
+Valor (dívida) || Amount (owed) || Importe (deuda)
+Nada a conciliar até esta data. || Nothing to reconcile up to this date. || Nada que conciliar hasta esta fecha.
+Selecionar || Select || Seleccionar
+Marcar todos || Select all || Marcar todos
+Desfazer a última conciliação desta conta? || Undo the last reconciliation for this account? || ¿Deshacer la última conciliación de esta cuenta?
+Conciliação desfeita || Reconciliation undone || Conciliación deshecha
+Desfazer última || Undo last || Deshacer la última
+Conciliação concluída || Reconciliation complete || Conciliación completada
+Concluir conciliação || Finish reconciliation || Finalizar conciliación
+Regras de categorização automática || Auto-categorization rules || Reglas de categorización automática
+Quando a descrição contiver || When the description contains || Cuando la descripción contenga
+ex.: uber || e.g. uber || p. ej.: uber
+Entrada ou saída || Money in or out || Entrada o salida
+Só saídas || Money out only || Solo salidas
+Só entradas || Money in only || Solo entradas
+Categorizar como || Categorize as || Categorizar como
+Regra criada || Rule created || Regla creada
+Adicionar || Add || Agregar
+Texto || Text || Texto
+Categoria || Category || Categoría
+Sem regras. Elas também são criadas quando você categoriza uma transação marcando “lembrar”. || No rules yet. They are also created when you categorize a transaction with “remember” checked. || Sin reglas. También se crean al categorizar una transacción marcando “recordar”.
+Qualquer || Any || Cualquiera
+Entrada || In || Entrada
+Saída || Out || Salida
+Remover || Remove || Quitar
+Transferência entre contas || Transfer between accounts || Transferencia entre cuentas
+Transferência registrada || Transfer recorded || Transferencia registrada
+Transferir || Transfer || Transferir
+Para || To§transfer || Para
+Banco e conciliação || Banking & reconciliation || Bancos y conciliación
+⇄ Transferência || ⇄ Transfer || ⇄ Transferencia
+para revisar || to review || por revisar
+Em dia || Up to date || Al día
+· conciliada em {0} || · reconciled on {0} || · conciliada el {0}
+Transações || Transactions || Transacciones
+Conciliar || Reconcile || Conciliar
+Regras || Rules || Reglas
+Contato salvo || Contact saved || Contacto guardado
+Editar contato || Edit contact || Editar contacto
+Novo fornecedor || New vendor || Nuevo proveedor
+Novo cliente || New customer || Nuevo cliente
+Nome / Razão social || Name / Business name || Nombre / Razón social
+Telefone || Phone || Teléfono
+CPF / CNPJ || Tax ID (EIN / SSN) || ID fiscal (EIN / SSN)
+Prazo de pagamento (dias) || Payment terms (days) || Plazo de pago (días)
+Cliente || Customer || Cliente
+Fornecedor || Vendor || Proveedor
+Cliente e fornecedor || Customer and vendor || Cliente y proveedor
+Endereço || Address || Dirección
+Notas || Notes || Notas
+Extrato — {0} || Statement — {0} || Estado de cuenta — {0}
+Emissão || Issued || Emisión
+Vencimento || Due || Vencimiento
+Total || Total || Total
+Sem documentos. || No documents. || Sin documentos.
+Buscar… || Search… || Buscar…
+Buscar || Search || Buscar
+A pagar || To pay || Por pagar
+A receber || To receive || Por cobrar
+Nenhum contato. || No contacts. || Sin contactos.
+cliente e fornecedor || customer and vendor || cliente y proveedor
+Extrato || Statement || Estado de cuenta
+Remover {0}? || Remove {0}? || ¿Quitar a {0}?
+Contato removido || Contact removed || Contacto eliminado
+Receitas e despesas por mês || Income and expenses by month || Ingresos y gastos por mes
+Receita {0} || Income {0} || Ingresos {0}
+Despesa {0} || Expense {0} || Gasto {0}
+Visão geral da saúde financeira || Overview of your financial health || Resumen de su salud financiera
+Saldo em caixa e bancos || Cash in bank || Efectivo en bancos
+Previsão em 30 dias: {0} || 30-day forecast: {0} || Previsión a 30 días: {0}
+{0} vencido ({1}) || {0} overdue ({1}) || {0} vencido ({1})
+Nada vencido || Nothing overdue || Nada vencido
+Lucro do mês || Profit this month || Utilidad del mes
+{0} receitas · {1} despesas || {0} income · {1} expenses || {0} ingresos · {1} gastos
+transação(ões) bancária(s) para revisar || bank transaction(s) to review || transacción(es) bancaria(s) por revisar
+produto(s) com estoque baixo || product(s) low on stock || producto(s) con inventario bajo
+Receitas e despesas — últimos 6 meses || Income and expenses — last 6 months || Ingresos y gastos — últimos 6 meses
+Maiores despesas do mês || Top expenses this month || Mayores gastos del mes
+Sem despesas neste mês. || No expenses this month. || Sin gastos este mes.
+Próximos vencimentos || Upcoming due dates || Próximos vencimientos
+Nenhuma conta em aberto. || No open accounts. || Sin cuentas abiertas.
+Receber || Receivable || Por cobrar
+Pagar || Payable || Por pagar
+Criar || Create || Crear
+Você poderá completar os dados depois em Fornecedores. || You can complete the details later under Vendors. || Podrá completar los datos después en Proveedores.
+Você poderá completar os dados depois em Clientes. || You can complete the details later under Customers. || Podrá completar los datos después en Clientes.
+Selecione o fornecedor || Select the vendor || Seleccione el proveedor
+Selecione o cliente || Select the customer || Seleccione el cliente
+Salvo || Saved || Guardado
+Nova fatura || New invoice || Nueva factura
+Editar fatura || Edit invoice || Editar factura
+Novo orçamento || New estimate || Nuevo presupuesto
+Editar orçamento || Edit estimate || Editar presupuesto
+Nova conta a pagar || New bill || Nueva cuenta por pagar
+Editar conta a pagar || Edit bill || Editar cuenta por pagar
+Documento já emitido: ao salvar, os lançamentos contábeis são refeitos. || Already issued: saving will redo its accounting entries. || Ya emitido: al guardar se rehacen sus asientos contables.
+Salvar rascunho || Save draft || Guardar borrador
+Salvar alterações || Save changes || Guardar cambios
+Salvar e marcar como enviado || Save and mark as sent || Guardar y marcar como enviado
+Salvar e emitir || Save and issue || Guardar y emitir
+Novo contato || New contact || Nuevo contacto
+Válido até || Valid until || Válido hasta
+Projeto (opcional) || Project (optional) || Proyecto (opcional)
+Item || Item || Artículo
+Qtd. || Qty || Cant.
+Preço || Price || Precio
+Imposto % || Tax % || Impuesto %
+Estoque: || In stock: || En inventario:
+Quantidade || Quantity || Cantidad
+Despesas diversas || Miscellaneous expenses || Gastos varios
+Imposto || Tax || Impuesto
+Remover linha || Remove line || Quitar línea
++ Adicionar linha || + Add line || + Agregar línea
+Observações || Notes§doc || Observaciones
+Subtotal || Subtotal || Subtotal
+Impostos || Taxes || Impuestos
+Fatura || Invoice || Factura
+Orçamento || Estimate || Presupuesto
+Conta a pagar || Bill || Cuenta por pagar
+Pagamento registrado || Payment recorded || Pago registrado
+Registrar recebimento || Record payment received || Registrar cobro
+Registrar pagamento || Record payment || Registrar pago
+Saldo: {0} || Balance: {0} || Saldo: {0}
+Depositar em || Deposit to || Depositar en
+Pagar com || Pay from || Pagar con
+Forma || Method || Forma
+PIX || ACH || ACH
+Boleto || Money order || Giro postal
+Cartão || Card || Tarjeta
+Transferência || Wire transfer || Transferencia
+Dinheiro || Cash || Efectivo
+Cheque || Check || Cheque
+Referência || Reference || Referencia
+Projeto: || Project: || Proyecto:
+Voltar || Back || Volver
+Imprimir / PDF || Print / PDF || Imprimir / PDF
+Link copiado || Link copied || Enlace copiado
+Copie o link: || Copy the link: || Copie el enlace:
+Copiar link || Copy link || Copiar enlace
+Enviar por e-mail || Send by email || Enviar por correo
+Fatura emitida || Invoice issued || Factura emitida
+Emitir || Issue || Emitir
+Convertido em fatura (rascunho) || Converted to invoice (draft) || Convertido en factura (borrador)
+Converter em fatura || Convert to invoice || Convertir en factura
+Imp. || Tax§short || Imp.
+Pago || Paid§m || Pagado
+Pagamentos || Payments || Pagos
+Ref. || Ref. || Ref.
+Excluir este pagamento? || Delete this payment? || ¿Eliminar este pago?
+Pagamento excluído || Payment deleted || Pago eliminado
+Anular este documento? Os lançamentos contábeis serão revertidos. || Void this document? Its accounting entries will be reversed. || ¿Anular este documento? Sus asientos contables se revertirán.
+Documento anulado || Document voided || Documento anulado
+Anular || Void || Anular
+Orçamento aceito || Estimate accepted || Presupuesto aceptado
+Marcar como aceito || Mark as accepted || Marcar como aceptado
+Orçamento recusado || Estimate declined || Presupuesto rechazado
+Marcar como recusado || Mark as declined || Marcar como rechazado
+Excluir definitivamente? || Delete permanently? || ¿Eliminar definitivamente?
+Número || Number || Número
+Exportar CSV || Export CSV || Exportar CSV
+{0} documento(s) || {0} document(s) || {0} documento(s)
+Vencido || Overdue§m || Vencido
+Buscar por número ou fornecedor… || Search by number or vendor… || Buscar por número o proveedor…
+Buscar por número ou cliente… || Search by number or customer… || Buscar por número o cliente…
+Filtrar por status || Filter by status || Filtrar por estado
+Todos os status || All statuses || Todos los estados
+Vencidas || Overdue§fp || Vencidas
+Nenhum documento encontrado. || No documents found. || No se encontraron documentos.
+Comprovante muito grande (máx. 1,8 MB) || Receipt too large (max 1.8 MB) || Comprobante demasiado grande (máx. 1,8 MB)
+Despesa salva || Expense saved || Gasto guardado
+Editar despesa || Edit expense || Editar gasto
+Nova despesa || New expense || Nuevo gasto
+Pago com || Paid with || Pagado con
+Projeto || Project || Proyecto
+Comprovante (imagem ou PDF) || Receipt (image or PDF) || Comprobante (imagen o PDF)
+Já existe um comprovante; enviar outro substitui. || A receipt already exists; uploading another replaces it. || Ya existe un comprobante; subir otro lo reemplaza.
+Gastos pagos na hora (para contas a prazo, use Contas a pagar) || Expenses paid on the spot (for credit-terms purchases, use Bills) || Gastos pagados al momento (para compras a plazo, use Cuentas por pagar)
++ Nova despesa || + New expense || + Nuevo gasto
+Total: || Total: || Total:
+Nenhuma despesa registrada. || No expenses recorded. || Sin gastos registrados.
+📎 comprovante || 📎 receipt || 📎 comprobante
+Excluir esta despesa? || Delete this expense? || ¿Eliminar este gasto?
+Despesa excluída || Expense deleted || Gasto eliminado
+Item salvo || Item saved || Artículo guardado
+Editar item || Edit item || Editar artículo
+Novo produto ou serviço || New product or service || Nuevo producto o servicio
+Serviço || Service || Servicio
+Produto || Product || Producto
+Código (SKU) || Code (SKU) || Código (SKU)
+Preço de venda || Sale price || Precio de venta
+Imposto padrão (%) || Default tax (%) || Impuesto predeterminado (%)
+Conta de receita || Income account || Cuenta de ingresos
+Automática || Automatic || Automática
+Controlar estoque (custo médio) || Track inventory (average cost) || Controlar inventario (costo promedio)
+Estoque inicial || Opening stock || Inventario inicial
+Vira lançamento contra Capital Social || Posted against Owner Capital || Se registra contra Capital social
+Custo unitário inicial || Opening unit cost || Costo unitario inicial
+Alerta de estoque mínimo || Low-stock alert level || Alerta de inventario mínimo
+Estoque ajustado || Stock adjusted || Inventario ajustado
+Ajustar estoque — {0} || Adjust stock — {0} || Ajustar inventario — {0}
+Ajustar || Adjust || Ajustar
+Saldo atual: || On hand: || Existencias:
+· custo médio || · average cost || · costo promedio
+Variação (+ entra / − sai) || Change (+ in / − out) || Variación (+ entra / − sale)
+Contrapartida || Offset account || Contrapartida
+Custo das mercadorias (perda/ganho) || Cost of goods (loss/gain) || Costo de ventas (pérdida/ganancia)
+Valor do estoque (custo médio): {0} || Inventory value (average cost): {0} || Valor del inventario (costo promedio): {0}
++ Novo item || + New item || + Nuevo artículo
+Todos || All || Todos
+Com estoque || Stocked || Con inventario
+Estoque baixo || Low stock || Inventario bajo
+Serviços || Services || Servicios
+Custo || Cost || Costo
+Nenhum item. || No items. || Sin artículos.
+baixo || low || bajo
+Arquivar {0}? || Archive {0}? || ¿Archivar {0}?
+Item arquivado || Item archived || Artículo archivado
+Arquivar || Archive || Archivar
+Projeto salvo || Project saved || Proyecto guardado
+Editar projeto || Edit project || Editar proyecto
+Novo projeto || New project || Nuevo proyecto
+Valor/hora || Hourly rate || Tarifa por hora
+Concluído || Completed || Completado
+Arquivado || Archived || Archivado
+Lançar horas || Log time || Registrar horas
+Horas lançadas || Time logged || Horas registradas
+Horas || Hours || Horas
+Faturável || Billable || Facturable
+Controle horas, custos e lucratividade por projeto || Track hours, costs and profitability by project || Controle horas, costos y rentabilidad por proyecto
+⏱ Lançar horas || ⏱ Log time || ⏱ Registrar horas
++ Novo projeto || + New project || + Nuevo proyecto
+Projetos || Projects || Proyectos
+A faturar || To invoice || Por facturar
+Custos || Costs || Costos
+Lucro || Profit || Utilidad
+Nenhum projeto. || No projects. || Sin proyectos.
+Fatura criada com as horas || Invoice created from the hours || Factura creada con las horas
+Faturar horas || Invoice hours || Facturar horas
+Quem || Who || Quién
+Nenhuma hora lançada. || No time logged. || Sin horas registradas.
+Faturada || Invoiced§f || Facturada
+Não faturável || Non-billable || No facturable
+FATURA || INVOICE || FACTURA
+ORÇAMENTO || ESTIMATE || PRESUPUESTO
+Imprimir / salvar PDF || Print / save as PDF || Imprimir / guardar PDF
+PAGA || PAID || PAGADA
+Semanal || Weekly || Semanal
+Mensal || Monthly || Mensual
+Trimestral || Quarterly || Trimestral
+Anual || Yearly || Anual
+Fatura recorrente || Recurring invoice || Factura recurrente
+Recorrência criada || Recurring invoice created || Recurrencia creada
+Nova fatura recorrente || New recurring invoice || Nueva factura recurrente
+Mensalidade — Cliente X || Monthly plan — Customer X || Mensualidad — Cliente X
+Frequência || Frequency || Frecuencia
+Próxima emissão || Next issue date || Próxima emisión
+Prazo (dias) || Terms (days) || Plazo (días)
+Emitir automaticamente (se desmarcado, cria rascunho) || Issue automatically (if unchecked, creates a draft) || Emitir automáticamente (si se desmarca, crea borrador)
+Faturas recorrentes || Recurring invoices || Facturas recurrentes
+O servidor gera as faturas sozinho na data programada (e recupera as que ficaram para trás). || The server creates invoices on schedule by itself (and catches up on any that were missed). || El servidor genera las facturas solo en la fecha programada (y recupera las atrasadas).
+Verificação concluída || Check complete || Verificación completada
+Gerar vencidas agora || Generate due ones now || Generar vencidas ahora
++ Nova recorrência || + New recurring invoice || + Nueva recurrencia
+Próxima || Next || Próxima
+Modo || Mode || Modo
+Nenhuma recorrência. || No recurring invoices. || Sin recurrencias.
+Emite sozinha || Auto-issues || Se emite sola
+Pausar || Pause || Pausar
+Retomar || Resume || Reanudar
+Excluir recorrência? || Delete this recurring invoice? || ¿Eliminar esta recurrencia?
+Este mês || This month || Este mes
+Últimos 30 dias || Last 30 days || Últimos 30 días
+Este ano || This year || Este año
+Ano passado || Last year || Año pasado
+Período anterior || Previous period || Período anterior
+Receitas || Income || Ingresos
+Total de receitas || Total income || Total de ingresos
+Custo das mercadorias || Cost of goods sold || Costo de ventas
+Lucro bruto || Gross profit || Utilidad bruta
+Despesas operacionais || Operating expenses || Gastos operativos
+Total de despesas || Total expenses || Total de gastos
+Lucro líquido || Net income || Utilidad neta
+Total receitas || Total income§csv || Total ingresos
+Total despesas || Total expenses§csv || Total gastos
+Total {0} || Total {0} || Total {0}
+Total patrimônio líquido || Total equity || Total patrimonio neto
+Atenção: o balanço não fecha. Verifique os lançamentos. || Warning: the balance sheet does not balance. Check your entries. || Atención: el balance no cuadra. Revise los asientos.
+Resultado do exercício (lucro acumulado) || Current-year earnings (retained) || Resultado del ejercicio (utilidad acumulada)
+Caixa das atividades operacionais || Cash from operating activities || Efectivo de actividades operativas
+Caixa das atividades de investimento || Cash from investing activities || Efectivo de actividades de inversión
+Caixa das atividades de financiamento || Cash from financing activities || Efectivo de actividades de financiamiento
+Saldo inicial de caixa || Opening cash balance || Saldo inicial de efectivo
+Operacionais || Operating || Operativas
+Investimento || Investing || Inversión
+Financiamento || Financing || Financiamiento
+Variação líquida de caixa || Net change in cash || Variación neta de efectivo
+Saldo final de caixa || Closing cash balance || Saldo final de efectivo
+A vencer || Not yet due || Por vencer
+Nada em aberto. 🎉 || Nothing outstanding. 🎉 || Nada pendiente. 🎉
+Sem dados no período. || No data in this period. || Sin datos en el período.
+Demonstração de resultado (DRE) || Profit & loss statement || Estado de resultados
+Balanço patrimonial || Balance sheet || Balance general
+Total ativo || Total assets || Total activos
+Total passivo || Total liabilities || Total pasivos
+Resultado do exercício || Current-year earnings || Resultado del ejercicio
+Total PL || Total equity§csv || Total patrimonio
+Fluxo de caixa || Cash flow || Flujo de efectivo
+Seção || Section || Sección
+Variação líquida || Net change || Variación neta
+Contas a receber por vencimento || Accounts receivable aging || Cuentas por cobrar por vencimiento
+Contas a pagar por vencimento || Accounts payable aging || Cuentas por pagar por vencimiento
+Vendas por cliente || Sales by customer || Ventas por cliente
+Despesas por categoria || Expenses by category || Gastos por categoría
+Despesas por fornecedor || Expenses by vendor || Gastos por proveedor
+Resumo de impostos sobre vendas || Sales tax summary || Resumen de impuestos sobre ventas
+Alíquota % || Rate % || Tasa %
+Base || Base || Base
+Alíquota || Rate || Tasa
+Base de cálculo || Taxable base || Base imponible
+Sem vendas no período. || No sales in this period. || Sin ventas en el período.
+Total a recolher no período: || Total to remit for the period: || Total a pagar en el período:
+Valorização do estoque || Inventory valuation || Valoración del inventario
+Qtd || Qty§inv || Cant.
+Custo médio || Average cost || Costo promedio
+Sem itens com estoque. || No stocked items. || Sin artículos con inventario.
+(baixo) || (low) || (bajo)
+Balancete de verificação || Trial balance || Balance de comprobación
+Totais || Totals || Totales
+⚠ não fecha || ⚠ out of balance || ⚠ no cuadra
+Desempenho || Performance || Desempeño
+Clientes e fornecedores || Customers & vendors || Clientes y proveedores
+Outros || Other || Otros
+Relatório não encontrado || Report not found || Informe no encontrado
+Período || Period || Período
+Atalhos… || Shortcuts… || Atajos…
+Posição em || As of || Al
+Dados da empresa e numeração || Company details & numbering || Datos de la empresa y numeración
+CNPJ / CPF || EIN / Tax ID || EIN / ID fiscal
+Moeda || Currency || Moneda
+Imposto padrão das vendas (%) || Default sales tax (%) || Impuesto predeterminado de ventas (%)
+Prazo padrão (dias) || Default terms (days) || Plazo predeterminado (días)
+Prefixo das faturas || Invoice prefix || Prefijo de facturas
+Prefixo dos orçamentos || Estimate prefix || Prefijo de presupuestos
+Rodapé das faturas || Invoice footer || Pie de las facturas
+Configurações salvas || Settings saved || Configuración guardada
+Sem limite de usuários. Cada papel tem permissões diferentes. || No user limit. Each role has different permissions. || Sin límite de usuarios. Cada rol tiene permisos distintos.
++ Convidar usuário || + Invite user || + Invitar usuario
+Papel || Role || Rol
+Papel atualizado || Role updated || Rol actualizado
+Inativo || Inactive || Inactivo
+O que cada papel pode fazer || What each role can do || Qué puede hacer cada rol
+Proprietário: || Owner: || Propietario:
+tudo, incluindo usuários e configurações. || everything, including users and settings. || todo, incluidos usuarios y configuración.
+Contador: || Accountant: || Contador:
+tudo de finanças, banco, relatórios e plano de contas. || all finance, banking, payroll, reports and the chart of accounts. || todo lo de finanzas, bancos, nómina, informes y plan de cuentas.
+Vendas: || Sales: || Ventas:
+clientes, faturas, orçamentos, produtos, projetos e horas. || customers, invoices, estimates, products, projects and time. || clientes, facturas, presupuestos, productos, proyectos y horas.
+Somente leitura: || Read-only: || Solo lectura:
+consulta documentos e relatórios, sem alterar nada. || view documents and reports without changing anything. || consulta documentos e informes sin cambiar nada.
+Novo usuário || New user || Nuevo usuario
+Usuário criado || User created || Usuario creado
+Senha inicial || Initial password || Contraseña inicial
+Quando || When || Cuándo
+Ação || Action || Acción
+Objeto || Object || Objeto
+Detalhe || Detail || Detalle
+Sem registros. || No records. || Sin registros.
+Sem permissão para exportar || No permission to export || Sin permiso para exportar
+Alterar senha || Change password || Cambiar contraseña
+Senha atual || Current password || Contraseña actual
+Nova senha || New password || Nueva contraseña
+Senha alterada || Password changed || Contraseña cambiada
+Alterar || Change || Cambiar
+Backup dos dados || Data backup || Copia de seguridad
+Baixe uma cópia completa (JSON) de todos os seus dados. Seus dados são seus: sem trava, sem taxa. || Download a complete copy (JSON) of all your data. Your data is yours: no lock-in, no fees. || Descargue una copia completa (JSON) de todos sus datos. Sus datos son suyos: sin ataduras, sin tarifas.
+Baixar backup || Download backup || Descargar copia
+Empresa || Company || Empresa
+Minha conta || My account || Mi cuenta
+Usuários || Users || Usuarios
+Auditoria || Audit log || Auditoría
+Prestador independente (receberá Form 1099) || Independent contractor (will receive Form 1099) || Contratista independiente (recibirá el Formulario 1099)
+regra || rule || regla
+histórico || history || historial
+lançamento existente || existing entry || asiento existente

@@ -1,0 +1,307 @@
+Payroll || Folha de pagamento || Nómina
+Finalized || Finalizada || Finalizada
+Hi! Here is the link to view the document: {0} || Olá! Segue o link para visualizar o documento: {0} || ¡Hola! Aquí está el enlace para ver el documento: {0}
+Federal income tax || Imposto de renda federal || Impuesto federal sobre la renta
+Social Security (employee) || Social Security (funcionário) || Social Security (empleado)
+Social Security (employer) || Social Security (empregador) || Social Security (empleador)
+Medicare (employee) || Medicare (funcionário) || Medicare (empleado)
+Medicare (employer) || Medicare (empregador) || Medicare (empleador)
+Additional Medicare || Medicare adicional || Medicare adicional
+State income tax || Imposto de renda estadual || Impuesto estatal sobre la renta
+FUTA (federal unemployment) || FUTA (seguro-desemprego federal) || FUTA (desempleo federal)
+SUTA (state unemployment) || SUTA (seguro-desemprego estadual) || SUTA (desempleo estatal)
+Other deductions || Outros descontos || Otras deducciones
+Every 2 weeks || A cada 2 semanas || Cada 2 semanas
+Twice a month || Duas vezes por mês || Dos veces al mes
+Employee saved || Funcionário salvo || Empleado guardado
+Edit employee || Editar funcionário || Editar empleado
+New employee || Novo funcionário || Nuevo empleado
+Job title || Cargo || Puesto
+SSN / Tax ID || SSN / ID fiscal || SSN / ID fiscal
+Stored only in your own database || Guardado apenas no seu próprio banco de dados || Se guarda solo en su propia base de datos
+Hire date || Data de admissão || Fecha de contratación
+Pay type || Tipo de pagamento || Tipo de pago
+Annual salary || Salário anual || Salario anual
+Hourly || Por hora || Por hora
+Pay frequency || Frequência de pagamento || Frecuencia de pago
+Federal filing status (W-4) || Estado civil fiscal federal (W-4) || Estado civil fiscal federal (W-4)
+Single or married filing separately || Solteiro ou casado declarando separado || Soltero o casado declarando por separado
+Married filing jointly || Casado declarando em conjunto || Casado declarando en conjunto
+W-4 step 3: yearly credits || W-4 etapa 3: créditos anuais || W-4 paso 3: créditos anuales
+e.g. child tax credit || ex.: crédito fiscal por filho || p. ej.: crédito fiscal por hijo
+Extra withholding per paycheck || Retenção extra por pagamento || Retención adicional por pago
+State income tax rate (%) || Alíquota do imposto estadual (%) || Tasa del impuesto estatal (%)
+Flat estimate; check your state || Estimativa fixa; confira seu estado || Estimación fija; verifique su estado
+Pre-tax deduction per paycheck || Desconto pré-imposto por pagamento || Deducción antes de impuestos por pago
+e.g. 401(k): lowers income tax only || ex.: 401(k): reduz só o imposto de renda || p. ej.: 401(k): reduce solo el impuesto sobre la renta
+After-tax deduction per paycheck || Desconto pós-imposto por pagamento || Deducción después de impuestos por pago
+After-tax deduction label || Nome do desconto pós-imposto || Nombre de la deducción después de impuestos
+e.g. Health plan || ex.: Plano de saúde || p. ej.: Seguro médico
+Active employee || Funcionário ativo || Empleado activo
++ New employee || + Novo funcionário || + Nuevo empleado
+Pay || Pagamento || Pago base
+Filing status || Estado civil fiscal || Estado civil fiscal
+No employees yet. || Nenhum funcionário ainda. || Aún no hay empleados.
+/hour || /hora || /hora
+/year || /ano || /año
+Married jointly || Casado em conjunto || Casado en conjunto
+Single || Solteiro || Soltero
+Payroll finalized || Folha finalizada || Nómina finalizada
+Draft saved || Rascunho salvo || Borrador guardado
+Edit pay run || Editar rodada de pagamento || Editar ciclo de pago
+New pay run || Nova rodada de pagamento || Nuevo ciclo de pago
+Finalize this payroll? It posts the accounting entries and cannot be edited afterwards. || Finalizar esta folha? Os lançamentos contábeis serão feitos e ela não poderá mais ser editada. || ¿Finalizar esta nómina? Se registran los asientos contables y ya no se podrá editar.
+Finalize payroll || Finalizar folha || Finalizar nómina
+Bonus (supplemental) || Bônus (suplementar) || Bono (suplementario)
+Period start || Início do período || Inicio del período
+Period end || Fim do período || Fin del período
+Pay date || Data de pagamento || Fecha de pago
+Employee || Funcionário || Empleado
+Overtime || Horas extras || Horas extra
+Bonus || Bônus || Bono
+Other pay || Outros ganhos || Otros ingresos
+Gross || Bruto || Bruto
+Net pay || Líquido a pagar || Pago neto
+Include || Incluir || Incluir
+Gross pay || Pagamento bruto || Pago bruto
+Net pay (cash out) || Líquido a pagar (saída de caixa) || Pago neto (salida de efectivo)
+Employee taxes withheld || Impostos retidos dos funcionários || Impuestos retenidos a empleados
+Employer taxes (extra cost) || Encargos do empregador (custo extra) || Impuestos del empleador (costo extra)
+Total payroll cost || Custo total da folha || Costo total de la nómina
+Tax calculations follow IRS Publication 15-T (2026) and are estimates to review; Fluxo does not file or deposit taxes for you. || Os cálculos seguem a Publicação 15-T do IRS (2026) e são estimativas a revisar; o Fluxo não declara nem deposita impostos por você. || Los cálculos siguen la Publicación 15-T del IRS (2026) y son estimaciones a revisar; Fluxo no declara ni deposita impuestos por usted.
+Pay run || Rodada de pagamento || Ciclo de pago
+Print || Imprimir || Imprimir
+Pay stub || Holerite || Talón de pago
+Regular pay || Pagamento regular || Pago regular
++ New pay run || + Nova rodada de pagamento || + Nuevo ciclo de pago
+Add your employees first, then run payroll. || Cadastre seus funcionários primeiro e depois rode a folha. || Agregue primero a sus empleados y luego procese la nómina.
+Employer taxes || Encargos do empregador || Impuestos del empleador
+No pay runs yet. || Nenhuma rodada de pagamento ainda. || Aún no hay ciclos de pago.
+View || Ver || Ver
+Delete this draft? || Excluir este rascunho? || ¿Eliminar este borrador?
+Void this payroll? Its accounting entries will be reversed. || Anular esta folha? Os lançamentos contábeis serão revertidos. || ¿Anular esta nómina? Sus asientos contables se revertirán.
+Payroll voided || Folha anulada || Nómina anulada
+Payroll taxes & deductions owed || Impostos e descontos da folha a recolher || Impuestos y deducciones de nómina por pagar
+Select federal deposit (Form 941) || Selecionar depósito federal (Form 941) || Seleccionar depósito federal (Formulario 941)
+Select FUTA (Form 940) || Selecionar FUTA (Form 940) || Seleccionar FUTA (Formulario 940)
+Select state taxes || Selecionar impostos estaduais || Seleccionar impuestos estatales
+What || O quê || Concepto
+Accrued || Acumulado || Acumulado
+Paid || Pago || Pagado
+Owed || A pagar || Adeudado
+Nothing owed yet. Finalize a pay run first. || Nada a recolher ainda. Finalize uma rodada primeiro. || Nada por pagar aún. Finalice primero un ciclo de pago.
+Tax payment recorded || Pagamento de impostos registrado || Pago de impuestos registrado
+This records the payment in your books. Make the actual deposit on EFTPS or your state portal. || Isso registra o pagamento na sua contabilidade. Faça o depósito de verdade no EFTPS ou no portal do seu estado. || Esto registra el pago en su contabilidad. Haga el depósito real en EFTPS o en el portal de su estado.
+State unemployment (SUTA) || Seguro-desemprego estadual (SUTA) || Desempleo estatal (SUTA)
+SUTA rate (%) || Alíquota SUTA (%) || Tasa SUTA (%)
+SUTA wage base (per employee, per year) || Base salarial SUTA (por funcionário, por ano) || Base salarial SUTA (por empleado, por año)
+Use the rate and wage base from your state notice. Leave at 0 to skip SUTA. || Use a alíquota e a base do aviso do seu estado. Deixe 0 para não calcular SUTA. || Use la tasa y la base del aviso de su estado. Deje 0 para omitir SUTA.
+Report || Relatório || Informe
+Form 941 quarterly summary || Resumo trimestral do Form 941 || Resumen trimestral del Formulario 941
+W-2 summary || Resumo do W-2 || Resumen del W-2
+Payroll summary || Resumo da folha || Resumen de nómina
+Contractors (1099) || Prestadores (1099) || Contratistas (1099)
+Year || Ano || Año
+Quarter || Trimestre || Trimestre
+Form 941 || Form 941 || Formulario 941
+Employees paid in the quarter:  || Funcionários pagos no trimestre:  || Empleados pagados en el trimestre: 
+Line 2 — Wages, tips and other compensation || Linha 2 — Salários, gorjetas e outras remunerações || Línea 2 — Salarios, propinas y otras compensaciones
+Line 3 — Federal income tax withheld || Linha 3 — Imposto de renda federal retido || Línea 3 — Impuesto federal sobre la renta retenido
+Line 5a — Taxable Social Security wages || Linha 5a — Salários tributáveis de Social Security || Línea 5a — Salarios sujetos a Social Security
+Line 5a — Social Security tax (12.4%) || Linha 5a — Imposto de Social Security (12,4%) || Línea 5a — Impuesto de Social Security (12,4%)
+Line 5c — Medicare tax (2.9%) || Linha 5c — Imposto Medicare (2,9%) || Línea 5c — Impuesto de Medicare (2,9%)
+Line 5d — Additional Medicare tax withheld || Linha 5d — Medicare adicional retido || Línea 5d — Medicare adicional retenido
+Total taxes before adjustments || Total de impostos antes de ajustes || Total de impuestos antes de ajustes
+Deposits recorded in this quarter || Depósitos registrados neste trimestre || Depósitos registrados en este trimestre
+Balance due || Saldo a pagar || Saldo adeudado
+Box 1 Wages || Campo 1 Salários || Casilla 1 Salarios
+Box 2 Fed. tax || Campo 2 Imposto fed. || Casilla 2 Impuesto fed.
+Box 3 SS wages || Campo 3 Salários SS || Casilla 3 Salarios SS
+Box 4 SS tax || Campo 4 Imposto SS || Casilla 4 Impuesto SS
+Box 5 Medicare wages || Campo 5 Salários Medicare || Casilla 5 Salarios Medicare
+Box 6 Medicare tax || Campo 6 Imposto Medicare || Casilla 6 Impuesto Medicare
+Box 17 State tax || Campo 17 Imposto estadual || Casilla 17 Impuesto estatal
+No finalized payroll in this year. || Nenhuma folha finalizada neste ano. || Ninguna nómina finalizada este año.
+Employee taxes || Impostos do funcionário || Impuestos del empleado
+Deductions || Descontos || Deducciones
+Contractors flagged for 1099 who were paid at least the reporting threshold: || Prestadores marcados para 1099 que receberam ao menos o limite de declaração: || Contratistas marcados para 1099 que recibieron al menos el umbral de declaración:
+Contractor || Prestador || Contratista
+Tax ID || ID fiscal || ID fiscal
+Paid in year || Pago no ano || Pagado en el año
+No contractors flagged. Mark a vendor as an independent contractor in Vendors. || Nenhum prestador marcado. Marque um fornecedor como prestador independente em Fornecedores. || Ningún contratista marcado. Marque a un proveedor como contratista independiente en Proveedores.
+Missing || Faltando || Falta
+File 1099-NEC || Declarar 1099-NEC || Presentar 1099-NEC
+Below threshold || Abaixo do limite || Bajo el umbral
+These figures help you complete IRS forms. Review them with your accountant; Fluxo does not e-file. || Estes números ajudam a preencher os formulários do IRS. Revise com seu contador; o Fluxo não faz envio eletrônico. || Estas cifras le ayudan a completar los formularios del IRS. Revíselas con su contador; Fluxo no presenta electrónicamente.
+U.S. payroll: pay runs, withholding, employer taxes, W-2 and 941 summaries || Folha dos EUA: rodadas de pagamento, retenções, encargos do empregador e resumos de W-2 e 941 || Nómina de EE. UU.: ciclos de pago, retenciones, impuestos del empleador y resúmenes de W-2 y 941
+Pay runs || Rodadas de pagamento || Ciclos de pago
+Employees || Funcionários || Empleados
+Taxes owed || Impostos a recolher || Impuestos por pagar
+Language || Idioma || Idioma
+Owner || Proprietário || Propietario
+Accountant || Contador || Contador
+Read-only || Somente leitura || Solo lectura
+created || criou || creó
+updated || atualizou || actualizó
+deleted || excluiu || eliminó
+issued || emitiu || emitió
+voided || anulou || anuló
+accepted || aceitou || aceptó
+declined || recusou || rechazó
+sent || enviou || envió
+converted || converteu || convirtió
+recorded a payment on || registrou pagamento em || registró un pago en
+imported || importou || importó
+accepted all suggestions on || aceitou todas as sugestões em || aceptó todas las sugerencias en
+reconciled || conciliou || concilió
+undid reconciliation on || desfez a conciliação de || deshizo la conciliación de
+transferred || transferiu || transfirió
+adjusted || ajustou || ajustó
+changed password || alterou a senha || cambió la contraseña
+finalized || finalizou || finalizó
+paid taxes || pagou impostos || pagó impuestos
+invoice || fatura || factura
+estimate || orçamento || presupuesto
+bill || conta a pagar || cuenta por pagar
+expense || despesa || gasto
+contact || contato || contacto
+item || item || artículo
+account || conta || cuenta
+journal || lançamento || asiento
+project || projeto || proyecto
+recurring || recorrência || recurrencia
+user || usuário || usuario
+settings || configurações || configuración
+employee || funcionário || empleado
+payroll || folha || nómina
+bank || banco || banco
+payment || pagamento || pago
+Server connection lost. || Conexão com o servidor perdida. || Se perdió la conexión con el servidor.
+Out of balance (debit {0} ≠ credit {1}) || Lançamento desbalanceado (débito {0} ≠ crédito {1}) || Asiento descuadrado (débito {0} ≠ crédito {1})
+Invalid quantity on line {0} || Quantidade inválida na linha {0} || Cantidad inválida en la línea {0}
+Invalid date: {0} || Data inválida: {0} || Fecha inválida: {0}
+The reconciliation does not balance: off by {0} cents || A conciliação não fecha: diferença de {0} centavos || La conciliación no cuadra: diferencia de {0} centavos
+System account "{0}" not found in the chart of accounts || Conta do sistema "{0}" não encontrada no plano de contas || Cuenta del sistema "{0}" no encontrada en el plan de cuentas
+Deductions exceed gross pay for {0} || Os descontos superam o pagamento bruto de {0} || Las deducciones superan el pago bruto de {0}
+{0} appears twice in this pay run || {0} aparece duas vezes nesta rodada || {0} aparece dos veces en este ciclo
+
+Invalid amount || Valor inválido || Importe inválido
+Account not found || Conta inexistente || Cuenta no encontrada
+Invalid date || Data inválida || Fecha inválida
+Invalid journal line || Linha de lançamento inválida || Línea de asiento inválida
+This entry has already been reconciled with the bank statement and cannot be changed || Este lançamento já foi conciliado com o extrato bancário e não pode ser alterado || Este asiento ya se concilió con el extracto bancario y no se puede cambiar
+Invalid tax rate || Alíquota inválida || Tasa de impuesto inválida
+Invalid document type || Tipo de documento inválido || Tipo de documento inválido
+Select a contact || Selecione um contato || Seleccione un contacto
+Invalid issue date || Data de emissão inválida || Fecha de emisión inválida
+Invalid due date || Vencimento inválido || Vencimiento inválido
+Add at least one line || Adicione ao menos uma linha || Agregue al menos una línea
+Every line needs a description or an item || Toda linha precisa de descrição ou item || Cada línea necesita una descripción o un artículo
+The total must be greater than zero || O total deve ser maior que zero || El total debe ser mayor que cero
+Document not found || Documento não encontrado || Documento no encontrado
+A voided document cannot be edited || Documento anulado não pode ser editado || Un documento anulado no se puede editar
+The new total is less than the amount already paid || O novo total é menor que o valor já pago || El nuevo total es menor que lo ya pagado
+Only drafts can be issued || Somente rascunhos podem ser emitidos || Solo los borradores se pueden emitir
+Already voided || Já anulado || Ya anulado
+Remove the payments before voiding || Remova os pagamentos antes de anular || Quite los pagos antes de anular
+Invalid action || Ação inválida || Acción inválida
+Void the document before deleting it || Anule o documento antes de excluir || Anule el documento antes de eliminarlo
+Estimate not found || Orçamento não encontrado || Presupuesto no encontrado
+Estimate already converted || Orçamento já convertido || Presupuesto ya convertido
+A declined or voided estimate cannot be converted || Orçamento recusado/anulado não pode ser convertido || Un presupuesto rechazado o anulado no se puede convertir
+This document cannot take payments (issue it first) || Documento não aceita pagamentos (emita-o primeiro) || Este documento no admite pagos (emítalo primero)
+Amount must be positive || Valor deve ser positivo || El importe debe ser positivo
+Amount is larger than the open balance || Valor maior que o saldo em aberto || El importe supera el saldo pendiente
+Invalid payment account || Conta de pagamento inválida || Cuenta de pago inválida
+Payment not found || Pagamento não encontrado || Pago no encontrado
+Invalid expense category || Categoria de despesa inválida || Categoría de gasto inválida
+Receipt is too large (max ~1.8 MB) || Comprovante muito grande (máx. ~1,8 MB) || El comprobante es demasiado grande (máx. ~1,8 MB)
+Expense not found || Despesa não encontrada || Gasto no encontrado
+Item does not track inventory || Item sem controle de estoque || El artículo no controla inventario
+Invalid quantity || Quantidade inválida || Cantidad inválida
+The selected account is not a bank or card account || A conta selecionada não é bancária/cartão || La cuenta seleccionada no es bancaria ni de tarjeta
+No rows to import || Nenhuma linha para importar || No hay filas para importar
+Maximum of 5000 rows per import || Máximo de 5000 linhas por importação || Máximo de 5000 filas por importación
+Transaction not found || Transação não encontrada || Transacción no encontrada
+Transaction already handled || Transação já tratada || Transacción ya procesada
+Entry does not belong to this account || Lançamento inválido para esta conta || El asiento no pertenece a esta cuenta
+Amounts do not match || Valores não conferem || Los importes no coinciden
+Entry already linked to another transaction || Lançamento já vinculado a outra transação || Asiento ya vinculado a otra transacción
+Invalid statement date || Data do extrato inválida || Fecha de extracto inválida
+Some selected entries are invalid || Há lançamentos selecionados inválidos || Algunos asientos seleccionados son inválidos
+No reconciliation to undo || Nenhuma conciliação para desfazer || No hay conciliación que deshacer
+Invalid ID || ID inválido || ID inválido
+Invalid period || Período inválido || Período inválido
+System is already set up || Sistema já configurado || El sistema ya está configurado
+Enter your name || Informe seu nome || Ingrese su nombre
+Enter the email || Informe o e-mail || Ingrese el correo
+The password must be at least 8 characters || A senha precisa ter ao menos 8 caracteres || La contraseña debe tener al menos 8 caracteres
+Incorrect email or password || E-mail ou senha incorretos || Correo o contraseña incorrectos
+Current password is incorrect || Senha atual incorreta || La contraseña actual es incorrecta
+The new password must be at least 8 characters || A nova senha precisa ter ao menos 8 caracteres || La nueva contraseña debe tener al menos 8 caracteres
+Enter the name || Informe o nome || Ingrese el nombre
+Invalid role || Papel inválido || Rol inválido
+Password must be at least 8 characters || Senha com ao menos 8 caracteres || La contraseña debe tener al menos 8 caracteres
+Email already registered || E-mail já cadastrado || Correo ya registrado
+User not found || Usuário não encontrado || Usuario no encontrado
+At least one active owner is required || É necessário manter ao menos um proprietário ativo || Se necesita al menos un propietario activo
+Enter the code || Informe o código || Ingrese el código
+Invalid type || Tipo inválido || Tipo inválido
+Code already exists || Código já existe || El código ya existe
+System accounts cannot be deactivated || Contas do sistema não podem ser desativadas || Las cuentas del sistema no se pueden desactivar
+System accounts cannot be deleted || Contas do sistema não podem ser excluídas || Las cuentas del sistema no se pueden eliminar
+Entry not found || Lançamento não encontrado || Asiento no encontrado
+Automatic entries are undone from their source document || Lançamentos automáticos são desfeitos no documento de origem || Los asientos automáticos se deshacen desde su documento de origen
+A reconciled entry cannot be deleted || Lançamento conciliado não pode ser excluído || Un asiento conciliado no se puede eliminar
+Contact not found || Contato não encontrado || Contacto no encontrado
+Item not found || Item não encontrado || Artículo no encontrado
+Zero the stock before turning tracking off || Zere o estoque antes de desligar o controle || Deje el inventario en cero antes de desactivar el control
+No receipt || Sem comprovante || Sin comprobante
+Enter the text to match || Informe o texto a procurar || Ingrese el texto a buscar
+Hours already invoiced || Horas já faturadas || Horas ya facturadas
+Invalid project || Projeto inválido || Proyecto inválido
+There are no hours to invoice || Não há horas a faturar || No hay horas por facturar
+The project needs a customer || O projeto precisa de um cliente || El proyecto necesita un cliente
+Enter a name || Informe um nome || Ingrese un nombre
+Invalid frequency || Frequência inválida || Frecuencia inválida
+Invalid next date || Próxima data inválida || Próxima fecha inválida
+Select the customer || Selecione o cliente || Seleccione el cliente
+Route not found || Rota não encontrada || Ruta no encontrada
+Session expired, please sign in again || Sessão expirada, entre novamente || La sesión expiró, inicie sesión de nuevo
+You do not have permission for this action || Você não tem permissão para esta ação || No tiene permiso para esta acción
+Too many attempts. Please wait 15 minutes. || Muitas tentativas. Aguarde 15 minutos. || Demasiados intentos. Espere 15 minutos.
+Internal server error || Erro interno do servidor || Error interno del servidor
+File too large || Arquivo muito grande || Archivo demasiado grande
+Duplicate record || Registro duplicado || Registro duplicado
+Source and destination accounts must be different || Contas de origem e destino devem ser diferentes || Las cuentas de origen y destino deben ser distintas
+Hours must be between 0 and 24 || Horas devem estar entre 0 e 24 || Las horas deben estar entre 0 y 24
+Employee not found || Funcionário não encontrado || Empleado no encontrado
+Pay run not found || Rodada de pagamento não encontrada || Ciclo de pago no encontrado
+Enter a pay rate || Informe o valor do pagamento || Ingrese una tarifa de pago
+Invalid hire date || Data de admissão inválida || Fecha de contratación inválida
+Pay basis must be hourly or annual salary || O pagamento deve ser por hora ou salário anual || El pago debe ser por hora o salario anual
+Invalid pay frequency || Frequência de pagamento inválida || Frecuencia de pago inválida
+Invalid filing status || Estado civil fiscal inválido || Estado civil fiscal inválido
+State withholding must be between 0% and 20% || A retenção estadual deve estar entre 0% e 20% || La retención estatal debe estar entre 0% y 20%
+Invalid pay run type || Tipo de rodada inválido || Tipo de ciclo de pago inválido
+Invalid dates || Datas inválidas || Fechas inválidas
+The period end is before its start || O fim do período é anterior ao início || El fin del período es anterior a su inicio
+Add at least one employee || Adicione ao menos um funcionário || Agregue al menos un empleado
+Employee not found or inactive || Funcionário não encontrado ou inativo || Empleado no encontrado o inactivo
+Invalid hours || Horas inválidas || Horas inválidas
+Amounts cannot be negative || Valores não podem ser negativos || Los importes no pueden ser negativos
+The pay run has no earnings || A rodada não tem ganhos || El ciclo de pago no tiene ingresos
+Only draft pay runs can be edited || Só rodadas em rascunho podem ser editadas || Solo los ciclos en borrador se pueden editar
+This pay run is already finalized || Esta rodada já está finalizada || Este ciclo de pago ya está finalizado
+Choose the bank account the payroll is paid from || Escolha a conta bancária de onde a folha é paga || Elija la cuenta bancaria desde la que se paga la nómina
+Void a finalized pay run instead of deleting it || Anule uma rodada finalizada em vez de excluí-la || Anule un ciclo finalizado en lugar de eliminarlo
+Only finalized pay runs can be voided || Só rodadas finalizadas podem ser anuladas || Solo se pueden anular ciclos finalizados
+Some of this payroll’s taxes were already remitted. Delete those remittances first. || Alguns impostos desta folha já foram recolhidos. Exclua esses pagamentos primeiro. || Algunos impuestos de esta nómina ya se pagaron. Elimine primero esos pagos.
+Choose what to pay || Escolha o que pagar || Elija qué pagar
+Choose a bank account || Escolha uma conta bancária || Elija una cuenta bancaria
+Unknown payroll component || Componente de folha desconhecido || Componente de nómina desconocido
+Amount is larger than what is owed || O valor é maior que o devido || El importe supera lo adeudado
+Quarter must be 1–4 || O trimestre deve ser 1–4 || El trimestre debe ser 1–4
+Set the project hourly rate || Defina o valor/hora do projeto || Defina la tarifa por hora del proyecto
+The account has entries; deactivate it instead of deleting it || A conta possui lançamentos; desative-a em vez de excluir || La cuenta tiene asientos; desactívela en lugar de eliminarla
+Regular§run || Normal || Regular
