@@ -7,14 +7,16 @@ import * as acc from './accounting.js';
 import * as bank from './banking.js';
 import * as rep from './reports.js';
 import * as pay from './payroll.js';
-import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE } from './plans.js';
+import * as plaidSvc from './plaid.js';
+import * as billing from './billing.js';
+import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, limitFor, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE } from './plans.js';
 import { authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
 
 const { HttpError, today, isDate, cents } = acc;
 const bad = (m) => new HttpError(400, m);
 export const app = express();
 app.disable('x-powered-by');
-app.use(express.json({ limit: '4mb' }));
+app.use(express.json({ limit: '4mb', verify: (req, _res, buf) => { req.rawBody = buf; } })); // rawBody: assinatura dos webhooks
 app.use(authenticate);
 
 const api = express.Router();
@@ -30,10 +32,14 @@ const range = (req) => {
 };
 
 /* ---------------------------------- auth ---------------------------------- */
-api.get('/status', wrap((_req, res) => ok(res, { needsSetup: !get('SELECT 1 FROM users LIMIT 1'), company: getSetting('company_name') })));
+api.get('/status', wrap((_req, res) => ok(res, { needsSetup: !get('SELECT 1 FROM users LIMIT 1'), company: getSetting('company_name'), billing: billing.stripeConfigured(), requirePayment: process.env.FLUXO_REQUIRE_PAYMENT === '1' })));
 
-api.post('/setup', wrap((req, res) => {
+api.post('/setup', wrap(async (req, res) => {
   if (get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(403, 'System is already set up');
+  // quem pagou pela landing page chega aqui com a sessão do Stripe; o servidor confirma o pagamento antes de aceitar
+  let paid = null;
+  if (req.body.checkout_session_id) paid = await billing.verifyCheckoutSession(req.body.checkout_session_id);
+  else if (process.env.FLUXO_REQUIRE_PAYMENT === '1') throw new HttpError(402, 'Payment required');
   const { company_name, name, email, password, demo, currency } = req.body;
   if (req.body.plan) setPlan({ plan: req.body.plan });
   const lang = LANGS.includes(req.body.lang) ? req.body.lang : 'en';
@@ -42,7 +48,8 @@ api.post('/setup', wrap((req, res) => {
   applyLanguage(lang, { currency: ['USD', 'EUR', 'GBP', 'CAD', 'MXN'].includes(currency) ? currency : undefined });
   if (company_name) setSetting('company_name', company_name);
   const uid = insert('INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,\'owner\')', name.trim(), email.trim().toLowerCase(), hashPassword(password));
-  if (demo) import('./seed.js').then((m) => m.loadDemo(lang)).catch((e) => console.error('seed', e));
+  if (paid?.subscription) billing.applySubscription(paid.subscription);
+  if (demo && !paid) import('./seed.js').then((m) => m.loadDemo(lang)).catch((e) => console.error('seed', e));
   ok(res, { token: createSession(uid), user: publicUser(get('SELECT * FROM users WHERE id=?', uid)) });
 }));
 
@@ -79,12 +86,40 @@ api.post('/public/doc/:token/accept', wrap((req, res) => {
   ok(res, { status: 'accepted' });
 }));
 
+// webhooks do Plaid: validados pela assinatura JWT (ES256) quando o servidor tem chaves reais
+api.post('/plaid/webhook', wrap(async (req, res) => {
+  if (plaidSvc.plaidConfigured() && process.env.PLAID_WEBHOOK_VERIFY !== '0') await plaidSvc.verifyWebhook(req.rawBody || Buffer.from(''), req.headers['plaid-verification']);
+  else if (plaidSvc.plaidMode() !== 'demo') throw new HttpError(404, 'Route not found');
+  ok(res, await plaidSvc.handleWebhook(req.body || {}));
+}));
+
+// Stripe: eventos assinados (HMAC-SHA256) que mantêm o plano da empresa sincronizado com a assinatura
+api.post('/stripe/webhook', wrap(async (req, res) => {
+  billing.verifyStripeSignature(req.rawBody || Buffer.from(''), req.headers['stripe-signature']);
+  ok(res, await billing.handleStripeEvent(req.body));
+}));
+api.get('/public/plans', wrap((_req, res) => ok(res, { configured: billing.stripeConfigured(), needsSetup: !get('SELECT 1 FROM users LIMIT 1'), order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE })));
+api.post('/public/checkout', wrap(async (req, res) => {
+  rateLimitLogin(`checkout|${req.ip}`);
+  if (get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(403, 'This installation already has an account. Sign in to change your plan.');
+  const email = String(req.body.email || '').trim().toLowerCase();
+  if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw bad('Enter a valid email');
+  ok(res, await billing.createCheckout({ plan: req.body.plan, payroll: !!req.body.payroll, origin: billing.originOf(req), email: email || undefined, signup: true }));
+}));
+api.get('/public/signup', wrap(async (req, res) => {
+  if (get('SELECT 1 FROM users LIMIT 1')) return ok(res, { alreadySetup: true });
+  const v = await billing.verifyCheckoutSession(req.query.session_id);
+  ok(res, { email: v.email, plan: v.plan, payroll: v.payroll });
+}));
+
 api.use(requireAuth);
 api.post('/logout', wrap((req, res) => { run('DELETE FROM sessions WHERE token=?', req.headers.authorization.slice(7)); ok(res, {}); }));
-const planInfo = () => ({ plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, lockDate: getSetting('lock_date', '') });
+const planInfo = () => ({ plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, lockDate: getSetting('lock_date', ''), billing: billing.billingState(), limits: { bank_connections: limitFor('bank_connections') } });
 api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), planInfo: planInfo() })));
 api.get('/plan', wrap((_req, res) => ok(res, planInfo())));
-api.put('/plan', can('users', true), wrap((req, res) => { setPlan({ plan: req.body.plan, payroll: req.body.payroll }); audit(req, 'update', 'settings', null, `plan ${currentPlan()}`); ok(res, planInfo()); }));
+api.put('/plan', can('users', true), wrap((req, res) => {
+  if (getSetting('billing_managed', '0') === '1' && process.env.FLUXO_ALLOW_MANUAL_PLAN !== '1') throw new HttpError(403, 'Your plan is managed by your subscription. Use Upgrade or Manage billing.');
+  setPlan({ plan: req.body.plan, payroll: req.body.payroll }); audit(req, 'update', 'settings', null, `plan ${currentPlan()}`); ok(res, planInfo()); }));
 api.post('/me/password', wrap((req, res) => {
   if (!verifyPassword(String(req.body.current || ''), req.user.password_hash)) throw bad('Current password is incorrect');
   if (!req.body.next || req.body.next.length < 8) throw bad('The new password must be at least 8 characters');
@@ -357,6 +392,24 @@ api.post('/transfers', can('banking', true), wrap((req, res) => {
   audit(req, 'transfer', 'journal', e); ok(res, { id: e });
 }));
 
+/* ------------------------------- cobrança (Stripe) ------------------------------- */
+api.get('/billing', can('users'), wrap((_req, res) => ok(res, planInfo())));
+api.post('/billing/checkout', can('users', true), wrap(async (req, res) => ok(res, await billing.createCheckout({ plan: req.body.plan, payroll: req.body.payroll === undefined ? hasAddon('payroll') : !!req.body.payroll, origin: billing.originOf(req) }))));
+api.post('/billing/change', can('users', true), wrap(async (req, res) => { await billing.changeSubscription({ plan: req.body.plan, payroll: req.body.payroll }); audit(req, 'update', 'settings', null, `plan ${currentPlan()}`); ok(res, planInfo()); }));
+api.post('/billing/portal', can('users', true), wrap(async (req, res) => ok(res, await billing.createPortal(billing.originOf(req)))));
+
+/* --------------------------- conexão bancária (Plaid) ---------------------------- */
+api.use('/plaid', can('banking'), requireFeature('bank_feeds'));
+api.get('/plaid/overview', wrap((_req, res) => ok(res, { mode: plaidSvc.plaidMode(), limit: limitFor('bank_connections'), connections: plaidSvc.listConnections() })));
+api.post('/plaid/link-token', can('banking', true), wrap(async (req, res) => ok(res, { link_token: await plaidSvc.createLinkToken(req.user, req.body.item_id) })));
+api.post('/plaid/exchange', can('banking', true), wrap(async (req, res) => { const c = await plaidSvc.exchangePublicToken(req.body, req.user); audit(req, 'connect', 'bank', null, c.institution_name); ok(res, c); }));
+api.post('/plaid/demo', can('banking', true), wrap(async (req, res) => { const c = await plaidSvc.connectDemo(req.user); audit(req, 'connect', 'bank', null, 'Demo Bank'); ok(res, c); }));
+api.post('/plaid/sync', can('banking', true), wrap(async (req, res) => ok(res, req.body.item_id ? await plaidSvc.syncItem(req.body.item_id) : { items: await plaidSvc.syncAll() })));
+api.put('/plaid/accounts/:id', can('banking', true), wrap((req, res) => ok(res, plaidSvc.linkAccount(id(req), { linked_account_id: req.body.linked_account_id, create: !!req.body.create }))));
+api.delete('/plaid/items/:itemId', can('banking', true), wrap(async (req, res) => { await plaidSvc.removeItem(req.params.itemId); audit(req, 'disconnect', 'bank', null, req.params.itemId); ok(res, {}); }));
+api.get('/plaid/activity', wrap((req, res) => ok(res, plaidSvc.activity(req.query))));
+api.get('/plaid/insights', wrap((req, res) => ok(res, plaidSvc.insights(req.query))));
+
 /* ----------------------------- projetos e tempo --------------------------- */
 api.use('/projects', requireFeature('time_tracking'));
 api.use('/time', requireFeature('time_tracking'));
@@ -423,12 +476,12 @@ const empFields = (b) => {
 api.get('/payroll/employees', can('payroll'), wrap((_req, res) => ok(res, all('SELECT * FROM employees ORDER BY active DESC, name'))));
 api.post('/payroll/employees', can('payroll', true), wrap((req, res) => {
   const nid = insert('INSERT INTO employees(name,email,tax_id,position,hire_date,pay_basis,pay_rate,frequency,filing_status,credits,extra_withholding,state_pct,pretax_deduction,other_deduction,other_deduction_label) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', ...empFields(req.body));
-  audit(req, 'create', 'employee', nid, req.body.name); ok(res, get('SELECT * FROM employees WHERE id=?', nid));
+  audit(req, 'create', 'employee', nid, req.body.name); billing.syncPayrollSeats().catch((e) => console.error('billing seats', e.message)); ok(res, get('SELECT * FROM employees WHERE id=?', nid));
 }));
 api.put('/payroll/employees/:id', can('payroll', true), wrap((req, res) => {
   const eid = id(req); if (!get('SELECT 1 FROM employees WHERE id=?', eid)) throw new HttpError(404, 'Employee not found');
   run('UPDATE employees SET name=?,email=?,tax_id=?,position=?,hire_date=?,pay_basis=?,pay_rate=?,frequency=?,filing_status=?,credits=?,extra_withholding=?,state_pct=?,pretax_deduction=?,other_deduction=?,other_deduction_label=?,active=? WHERE id=?', ...empFields(req.body), req.body.active === false ? 0 : 1, eid);
-  audit(req, 'update', 'employee', eid); ok(res, get('SELECT * FROM employees WHERE id=?', eid));
+  audit(req, 'update', 'employee', eid); billing.syncPayrollSeats().catch((e) => console.error('billing seats', e.message)); ok(res, get('SELECT * FROM employees WHERE id=?', eid));
 }));
 api.get('/payroll/runs', can('payroll'), wrap((_req, res) => ok(res, all('SELECT * FROM pay_runs ORDER BY pay_date DESC, id DESC LIMIT 200'))));
 api.get('/payroll/runs/:id', can('payroll'), wrap((req, res) => { const r = pay.loadRun(id(req)); if (!r) throw new HttpError(404, 'Pay run not found'); ok(res, r); }));
@@ -552,4 +605,6 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   app.listen(port, () => console.log(`Fluxo rodando em http://localhost:${port}`));
   const tick = () => { try { const n = acc.runRecurring().length; if (n) console.log(`${n} fatura(s) recorrente(s) geradas`); } catch (e) { console.error(e); } };
   tick(); setInterval(tick, 60 * 60 * 1000).unref();
+  const bankTick = () => { if (get('SELECT 1 FROM plaid_items LIMIT 1')) plaidSvc.syncAll().catch((e) => console.error('bank sync', e.message)); };
+  setInterval(bankTick, 60 * 60 * 1000).unref();
 }

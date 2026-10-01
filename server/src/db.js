@@ -121,6 +121,21 @@ CREATE TABLE IF NOT EXISTS credit_applications (
   id INTEGER PRIMARY KEY, credit_id INTEGER NOT NULL REFERENCES docs(id) ON DELETE CASCADE, invoice_id INTEGER REFERENCES docs(id) ON DELETE CASCADE,
   amount INTEGER NOT NULL, date TEXT NOT NULL, account_id INTEGER REFERENCES accounts(id), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS plaid_items (
+  id INTEGER PRIMARY KEY, item_id TEXT NOT NULL UNIQUE, access_token_enc TEXT NOT NULL, institution_name TEXT NOT NULL DEFAULT '', institution_id TEXT DEFAULT '',
+  cursor TEXT, status TEXT NOT NULL DEFAULT 'ok', error_code TEXT DEFAULT '', last_sync TEXT, demo INTEGER NOT NULL DEFAULT 0, created_by INTEGER, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS plaid_accounts (
+  id INTEGER PRIMARY KEY, item_id TEXT NOT NULL REFERENCES plaid_items(item_id) ON DELETE CASCADE, account_id TEXT NOT NULL UNIQUE, name TEXT NOT NULL, official_name TEXT DEFAULT '',
+  mask TEXT DEFAULT '', type TEXT DEFAULT '', subtype TEXT DEFAULT '', balance_current INTEGER, balance_available INTEGER, currency TEXT DEFAULT 'USD',
+  linked_account_id INTEGER REFERENCES accounts(id), balance_at TEXT
+);
+CREATE TABLE IF NOT EXISTS plaid_transactions (
+  transaction_id TEXT PRIMARY KEY, account_id TEXT NOT NULL, date TEXT NOT NULL, name TEXT NOT NULL DEFAULT '', merchant TEXT DEFAULT '', amount INTEGER NOT NULL,
+  category_primary TEXT DEFAULT '', category_detailed TEXT DEFAULT '', pending INTEGER NOT NULL DEFAULT 0, currency TEXT DEFAULT 'USD', imported INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_ptx_account ON plaid_transactions(account_id, date);
+CREATE TABLE IF NOT EXISTS stripe_events (id TEXT PRIMARY KEY, type TEXT NOT NULL, at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS employees (
   id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT DEFAULT '', tax_id TEXT DEFAULT '', position TEXT DEFAULT '', hire_date TEXT NOT NULL,
   pay_basis TEXT NOT NULL DEFAULT 'year' CHECK (pay_basis IN ('hour','year')), pay_rate INTEGER NOT NULL DEFAULT 0,
@@ -247,7 +262,8 @@ export function ensureDefaults() {
   });
   const defaults = { ...LANG_DEFAULTS.en, lang: 'en', next_invoice: '1001', next_estimate: '1001', next_bill: '1001', default_tax_rate: '0', default_terms_days: '15',
     payroll_suta_rate: '0', payroll_suta_base: '0', default_tax_rate: '0', credit_prefix: 'CM-', po_prefix: 'PO-', next_credit: '1001', next_po: '1001',
-    plan: 'advanced', addon_payroll: '1', lock_date: '', company_logo: '', brand_color: '#4338CA' };
+    plan: 'advanced', addon_payroll: '1', lock_date: '', company_logo: '', brand_color: '#4338CA',
+    stripe_customer_id: '', stripe_subscription_id: '', subscription_status: '', subscription_period_end: '', subscription_cancel_at_end: '0', billing_managed: '0' };
   for (const [k, v] of Object.entries(defaults)) if (get('SELECT 1 FROM settings WHERE key=?', k) === undefined) setSetting(k, v);
 }
 ensureDefaults();

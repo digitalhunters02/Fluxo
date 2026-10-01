@@ -62,9 +62,9 @@ export function importTxns(account_id, rows) {
       const description = String(r.description || '').trim().slice(0, 200) || '(no description)';
       const base = `${account_id}|${r.date}|${description}|${amount}`;
       const n = (seen.get(base) || 0) + 1; seen.set(base, n); // transações idênticas no mesmo arquivo são válidas
-      const hash = crypto.createHash('sha1').update(`${base}|${n}`).digest('hex');
+      const hash = r.external_id ? String(r.external_id) : crypto.createHash('sha1').update(`${base}|${n}`).digest('hex');
       if (get('SELECT 1 FROM bank_txns WHERE hash=?', hash)) { duplicates++; continue; }
-      const sug = suggestCategory(description, amount);
+      const sug = suggestCategory(description, amount) || (r.suggested_account_id ? { account_id: r.suggested_account_id, source: 'category' } : null);
       const match = findMatch(account_id, r.date, amount, used);
       if (match) used.push(match);
       insert(`INSERT INTO bank_txns(account_id,date,description,amount,hash,suggested_account_id,suggested_line_id,suggestion_source) VALUES(?,?,?,?,?,?,?,?)`,

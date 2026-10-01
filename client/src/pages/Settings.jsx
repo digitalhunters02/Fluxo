@@ -1,9 +1,9 @@
 import { t } from '../i18n.jsx';
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, getToken } from '../api.js';
 import { date } from '../format.js';
-import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad } from '../components/ui.jsx';
+import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad, useToast } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
 import { Gate, Lock, PLAN_LABEL } from '../components/plan.jsx';
 
@@ -66,7 +66,7 @@ function Users() {
 
 const ACTIONS = { create: t('created'), update: t('updated'), delete: t('deleted'), post: t('issued'), void: t('voided'), accept: t('accepted'), decline: t('declined'), send: t('sent'), convert: t('converted'),
   payment: t('recorded a payment on'), import: t('imported'), 'accept-all': t('accepted all suggestions on'), reconcile: t('reconciled'), 'undo-reconcile': t('undid reconciliation on'), transfer: t('transferred'),
-  adjust: t('adjusted'), password: t('changed password'), finalize: t('finalized'), remit: t('paid taxes'), apply: t('apply'), refund: t('refund') };
+  adjust: t('adjusted'), password: t('changed password'), finalize: t('finalized'), remit: t('paid taxes'), apply: t('apply'), refund: t('refund'), connect: t('connected'), disconnect: t('disconnected') };
 const ENTITIES = { invoice: t('invoice'), estimate: t('estimate'), bill: t('bill'), expense: t('expense'), contact: t('contact'), item: t('item'), account: t('account'), journal: t('journal'), project: t('project'),
   recurring: t('recurring'), user: t('user'), settings: t('settings'), employee: t('employee'), payroll: t('payroll'), bank: t('bank'), payment: t('payment'), budget: t('budget'), class: t('class'), role: t('role'), credit: t('credit'), po: t('po') };
 
@@ -113,13 +113,13 @@ function LockDate() {
 
 const PLAN_FEATURES = [
   ['Invoices, estimates & credit memos', 'starter'], ['Expenses, receipts & sales receipts', 'starter'], ['Bank CSV import & reconciliation', 'starter'], ['Core financial reports', 'starter'], ['Logo & brand color on invoices', 'starter'],
-  ['Bills & vendor payments', 'essentials'], ['Recurring invoices', 'essentials'], ['Time tracking', 'essentials'], ['Full report set & audit log', 'essentials'],
+  ['Bills & vendor payments', 'essentials'], ['Automatic bank connection (Plaid)', 'essentials'], ['Recurring invoices', 'essentials'], ['Time tracking', 'essentials'], ['Full report set & audit log', 'essentials'],
   ['Inventory (average cost)', 'plus'], ['Project profitability', 'plus'], ['Purchase orders', 'plus'], ['Budgets & budget vs actual', 'plus'], ['Classes & P&L by class', 'plus'], ['1099 contractor report', 'plus'], ['Close the books (period lock)', 'plus'],
   ['Custom roles & permissions', 'advanced'], ['Batch invoicing', 'advanced'],
 ];
 const FEATURE_LABEL = {
   'Invoices, estimates & credit memos': t('Invoices, estimates & credit memos'), 'Expenses, receipts & sales receipts': t('Expenses, receipts & sales receipts'), 'Bank CSV import & reconciliation': t('Bank CSV import & reconciliation'),
-  'Core financial reports': t('Core financial reports'), 'Logo & brand color on invoices': t('Logo & brand color on invoices'), 'Bills & vendor payments': t('Bills & vendor payments'), 'Recurring invoices': t('Recurring invoices'),
+  'Core financial reports': t('Core financial reports'), 'Logo & brand color on invoices': t('Logo & brand color on invoices'), 'Bills & vendor payments': t('Bills & vendor payments'), 'Automatic bank connection (Plaid)': t('Automatic bank connection (Plaid)'), 'Recurring invoices': t('Recurring invoices'),
   'Time tracking': t('Time tracking'), 'Full report set & audit log': t('Full report set & audit log'), 'Inventory (average cost)': t('Inventory (average cost)'), 'Project profitability': t('Project profitability'),
   'Purchase orders': t('Purchase orders'), 'Budgets & budget vs actual': t('Budgets & budget vs actual'), 'Classes & P&L by class': t('Classes & P&L by class'), '1099 contractor report': t('1099 contractor report'),
   'Close the books (period lock)': t('Close the books (period lock)'), 'Custom roles & permissions': t('Custom roles & permissions'), 'Batch invoicing': t('Batch invoicing'),
@@ -128,30 +128,70 @@ const FEATURE_LABEL = {
 function PlanTab() {
   const { user, planInfo, refresh } = useAuth();
   const [run, busy] = useAction();
+  const toast = useToast();
+  const [params, setParams] = useSearchParams();
+  const [withPayroll, setWithPayroll] = useState(planInfo.payroll);
   const owner = user.role === 'owner';
+  const bill = planInfo.billing;
   const rank = (p) => planInfo.order.indexOf(p);
-  const change = (patch) => run(async () => { await api.put('/plan', patch); await refresh(); }, t('Plan updated'));
+  const stripeOn = bill.configured;
+  // voltou do Stripe: o webhook pode demorar alguns segundos, então atualiza algumas vezes
+  useEffect(() => {
+    if (params.get('checkout') === 'success') {
+      toast(t('Payment received. Updating your plan…'));
+      let n = 0; const h = setInterval(async () => { await refresh(); if (++n >= 5) clearInterval(h); }, 2000);
+      setParams({}, { replace: true });
+      return () => clearInterval(h);
+    }
+    if (params.get('checkout') === 'canceled') { toast(t('Checkout was canceled.'), 'err'); setParams({}, { replace: true }); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const manual = (patch) => run(async () => { await api.put('/plan', patch); await refresh(); }, t('Plan updated'));
+  const subscribe = (plan) => run(async () => { const r = await api.post('/billing/checkout', { plan, payroll: withPayroll }); window.location.href = r.url; });
+  const change = (patch) => run(async () => { await api.post('/billing/change', patch); await refresh(); }, t('Plan updated'));
+  const portal = () => run(async () => { const r = await api.post('/billing/portal', {}); window.location.href = r.url; });
+  const statusBadge = { active: ['paid', t('Active')], trialing: ['sent', t('Trial')], past_due: ['declined', t('Payment failed')], canceled: ['void', t('Canceled')] }[bill.status];
   return (
     <>
       <p className="mb-4 max-w-2xl text-sm text-slate-500">{t('Your plan decides which features are available. Everyone on your team is included: there is no per-user fee.')}</p>
+      {stripeOn && bill.managed && (
+        <Card title={t('Subscription')} className="mb-4">
+          <div className="flex flex-wrap items-center gap-3">
+            {statusBadge && <Badge status={statusBadge[0]}>{statusBadge[1]}</Badge>}
+            {bill.periodEnd && <span className="text-sm text-slate-600">{bill.cancelAtPeriodEnd ? t('Ends on {0}', [date(bill.periodEnd)]) : t('Renews on {0}', [date(bill.periodEnd)])}</span>}
+            {owner && bill.hasCustomer && <Button variant="ghost" disabled={busy} onClick={portal}>{t('Manage billing')}</Button>}
+          </div>
+          {bill.status === 'past_due' && <p className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{t('Your last payment failed. Update your card in Manage billing to keep your plan.')}</p>}
+          <p className="mt-3 text-xs text-slate-400">{t('Upgrades and downgrades are prorated. Update your card, download invoices or cancel in Manage billing.')}</p>
+        </Card>
+      )}
+      {stripeOn && !bill.managed && owner && <label className="mb-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={withPayroll} onChange={(e) => setWithPayroll(e.target.checked)} /> {t('Include U.S. payroll (${0}/mo + ${1} per employee)', [planInfo.payrollPrice.base, planInfo.payrollPrice.perEmployee])}</label>}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {planInfo.order.map((p) => (
-          <Card key={p} className={p === planInfo.plan ? 'ring-2 ring-brand-500' : ''}>
-            <div className="flex items-baseline justify-between"><h3 className="text-lg font-semibold">{PLAN_LABEL[p]}</h3>{p === planInfo.plan && <Badge status="paid">{t('Current plan')}</Badge>}</div>
-            <div className="num my-2 text-3xl font-bold">${planInfo.prices[p]}<span className="text-sm font-normal text-slate-500">{t('/month')}</span></div>
-            <ul className="space-y-1.5 text-sm">
-              {PLAN_FEATURES.map(([f, min]) => <li key={f} className={rank(p) >= rank(min) ? '' : 'text-slate-300 line-through'}>{rank(p) >= rank(min) ? '✓' : '·'} {FEATURE_LABEL[f]}</li>)}
-            </ul>
-            {owner && p !== planInfo.plan && <Button className="mt-4 w-full" variant={rank(p) > rank(planInfo.plan) ? 'primary' : 'ghost'} disabled={busy} onClick={() => confirm(t('Switch to the {0} plan?', [PLAN_LABEL[p]])) && change({ plan: p })}>{rank(p) > rank(planInfo.plan) ? t('Upgrade') : t('Downgrade')}</Button>}
-          </Card>
-        ))}
+        {planInfo.order.map((p) => {
+          const current = p === planInfo.plan && (!stripeOn || bill.managed);
+          const up = rank(p) > rank(planInfo.plan);
+          return (
+            <Card key={p} className={current ? 'ring-2 ring-brand-500' : ''}>
+              <div className="flex items-baseline justify-between"><h3 className="text-lg font-semibold">{PLAN_LABEL[p]}</h3>{current && <Badge status="paid">{t('Current plan')}</Badge>}</div>
+              <div className="num my-2 text-3xl font-bold">${planInfo.prices[p]}<span className="text-sm font-normal text-slate-500">{t('/month')}</span></div>
+              <ul className="space-y-1.5 text-sm">
+                {PLAN_FEATURES.map(([f, min]) => <li key={f} className={rank(p) >= rank(min) ? '' : 'text-slate-300 line-through'}>{rank(p) >= rank(min) ? '✓' : '·'} {FEATURE_LABEL[f]}</li>)}
+              </ul>
+              {owner && !current && (stripeOn
+                ? (bill.managed
+                  ? <Button className="mt-4 w-full" variant={up ? 'primary' : 'ghost'} disabled={busy} onClick={() => confirm(t('Switch to the {0} plan? The difference is prorated on your next invoice.', [PLAN_LABEL[p]])) && change({ plan: p })}>{up ? t('Upgrade') : t('Downgrade')}</Button>
+                  : <Button className="mt-4 w-full" disabled={busy} onClick={() => subscribe(p)}>{t('Subscribe')}</Button>)
+                : <Button className="mt-4 w-full" variant={up ? 'primary' : 'ghost'} disabled={busy} onClick={() => confirm(t('Switch to the {0} plan?', [PLAN_LABEL[p]])) && manual({ plan: p })}>{up ? t('Upgrade') : t('Downgrade')}</Button>)}
+            </Card>
+          );
+        })}
       </div>
       <Card title={t('Payroll add-on')} className="mt-4">
         <p className="text-sm text-slate-600">{t('U.S. payroll: ${0}/month + ${1} per employee. Calculates and records payroll, pay stubs, W-2 and 941 summaries.', [planInfo.payrollPrice.base, planInfo.payrollPrice.perEmployee])}</p>
         <div className="mt-3 flex items-center gap-3"><Badge status={planInfo.payroll ? 'paid' : 'void'}>{planInfo.payroll ? t('Active') : t('Inactive')}</Badge>
-          {owner && <Button variant="ghost" disabled={busy} onClick={() => change({ payroll: !planInfo.payroll })}>{planInfo.payroll ? t('Turn off') : t('Turn on')}</Button>}</div>
+          {owner && (!stripeOn || bill.managed) && <Button variant="ghost" disabled={busy} onClick={() => (stripeOn ? change({ payroll: !planInfo.payroll }) : manual({ payroll: !planInfo.payroll }))}>{planInfo.payroll ? t('Turn off') : t('Turn on')}</Button>}</div>
       </Card>
-      <p className="mt-4 text-xs text-slate-400">{t('Online billing is not connected yet: the owner switches plans here by hand.')}</p>
+      {!stripeOn && <p className="mt-4 text-xs text-slate-400">{t('Online billing is not connected yet: the owner switches plans here by hand.')}</p>}
     </>
   );
 }

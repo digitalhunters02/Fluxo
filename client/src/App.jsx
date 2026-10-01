@@ -20,6 +20,8 @@ import Settings from './pages/Settings.jsx';
 import Payroll from './pages/Payroll.jsx';
 import PublicDoc from './pages/PublicDoc.jsx';
 import { Gate, Lock } from './components/plan.jsx';
+import Connections from './pages/Connections.jsx';
+import { Pricing, Welcome } from './pages/Pricing.jsx';
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
@@ -37,6 +39,19 @@ function AuthScreen({ status, onAuth }) {
   const [run, busy] = useAction();
   const [f, setF] = useState({ company_name: '', name: '', email: '', password: '', demo: true, currency: 'USD', plan: 'advanced' });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
+  if (status.needsSetup && status.requirePayment) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-brand-900 via-brand-700 to-brand-500 p-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-7 text-center shadow-2xl">
+          <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-lg font-bold text-white">F</div>
+          <h1 className="text-lg font-semibold">{t('Choose a plan to get started')}</h1>
+          <p className="mt-2 text-sm text-slate-500">{t('Your workspace is created right after you pick a plan and pay.')}</p>
+          <a href="/pricing" className="btn btn-primary mt-5 w-full">{t('See plans and pricing')}</a>
+          <div className="mt-4 flex justify-center"><LangSwitch /></div>
+        </div>
+      </div>
+    );
+  }
   const submit = async (e) => {
     e.preventDefault();
     const r = await run(() => api.post(status.needsSetup ? '/setup' : '/login', { ...f, lang }));
@@ -50,6 +65,7 @@ function AuthScreen({ status, onAuth }) {
           <div><div className="text-lg font-semibold text-slate-900">Fluxo</div><div className="text-xs text-slate-500">{t('Simple finance and accounting')}</div></div>
         </div>
         <div className="mb-4 flex justify-end"><LangSwitch /></div>
+        {status.needsSetup && status.billing && <p className="mb-3 rounded-lg bg-brand-50 p-3 text-sm text-brand-700">{t('New here?')} <a className="font-semibold underline" href="/pricing">{t('Choose a plan to get started')}</a></p>}
         <h1 className="mb-4 text-base font-semibold">{status.needsSetup ? t('Create your owner account') : t('Sign in to {0}', [status.company])}</h1>
         <div className="space-y-3">
           {status.needsSetup && <><Field label={t('Company name')}><Input value={f.company_name} onChange={set('company_name')} placeholder={t('My Company LLC')} /></Field><Field label={t('Currency')}><Select value={f.currency} onChange={set('currency')}>{['USD', 'EUR', 'GBP', 'CAD', 'MXN'].map((c) => <option key={c}>{c}</option>)}</Select></Field><Field label={t('Plan')} hint={t('You can change it later in Settings')}><Select value={f.plan} onChange={set('plan')}><option value="starter">Starter — $29</option><option value="essentials">Essentials — $65</option><option value="plus">Plus — $109</option><option value="advanced">Advanced — $269</option></Select></Field><Field label={t('Your name')}><Input required value={f.name} onChange={set('name')} /></Field></>}
@@ -67,7 +83,7 @@ const NAV = [
   { to: '/', label: t('Dashboard'), icon: '◧', read: 'reports', end: true },
   { group: t('Sales'), items: [['/invoices', t('Invoices'), 'sales'], ['/estimates', t('Estimates'), 'sales'], ['/credit-memos', t('Credit memos'), 'sales'], ['/recurring', t('Recurring'), 'sales', 'recurring'], ['/customers', t('Customers'), 'sales']] },
   { group: t('Purchases'), items: [['/bills', t('Bills'), 'purchases', 'bills'], ['/purchase-orders', t('Purchase orders'), 'purchases', 'purchase_orders'], ['/expenses', t('Expenses'), 'purchases'], ['/vendors', t('Vendors'), 'sales']] },
-  { group: t('Banking'), items: [['/banking', t('Transactions & reconciliation'), 'banking']] },
+  { group: t('Banking'), items: [['/connections', t('Connected banks'), 'banking', 'bank_feeds'], ['/banking', t('Transactions & reconciliation'), 'banking']] },
   { group: t('Management'), items: [['/products', t('Products & inventory'), 'inventory'], ['/projects', t('Projects & time'), 'projects', 'time_tracking'], ['/payroll', t('Payroll'), 'payroll', 'payroll'], ['/reports', t('Reports'), 'reports'], ['/accounting', t('Accounting'), 'accounting']] },
   { to: '/settings', label: t('Settings'), icon: '⚙', read: 'settings' },
 ];
@@ -103,6 +119,7 @@ function Shell({ user, settings, logout }) {
         </div>
       </aside>
       <main className="min-w-0 flex-1 p-4 pt-14 md:p-8 md:pt-8">
+        {user.planInfo.billing?.status === 'past_due' && <div className="no-print mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{t('Your last payment failed.')} <NavLink to="/settings/plan" className="font-semibold underline">{t('Update your payment method')}</NavLink></div>}
         <Routes>
           <Route path="/" element={can('reports') ? <Dashboard /> : <Navigate to={home} replace />} />
           <Route path="/invoices" element={<Docs type="invoice" />} />
@@ -117,6 +134,7 @@ function Shell({ user, settings, logout }) {
           <Route path="/customers" element={<Contacts kind="customer" />} />
           <Route path="/vendors" element={<Contacts kind="vendor" />} />
           <Route path="/expenses" element={<Expenses />} />
+          <Route path="/connections/:tab?" element={<Gate feature="bank_feeds"><Connections /></Gate>} />
           <Route path="/banking" element={<Banking />} />
           <Route path="/products" element={<Items />} />
           <Route path="/projects" element={<Gate feature="time_tracking"><Projects /></Gate>} />
@@ -152,6 +170,8 @@ export default function App() {
   useEffect(() => { boot(); }, [boot]);
   useEffect(() => { setUnauthorizedHandler(() => { setToken(null); setUser(null); }); }, []);
 
+  if (loc.pathname === '/pricing') return <Pricing />;
+  if (loc.pathname === '/welcome') return <Welcome />;
   if (loc.pathname.startsWith('/p/')) return <ToastProvider><Routes><Route path="/p/:token" element={<PublicDoc />} /></Routes></ToastProvider>;
   if (!status) return <Loading />;
   if (status.error) return <div className="p-10 text-center text-rose-600">{t('Could not connect to the server.')}</div>;

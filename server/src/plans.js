@@ -9,10 +9,13 @@ export const PAYROLL_ADDON_PRICE = { base: 35, perEmployee: 5 };
 /** recurso -> plano mínimo. Recursos que não aparecem aqui valem para todos os planos. */
 export const FEATURES = {
   bills: 'essentials', recurring: 'essentials', time_tracking: 'essentials', audit_log: 'essentials', reports_full: 'essentials',
-  inventory: 'plus', project_profit: 'plus', contractors_1099: 'plus', budgets: 'plus', purchase_orders: 'plus', period_lock: 'plus', classes: 'plus',
+  bank_feeds: 'essentials', inventory: 'plus', project_profit: 'plus', contractors_1099: 'plus', budgets: 'plus', purchase_orders: 'plus', period_lock: 'plus', classes: 'plus',
   custom_roles: 'advanced', batch_invoices: 'advanced',
 };
 export const ADDON_FEATURES = ['payroll'];
+/** Limites numéricos por plano (conexões bancárias automáticas). */
+export const LIMITS = { bank_connections: { starter: 0, essentials: 2, plus: 5, advanced: 15 } };
+export const limitFor = (name) => LIMITS[name][currentPlan()];
 
 export const currentPlan = () => { const p = getSetting('plan', 'advanced'); return PLAN_ORDER.includes(p) ? p : 'advanced'; };
 export const hasAddon = (a) => getSetting(`addon_${a}`, '0') === '1';
