@@ -12,7 +12,7 @@ const REPEAT = () => ({ '': t('Does not repeat'), weekly: t('Weekly'), monthly: 
 /** Texto do aviso: os automáticos chegam com a chave em inglês e os dados para preencher. */
 export const reminderTitle = (r) => {
   if (r.manual) return r.title;
-  const arg = { overdue: r.data.number, bill: r.data.number, estimate: r.data.number, stock: r.data.name, bank: r.data.n }[r.kind];
+  const arg = { overdue: r.data.number, bill: r.data.number, estimate: r.data.number, stock: r.data.name, bank: r.data.n, recurring: r.data.name }[r.kind];
   return t(r.title, arg === undefined ? [] : [arg]);
 };
 

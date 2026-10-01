@@ -8,7 +8,7 @@ export const number = (n, d = 2) => new Intl.NumberFormat(cfg.locale, { maximumF
 // Datas no padrão dos EUA (mês/dia/ano) em todos os idiomas
 export const date = (iso) => (iso ? new Date(iso + 'T00:00:00').toLocaleDateString('en-US') : '');
 export const monthLabel = (ym) => new Date(ym + '-01T00:00:00').toLocaleDateString(cfg.locale, { month: 'short' }).replace('.', '');
-export const today = () => new Date().toISOString().slice(0, 10);
+export const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }; // data local do aparelho (não UTC)
 export const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 /** "1,234.56", "1234.56", "$12.5", "(45.00)" -> centavos. Aceita também "1.234,56". */
 export const toCents = (v) => {
@@ -23,7 +23,7 @@ export const toCents = (v) => {
     s = lastDot === -1 && /,\d{3}$/.test(s) ? s.replace(/,/g, '') : s.replace(/\./g, '').replace(',', '.');
   } else s = s.replace(/,/g, '');
   const n = Number(s);
-  return Number.isFinite(n) ? (neg ? -1 : 1) * Math.round(n * 100) : 0;
+  return Number.isFinite(n) ? (neg ? -1 : 1) * Math.round(Number(`${s}e2`)) : 0; // texto em notação exponencial: 1.005 -> 100.5 exato (n * 100 daria 100.49999)
 };
 export const fromCents = (c) => ((c || 0) / 100).toFixed(2);
 export const statusLabel = (s) => (STATUS[s] ? STATUS[s][0] : s);

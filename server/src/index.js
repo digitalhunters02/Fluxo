@@ -190,11 +190,12 @@ api.post('/me/password', wrap((req, res) => {
 }));
 
 /* ------------------------------- configurações ---------------------------- */
-const PUBLIC_SETTINGS = ['lock_date', 'company_logo', 'brand_color', 'lang', 'payroll_suta_rate', 'payroll_suta_base', 'company_name', 'company_tax_id', 'company_address', 'company_email', 'company_phone', 'currency', 'locale', 'invoice_prefix', 'estimate_prefix', 'bill_prefix', 'default_tax_rate', 'default_terms_days', 'invoice_footer'];
+const PUBLIC_SETTINGS = ['timezone', 'lock_date', 'company_logo', 'brand_color', 'lang', 'payroll_suta_rate', 'payroll_suta_base', 'company_name', 'company_tax_id', 'company_address', 'company_email', 'company_phone', 'currency', 'locale', 'invoice_prefix', 'estimate_prefix', 'bill_prefix', 'default_tax_rate', 'default_terms_days', 'invoice_footer'];
 api.get('/settings', can('settings'), wrap((_req, res) => ok(res, Object.fromEntries(PUBLIC_SETTINGS.map((k) => [k, getSetting(k)])))));
 api.put('/settings', can('settings', true), wrap((req, res) => {
   if ('company_logo' in req.body && req.body.company_logo !== '' && !(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(req.body.company_logo) && req.body.company_logo.length <= 400_000)) throw bad('Logo must be a PNG, JPEG or WebP under 300 KB');
   if ('brand_color' in req.body && !/^#[0-9a-fA-F]{6}$/.test(req.body.brand_color)) throw bad('Invalid color');
+  if ('timezone' in req.body && !acc.TIMEZONES.includes(req.body.timezone)) throw bad('Invalid time zone');
   if ((req.body.company_logo && req.body.company_logo !== getSetting('company_logo', '')) || (req.body.brand_color && req.body.brand_color !== getSetting('brand_color', ''))) assertFeature('branding');
   for (const k of PUBLIC_SETTINGS) if (k !== 'lock_date' && k in req.body) setSetting(k, req.body[k]);
   audit(req, 'update', 'settings'); ok(res, {});
@@ -521,20 +522,42 @@ api.post('/projects/:id/invoice-time', can('sales', true), wrap((req, res) => {
 
 /* ------------------------------- recorrências ----------------------------- */
 api.use('/recurring', requireFeature('recurring'));
-api.get('/recurring', can('sales'), wrap((_req, res) => ok(res, all('SELECT r.*, c.name AS contact_name FROM recurring r LEFT JOIN contacts c ON c.id=json_extract(r.template,\'$.contact_id\') ORDER BY r.active DESC, r.next_date').map((r) => ({ ...r, template: JSON.parse(r.template) })))));
+const recType = (r) => (r.template.type === 'bill' ? 'bill' : 'invoice');
+api.get('/recurring', can('sales'), wrap((req, res) => {
+  const seeBills = hasFeature('bills') && effectivePerms(req.user).read.includes('purchases');
+  ok(res, all('SELECT r.*, c.name AS contact_name FROM recurring r LEFT JOIN contacts c ON c.id=json_extract(r.template,\'$.contact_id\') ORDER BY r.active DESC, r.next_date')
+    .map((r) => ({ ...r, template: JSON.parse(r.template) })).map((r) => ({ ...r, type: recType(r) })).filter((r) => r.type === 'invoice' || seeBills));
+}));
 api.post('/recurring', can('sales', true), wrap((req, res) => {
   const b = req.body; need(b.name, 'Enter a name');
   if (!['weekly', 'monthly', 'quarterly', 'yearly'].includes(b.frequency)) throw bad('Invalid frequency');
   if (!isDate(b.next_date)) throw bad('Invalid next date');
-  if (!get('SELECT 1 FROM contacts WHERE id=?', b.template?.contact_id)) throw bad('Select the customer');
-  acc.computeLines('invoice', b.template.lines || []);
+  if (b.end_date && (!isDate(b.end_date) || b.end_date < b.next_date)) throw bad('The end date must be after the first date');
+  const type = b.template?.type === 'bill' ? 'bill' : 'invoice';
+  if (type === 'bill') { assertFeature('bills'); if (!effectivePerms(req.user).write.includes('purchases')) throw new HttpError(403, 'You do not have permission for this action'); }
+  if (!get('SELECT 1 FROM contacts WHERE id=?', b.template?.contact_id)) throw bad(type === 'bill' ? 'Select a vendor' : 'Select the customer');
   if (!b.template.lines?.length) throw bad('Add at least one line');
-  const nid = insert('INSERT INTO recurring(name,template,frequency,next_date,end_date,auto_post) VALUES(?,?,?,?,?,?)', b.name, JSON.stringify(b.template), b.frequency, b.next_date, b.end_date || null, b.auto_post ? 1 : 0);
+  const calc = acc.computeLines(type, b.template.lines);
+  if (calc.total <= 0) throw bad('The total must be greater than zero');
+  if (calc.lines.some((l) => !l.description && !l.item_id)) throw bad('Every line needs a description or an item');
+  const nid = insert('INSERT INTO recurring(name,template,frequency,next_date,end_date,auto_post,anchor_day) VALUES(?,?,?,?,?,?,?)', String(b.name).trim().slice(0, 120), JSON.stringify({ ...b.template, type }), b.frequency, b.next_date, b.end_date || null, b.auto_post ? 1 : 0, Number(b.next_date.slice(8)));
   audit(req, 'create', 'recurring', nid, b.name); ok(res, { id: nid });
 }));
-api.put('/recurring/:id', can('sales', true), wrap((req, res) => { run('UPDATE recurring SET active=? WHERE id=?', req.body.active ? 1 : 0, id(req)); ok(res, {}); }));
-api.delete('/recurring/:id', can('sales', true), wrap((req, res) => { run('DELETE FROM recurring WHERE id=?', id(req)); ok(res, {}); }));
-api.post('/recurring/run', can('sales', true), wrap((req, res) => { const c = acc.runRecurring(today(), req.user); ok(res, { created: c.length }); }));
+api.put('/recurring/:id', can('sales', true), wrap((req, res) => {
+  const cur = get('SELECT * FROM recurring WHERE id=?', id(req));
+  if (!cur) throw new HttpError(404, 'Recurring item not found');
+  const b = req.body || {};
+  const next = { name: b.name ?? cur.name, frequency: b.frequency ?? cur.frequency, next_date: b.next_date ?? cur.next_date, end_date: 'end_date' in b ? (b.end_date || null) : cur.end_date, auto_post: 'auto_post' in b ? (b.auto_post ? 1 : 0) : cur.auto_post, active: 'active' in b ? (b.active ? 1 : 0) : cur.active };
+  if (!String(next.name).trim()) throw bad('Enter a name');
+  if (!['weekly', 'monthly', 'quarterly', 'yearly'].includes(next.frequency)) throw bad('Invalid frequency');
+  if (!isDate(next.next_date)) throw bad('Invalid next date');
+  if (next.end_date && (!isDate(next.end_date) || next.end_date < next.next_date)) throw bad('The end date must be after the first date');
+  const anchor = b.next_date ? Number(next.next_date.slice(8)) : cur.anchor_day;
+  run("UPDATE recurring SET name=?, frequency=?, next_date=?, end_date=?, auto_post=?, active=?, anchor_day=?, last_error=CASE WHEN ?=1 THEN '' ELSE last_error END WHERE id=?", String(next.name).trim().slice(0, 120), next.frequency, next.next_date, next.end_date, next.auto_post, next.active, anchor, next.active, cur.id);
+  audit(req, 'update', 'recurring', cur.id, next.name); ok(res, {});
+}));
+api.delete('/recurring/:id', can('sales', true), wrap((req, res) => { if (!get('SELECT 1 FROM recurring WHERE id=?', id(req))) throw new HttpError(404, 'Recurring item not found'); run('DELETE FROM recurring WHERE id=?', id(req)); audit(req, 'delete', 'recurring', id(req), ''); ok(res, {}); }));
+api.post('/recurring/run', can('sales', true), wrap((req, res) => { const c = acc.runRecurring(today(), req.user); ok(res, { created: c.length, failed: all("SELECT id,name,last_error FROM recurring WHERE active=1 AND last_error!=''") }); }));
 
 
 /* ------------------------------ folha de pagamento ------------------------ */
@@ -704,15 +727,20 @@ if (fs.existsSync(dist)) {
 app.use((err, _req, res, _next) => {
   if (err instanceof HttpError) return res.status(err.status).json({ error: err.message, ...(err.extra || {}) });
   if (err.type === 'entity.too.large') return res.status(413).json({ error: 'File too large' });
+  if (err.type === 'entity.parse.failed') return res.status(400).json({ error: 'Invalid request' });
+  if (String(err.message).includes('FOREIGN KEY')) return res.status(409).json({ error: 'This record is in use and cannot be deleted. Deactivate it instead.' });
   if (String(err.message).includes('UNIQUE')) return res.status(409).json({ error: 'Duplicate record' });
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
 });
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+  // um erro inesperado numa tarefa em segundo plano não pode derrubar o servidor de todos os clientes
+  process.on('unhandledRejection', (e) => console.error('unhandledRejection', e));
+  process.on('uncaughtException', (e) => console.error('uncaughtException', e));
   const port = Number(process.env.PORT || 4000);
   app.listen(port, () => console.log(`Fluxo rodando em http://localhost:${port}`));
-  const tick = () => { const job = () => { try { const n = acc.runRecurring().length; if (n) console.log(`${n} fatura(s) recorrente(s) geradas`); auto.generate(); auto.dailyBackup(); } catch (e) { console.error(e); } }; return multi() ? tenants.eachTenant(job) : job(); };
+  const tick = () => { const job = () => { try { const n = hasFeature('recurring') ? acc.runRecurring().length : 0; if (n) console.log(`${n} fatura(s) recorrente(s) geradas`); auto.generate(); auto.dailyBackup(); } catch (e) { console.error(e); } }; return multi() ? tenants.eachTenant(job) : job(); };
   tick(); setInterval(tick, 60 * 60 * 1000).unref();
   const bankTick = () => { const job = () => (get('SELECT 1 FROM plaid_items LIMIT 1') ? plaidSvc.syncAll().catch((e) => console.error('bank sync', e.message)) : undefined); return multi() ? tenants.eachTenant(job) : job(); };
   setInterval(bankTick, 60 * 60 * 1000).unref();

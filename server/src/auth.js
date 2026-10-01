@@ -66,7 +66,7 @@ export function authenticate(req, _res, next) {
   const h = req.headers.authorization || '';
   const token = h.startsWith('Bearer ') ? h.slice(7) : null;
   if (token) {
-    const u = get('SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND u.active=1', token);
+    const u = get("SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND u.active=1 AND s.created_at > datetime('now','-30 days')", token);
     if (u) req.user = u;
   }
   next();
@@ -91,6 +91,7 @@ export function rateLimitLogin(key) {
   const rec = (attempts.get(key) || []).filter((t) => now - t < 15 * 60 * 1000);
   if (rec.length >= 10) throw new HttpError(429, 'Too many attempts. Please wait 15 minutes.');
   rec.push(now); attempts.set(key, rec);
+  if (attempts.size > 5000) for (const [k, v] of attempts) if (v.every((t) => now - t >= 15 * 60 * 1000)) attempts.delete(k); // não deixa o mapa crescer sem fim
 }
 export const clearAttempts = (key) => attempts.delete(key);
 export const listUsers = () => all('SELECT * FROM users ORDER BY id').map(publicUser);

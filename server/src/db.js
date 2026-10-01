@@ -178,7 +178,11 @@ export function openDb(file) {
   const d = new DatabaseSync(file);
   d.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   d.exec(SCHEMA);
-  if (!d.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'custom_perms')) d.exec('ALTER TABLE users ADD COLUMN custom_perms TEXT'); // acesso por aba definido por usuário
+  const addColumn = (table, col, ddl) => { if (!d.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === col)) d.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`); };
+  addColumn('users', 'custom_perms', 'TEXT');                       // acesso por aba definido por usuário
+  addColumn('recurring', 'anchor_day', 'INTEGER');                  // dia do mês original: evita que "dia 31" derive para 28 depois de fevereiro
+  addColumn('recurring', 'last_error', "TEXT NOT NULL DEFAULT ''");  // por que a última geração falhou (aparece na tela e vira lembrete)
+  addColumn('recurring', 'last_run', 'TEXT');
   als.run({ db: d }, ensureDefaults);
   return d;
 }
@@ -283,7 +287,7 @@ export function ensureDefaults() {
   const defaults = { ...LANG_DEFAULTS.en, lang: 'en', next_invoice: '1001', next_estimate: '1001', next_bill: '1001', default_tax_rate: '0', default_terms_days: '15',
     payroll_suta_rate: '0', payroll_suta_base: '0', default_tax_rate: '0', credit_prefix: 'CM-', po_prefix: 'PO-', next_credit: '1001', next_po: '1001',
     plan: 'advanced', addon_payroll: '1', lock_date: '', company_logo: '', brand_color: '#4338CA',
-    auto_overdue: '1', overdue_days: '1', auto_bills: '1', bills_days: '3', auto_estimates: '1', estimate_days: '3', auto_lowstock: '1', auto_bank: '1', auto_tax_calendar: '1', auto_backup: '0', last_backup: '',
+    timezone: 'America/New_York', auto_overdue: '1', overdue_days: '1', auto_bills: '1', bills_days: '3', auto_estimates: '1', estimate_days: '3', auto_lowstock: '1', auto_bank: '1', auto_tax_calendar: '1', auto_backup: '0', last_backup: '',
     stripe_customer_id: '', stripe_subscription_id: '', subscription_status: '', subscription_period_end: '', subscription_cancel_at_end: '0', billing_managed: '0' };
   for (const [k, v] of Object.entries(defaults)) if (get('SELECT 1 FROM settings WHERE key=?', k) === undefined) setSetting(k, v);
 }

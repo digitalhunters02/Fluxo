@@ -196,7 +196,6 @@ Select a contact || Selecione um contato || Seleccione un contacto
 Invalid issue date || Data de emissão inválida || Fecha de emisión inválida
 Invalid due date || Vencimento inválido || Vencimiento inválido
 Add at least one line || Adicione ao menos uma linha || Agregue al menos una línea
-Every line needs a description or an item || Toda linha precisa de descrição ou item || Cada línea necesita una descripción o un artículo
 The total must be greater than zero || O total deve ser maior que zero || El total debe ser mayor que cero
 Document not found || Documento não encontrado || Documento no encontrado
 A voided document cannot be edited || Documento anulado não pode ser editado || Un documento anulado no se puede editar
@@ -731,3 +730,29 @@ Search the audit log… || Buscar no registro de auditoria… || Buscar en el re
 Search customers, invoices, items… || Buscar clientes, faturas, itens… || Buscar clientes, facturas, artículos…
 Nothing found for “{0}”. || Nada encontrado para “{0}”. || No se encontró nada para “{0}”.
 Type at least 2 letters. Tip: press / from any page to search. || Digite ao menos 2 letras. Dica: aperte / em qualquer página para buscar. || Escriba al menos 2 letras. Consejo: pulse / en cualquier página para buscar.
+Recurring “{0}” could not be created || A recorrente “{0}” não pôde ser criada || La recurrente “{0}” no se pudo crear
+Invalid time zone || Fuso horário inválido || Zona horaria no válida
+The end date must be after the first date || A data final deve ser depois da primeira data || La fecha final debe ser posterior a la primera
+Recurring item not found || Recorrência não encontrada || Recurrencia no encontrada
+Select a vendor || Selecione o fornecedor || Seleccione el proveedor
+Recurring bill || Conta a pagar recorrente || Factura de compra recurrente
+Recurring bill created || Conta a pagar recorrente criada || Factura de compra recurrente creada
+New recurring bill || Nova conta a pagar recorrente || Nueva factura de compra recurrente
+Type || Tipo || Tipo
+Invoice (money you receive) || Fatura (dinheiro que você recebe) || Factura (dinero que usted recibe)
+Bill (money you pay, like rent) || Conta a pagar (dinheiro que você paga, como aluguel) || Factura de compra (dinero que usted paga, como el alquiler)
+Office rent || Aluguel do escritório || Alquiler de la oficina
+Stop after (optional) || Parar depois de (opcional) || Detener después de (opcional)
+Record the bill automatically (if unchecked, creates a draft) || Lançar a conta automaticamente (se desmarcado, cria um rascunho) || Registrar la factura automáticamente (si no, crea un borrador)
+Recurring || Recorrentes || Recurrentes
+The server creates invoices and bills on schedule by itself (and catches up on any that were missed). || O servidor cria faturas e contas a pagar no prazo, sozinho (e recupera as que ficaram para trás). || El servidor crea facturas y facturas de compra a tiempo por sí solo (y recupera las que se perdieron).
+Nothing recurring yet. || Nada recorrente ainda. || Aún no hay nada recurrente.
+Customer / vendor || Cliente / fornecedor || Cliente / proveedor
+Could not create: {0} || Não foi possível criar: {0} || No se pudo crear: {0}
+Delete this recurring item? Documents already created stay. || Excluir esta recorrência? Os documentos já criados permanecem. || ¿Eliminar esta recurrencia? Los documentos ya creados permanecen.
+Edit recurring || Editar recorrência || Editar recurrencia
+To change the amount or the lines, delete this one and create a new recurring item. || Para mudar o valor ou as linhas, exclua esta e crie uma nova recorrência. || Para cambiar el importe o las líneas, elimine esta y cree una nueva recurrencia.
+Time zone || Fuso horário || Zona horaria
+Decides what "today" means for new documents and reminders. || Define o que é "hoje" nos novos documentos e lembretes. || Define qué es "hoy" en los documentos nuevos y los recordatorios.
+Invalid request || Requisição inválida || Solicitud no válida
+This record is in use and cannot be deleted. Deactivate it instead. || Este registro está em uso e não pode ser excluído. Desative-o. || Este registro está en uso y no se puede eliminar. Desactívelo.

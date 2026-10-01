@@ -18,7 +18,13 @@ const MEMOS = {
 export const memoText = (key) => { const l = getSetting('lang', 'en'); return MEMOS[key][l] || MEMOS[key].en; };
 const QUOTES = ['estimate', 'po']; // documentos que não geram lançamento contábil
 export const isQuote = (type) => QUOTES.includes(type);
-export const today = () => new Date().toISOString().slice(0, 10);
+export const TIMEZONES = ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Phoenix', 'America/Los_Angeles', 'America/Anchorage', 'Pacific/Honolulu', 'America/Puerto_Rico', 'UTC'];
+/** "Hoje" no fuso da empresa (e não em UTC, que à noite nos EUA já é o dia seguinte). */
+export const today = (now = new Date()) => {
+  let zone = getSetting('timezone', 'America/New_York');
+  try { return new Intl.DateTimeFormat('en-CA', { timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now); }
+  catch { zone = 'UTC'; return now.toISOString().slice(0, 10); }
+};
 export const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 export const addMonths = (iso, n) => {
   const d = new Date(iso + 'T00:00:00Z'); const day = d.getUTCDate();
@@ -27,7 +33,12 @@ export const addMonths = (iso, n) => {
   d.setUTCDate(Math.min(day, last));
   return d.toISOString().slice(0, 10);
 };
-export const isDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
+/** Data real no formato AAAA-MM-DD (recusa 2026-02-31, que o Date.parse aceitaria como 3 de março). */
+export const isDate = (s) => {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+};
 export const cents = (v) => { const n = Math.round(Number(v)); if (!Number.isFinite(n)) throw bad('Invalid amount'); return n; };
 
 export const sysAccount = (subtype) => {
@@ -78,15 +89,17 @@ export function removeEntries(source_type, source_id) {
 
 /* -------------------------------- documentos ------------------------------ */
 
+/** Arredonda para o centavo (meio centavo sobe) ignorando o ruído de ponto flutuante: 2.4999999999999996 conta como 2.5. */
+const roundCents = (x) => Math.round(Number(x.toPrecision(12)));
 export function computeLines(type, lines) {
   let subtotal = 0, tax = 0;
   const out = lines.map((l, i) => {
     const qty = Number(l.qty ?? 1), unit = cents(l.unit_price ?? 0);
     if (!Number.isFinite(qty) || qty <= 0) throw bad(`Invalid quantity on line ${i + 1}`);
-    const amount = Math.round(qty * unit);
+    const amount = roundCents(qty * unit);
     const rate = ['bill', 'po'].includes(type) ? 0 : Number(l.tax_rate || 0);
     if (!(rate >= 0 && rate <= 100)) throw bad('Invalid tax rate');
-    const tax_amount = Math.round((amount * rate) / 100);
+    const tax_amount = roundCents((amount * rate) / 100);
     subtotal += amount; tax += tax_amount;
     return { ...l, qty, unit_price: unit, amount, tax_rate: rate, tax_amount, position: i };
   });
@@ -465,25 +478,41 @@ export function adjustStock({ item_id, qty_delta, date, offset_account_id }, use
 
 /* ------------------------------ recorrências ------------------------------ */
 
-export function advance(date, frequency) {
-  return { weekly: () => addDays(date, 7), monthly: () => addMonths(date, 1), quarterly: () => addMonths(date, 3), yearly: () => addMonths(date, 12) }[frequency]();
+/** Próxima data da série. Com `anchor` (dia do mês original) uma série de "dia 31" volta ao 31 depois de fevereiro. */
+export function advance(date, frequency, anchor = null) {
+  const months = { monthly: 1, quarterly: 3, yearly: 12 }[frequency];
+  if (frequency === 'weekly') return addDays(date, 7);
+  if (!months) throw new HttpError(400, 'Invalid frequency');
+  const d = new Date(`${date}T00:00:00Z`);
+  const total = d.getUTCFullYear() * 12 + d.getUTCMonth() + months, y = Math.floor(total / 12), m = total % 12;
+  const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(y, m, Math.min(anchor || d.getUTCDate(), last))).toISOString().slice(0, 10);
 }
 
+/** Gera as faturas (ou contas a pagar) recorrentes que venceram. Cada uma e o avanço da data são gravados juntos: se algo falhar no meio, nada fica pela metade nem duplica. */
 export function runRecurring(now = today(), user = null) {
   const created = [];
   for (const r of all('SELECT * FROM recurring WHERE active=1 AND next_date<=?', now)) {
-    let guard = 0;
-    let rec = r;
-    while (rec.next_date <= now && guard++ < 60) {
+    let rec = r, guard = 0;
+    while (rec && rec.active && rec.next_date <= now && guard++ < 60) {
       if (rec.end_date && rec.next_date > rec.end_date) { run('UPDATE recurring SET active=0 WHERE id=?', rec.id); break; }
       const t = JSON.parse(rec.template);
+      const type = t.type === 'bill' ? 'bill' : 'invoice';
       const terms = Number(t.terms_days ?? 15);
       try {
-        const doc = saveDoc({ type: 'invoice', contact_id: t.contact_id, project_id: t.project_id, issue_date: rec.next_date, due_date: addDays(rec.next_date, terms),
-          notes: t.notes || '', lines: t.lines, post: !!rec.auto_post, recurring_id: rec.id }, user);
+        const doc = tx(() => {
+          const d = saveDoc({ type, contact_id: t.contact_id, project_id: t.project_id, issue_date: rec.next_date, due_date: addDays(rec.next_date, terms),
+            notes: t.notes || '', lines: t.lines, post: !!rec.auto_post, recurring_id: rec.id }, user);
+          const next = advance(rec.next_date, rec.frequency, rec.anchor_day);
+          run("UPDATE recurring SET next_date=?, last_error='', last_run=?, active=? WHERE id=?", next, now, rec.end_date && next > rec.end_date ? 0 : 1, rec.id);
+          return d;
+        });
         created.push(doc);
-      } catch (e) { console.error(`Recurring invoice ${rec.id} failed:`, e.message); break; }
-      run('UPDATE recurring SET next_date=? WHERE id=?', advance(rec.next_date, rec.frequency), rec.id);
+      } catch (e) {
+        run('UPDATE recurring SET last_error=? WHERE id=?', String(e.message || e).slice(0, 200), rec.id);
+        console.error(`Recurring ${type} ${rec.id} failed:`, e.message);
+        break; // tenta de novo na próxima rodada; o erro aparece na tela e como lembrete
+      }
       rec = get('SELECT * FROM recurring WHERE id=?', rec.id);
     }
   }
