@@ -1171,5 +1171,6 @@ export default {
  "Switch to Free? Your paid plan keeps running until the end of the period you already paid.": "Mudar para o Grátis? Seu plano pago continua até o fim do período que você já pagou.",
  "Your plan includes one user. Upgrade to add more.": "Seu plano inclui um usuário. Faça upgrade para adicionar mais.",
  "You have reached the invoice limit of your plan this month. Upgrade to create more.": "Você atingiu o limite de faturas do seu plano neste mês. Faça upgrade para criar mais.",
- "The Free plan needs no payment": "O plano Grátis não exige pagamento"
+ "The Free plan needs no payment": "O plano Grátis não exige pagamento",
+ "This purchase already has an account. Sign in instead.": "Esta compra já tem uma conta. Entre com ela."
 };

@@ -1,0 +1,28 @@
+# Blueprint do Render: um serviço web com disco persistente (os bancos SQLite de todas as empresas ficam em /data).
+services:
+  - type: web
+    name: fluxo
+    runtime: docker
+    plan: starter            # discos persistentes exigem um plano pago
+    healthCheckPath: /healthz
+    disk:
+      name: fluxo-data
+      mountPath: /data
+      sizeGB: 10
+    envVars:
+      - key: APP_URL
+        sync: false          # ex.: https://app.seudominio.com
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: PLAID_CLIENT_ID
+        sync: false
+      - key: PLAID_SECRET
+        sync: false
+      - key: PLAID_WEBHOOK_URL
+        sync: false          # https://app.seudominio.com/api/plaid/webhook
+      - key: PLAID_ENV
+        value: sandbox       # mude para production quando o Plaid aprovar
+      - key: FLUXO_ENCRYPTION_KEY
+        generateValue: true  # guarde uma cópia: sem ela os tokens bancários salvos não abrem mais

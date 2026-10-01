@@ -2,7 +2,8 @@ import express from 'express';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { all, get, run, insert, tx, getSetting, setSetting, db, applyLanguage, LANGS } from './db.js';
+import { all, get, run, insert, tx, getSetting, setSetting, applyLanguage, LANGS } from './db.js';
+import * as tenants from './tenants.js';
 import * as acc from './accounting.js';
 import * as bank from './banking.js';
 import * as rep from './reports.js';
@@ -16,7 +17,29 @@ const { HttpError, today, isDate, cents } = acc;
 const bad = (m) => new HttpError(400, m);
 export const app = express();
 app.disable('x-powered-by');
+if (process.env.FLUXO_TRUST_PROXY === '1') app.set('trust proxy', 1); // atrás de um proxy (Render, Fly...): usa o IP real nos limites de tentativas
+app.get('/healthz', (_req, res) => res.json({ ok: true }));
 app.use(express.json({ limit: '4mb', verify: (req, _res, buf) => { req.rawBody = buf; } })); // rawBody: assinatura dos webhooks
+/** Modo multi-empresa: o token tem a forma "empresa.token"; escolhe o banco da empresa antes de qualquer consulta. */
+const multi = () => tenants.multiEnabled();
+const splitRef = (ref) => { const i = String(ref).indexOf('.'); return i < 0 ? ['', String(ref)] : [String(ref).slice(0, i), String(ref).slice(i + 1)]; };
+const tokenOf = (req) => { const h = req.headers.authorization || ''; return h.startsWith('Bearer ') ? h.slice(7) : ''; };
+app.use((req, _res, next) => {
+  if (!multi()) return next();
+  const [slug, raw] = splitRef(tokenOf(req));
+  if (!tenants.tenantExists(slug)) return next();
+  req.headers.authorization = `Bearer ${raw}`;
+  tenants.inTenant(slug, next);
+});
+/** Rotas públicas (link de documento): o link traz a empresa antes do token. */
+const publicTenant = (req, _res, next) => {
+  if (!multi()) return next();
+  const [slug, raw] = splitRef(req.params.token);
+  if (!tenants.tenantExists(slug)) return next(new HttpError(404, 'Document not found'));
+  req.params.token = raw;
+  tenants.inTenant(slug, next);
+};
+const withSlug = (token) => (multi() && tenants.currentSlug() ? `${tenants.currentSlug()}.${token}` : token);
 app.use(authenticate);
 
 const api = express.Router();
@@ -32,38 +55,56 @@ const range = (req) => {
 };
 
 /* ---------------------------------- auth ---------------------------------- */
-api.get('/status', wrap((_req, res) => ok(res, { needsSetup: !get('SELECT 1 FROM users LIMIT 1'), company: getSetting('company_name'), billing: billing.stripeConfigured(), requirePayment: process.env.FLUXO_REQUIRE_PAYMENT === '1' })));
+api.get('/status', wrap((_req, res) => ok(res, multi()
+  ? { needsSetup: false, multi: true, company: '', billing: billing.stripeConfigured(), requirePayment: false }
+  : { needsSetup: !get('SELECT 1 FROM users LIMIT 1'), company: getSetting('company_name'), billing: billing.stripeConfigured(), requirePayment: process.env.FLUXO_REQUIRE_PAYMENT === '1' })));
 
 api.post('/setup', wrap(async (req, res) => {
-  if (get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(403, 'System is already set up');
+  if (multi()) rateLimitLogin(`signup|${req.ip}`); // cada chamada cria uma empresa nova: limita por IP
+  else if (get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(403, 'System is already set up');
   // quem pagou pela landing page chega aqui com a sessão do Stripe; o servidor confirma o pagamento antes de aceitar
   let paid = null;
   if (req.body.checkout_session_id) paid = await billing.verifyCheckoutSession(req.body.checkout_session_id);
-  else if (process.env.FLUXO_REQUIRE_PAYMENT === '1' && req.body.plan !== 'free') throw new HttpError(402, 'Payment required'); // o plano gratuito nunca exige pagamento
+  else if (!multi() && process.env.FLUXO_REQUIRE_PAYMENT === '1' && req.body.plan !== 'free') throw new HttpError(402, 'Payment required'); // o plano gratuito nunca exige pagamento
   const { company_name, name, email, password, demo, currency } = req.body;
-  if (req.body.plan) setPlan({ plan: req.body.plan });
   const lang = LANGS.includes(req.body.lang) ? req.body.lang : 'en';
   need(name, 'Enter your name'); need(email, 'Enter the email');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(email).trim())) throw bad('Enter a valid email');
   if (!password || password.length < 8) throw bad('The password must be at least 8 characters');
-  applyLanguage(lang, { currency: ['USD', 'EUR', 'GBP', 'CAD', 'MXN'].includes(currency) ? currency : undefined });
-  if (company_name) setSetting('company_name', company_name);
-  const uid = insert('INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,\'owner\')', name.trim(), email.trim().toLowerCase(), hashPassword(password));
-  if (paid?.subscription) billing.applySubscription(paid.subscription);
-  if (demo && !paid) import('./seed.js').then((m) => m.loadDemo(lang)).catch((e) => console.error('seed', e));
-  ok(res, { token: createSession(uid), user: publicUser(get('SELECT * FROM users WHERE id=?', uid)) });
+  const provision = () => {
+    if (multi()) { if (!paid) setPlan({ plan: 'free' }); } // hospedado: sem pagamento confirmado, só o plano gratuito
+    else if (req.body.plan) setPlan({ plan: req.body.plan });
+    applyLanguage(lang, { currency: ['USD', 'EUR', 'GBP', 'CAD', 'MXN'].includes(currency) ? currency : undefined });
+    if (company_name) setSetting('company_name', company_name);
+    const uid = insert('INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,\'owner\')', name.trim(), email.trim().toLowerCase(), hashPassword(password));
+    if (paid?.subscription) billing.applySubscription(paid.subscription);
+    if (demo && !paid) import('./seed.js').then((m) => m.loadDemo(lang)).catch((e) => console.error('seed', e));
+    return { token: withSlug(createSession(uid)), user: publicUser(get('SELECT * FROM users WHERE id=?', uid)) };
+  };
+  if (!multi()) return ok(res, provision());
+  if (paid?.customer && tenants.slugForLink('stripe_customer', paid.customer)) throw new HttpError(409, 'This purchase already has an account. Sign in instead.');
+  const slug = tenants.createTenant({ name: company_name, ownerEmail: email });
+  if (!slug) throw new HttpError(409, 'Email already registered');
+  try { ok(res, tenants.inTenant(slug, provision)); } catch (e) { tenants.dropTenant(slug); throw e; }
 }));
 
 api.post('/login', wrap((req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   rateLimitLogin(email + '|' + req.ip);
-  const u = get('SELECT * FROM users WHERE email=? AND active=1', email);
-  if (!u || !verifyPassword(String(req.body.password || ''), u.password_hash)) throw new HttpError(401, 'Incorrect email or password');
-  clearAttempts(email + '|' + req.ip);
-  ok(res, { token: createSession(u.id), user: publicUser(u) });
+  const attempt = () => {
+    const u = get('SELECT * FROM users WHERE email=? AND active=1', email);
+    if (!u || !verifyPassword(String(req.body.password || ''), u.password_hash)) throw new HttpError(401, 'Incorrect email or password');
+    clearAttempts(email + '|' + req.ip);
+    return { token: withSlug(createSession(u.id)), user: publicUser(u) };
+  };
+  if (!multi()) return ok(res, attempt());
+  const slug = tenants.slugForEmail(email);
+  if (!slug) throw new HttpError(401, 'Incorrect email or password');
+  ok(res, tenants.inTenant(slug, attempt));
 }));
 
 // visualização pública de documento (link compartilhável)
-api.get('/public/doc/:token', wrap((req, res) => {
+api.get('/public/doc/:token', publicTenant, wrap((req, res) => {
   const row = get("SELECT id FROM docs WHERE share_token=? AND type IN ('invoice','estimate','credit')", req.params.token);
   if (!row) throw new HttpError(404, 'Document not found');
   const d = acc.loadDoc(row.id);
@@ -74,7 +115,7 @@ api.get('/public/doc/:token', wrap((req, res) => {
 }));
 
 // o cliente aceita um orçamento pelo link público (assinatura digitada)
-api.post('/public/doc/:token/accept', wrap((req, res) => {
+api.post('/public/doc/:token/accept', publicTenant, wrap((req, res) => {
   rateLimitLogin(`accept|${req.params.token}|${req.ip}`);
   const row = get("SELECT id,status,number FROM docs WHERE share_token=? AND type='estimate'", req.params.token);
   if (!row) throw new HttpError(404, 'Document not found');
@@ -90,33 +131,39 @@ api.post('/public/doc/:token/accept', wrap((req, res) => {
 api.post('/plaid/webhook', wrap(async (req, res) => {
   if (plaidSvc.plaidConfigured() && process.env.PLAID_WEBHOOK_VERIFY !== '0') await plaidSvc.verifyWebhook(req.rawBody || Buffer.from(''), req.headers['plaid-verification']);
   else if (plaidSvc.plaidMode() !== 'demo') throw new HttpError(404, 'Route not found');
-  ok(res, await plaidSvc.handleWebhook(req.body || {}));
+  if (!multi()) return ok(res, await plaidSvc.handleWebhook(req.body || {}));
+  const slug = tenants.slugForLink('plaid_item', req.body?.item_id);
+  ok(res, slug ? await tenants.inTenant(slug, () => plaidSvc.handleWebhook(req.body || {})) : { ignored: true });
 }));
 
 // Stripe: eventos assinados (HMAC-SHA256) que mantêm o plano da empresa sincronizado com a assinatura
 api.post('/stripe/webhook', wrap(async (req, res) => {
   billing.verifyStripeSignature(req.rawBody || Buffer.from(''), req.headers['stripe-signature']);
-  ok(res, await billing.handleStripeEvent(req.body));
+  if (!multi()) return ok(res, await billing.handleStripeEvent(req.body));
+  const o = req.body?.data?.object || {}, ref = (x) => (typeof x === 'string' ? x : x?.id);
+  const slug = [o.client_reference_id && tenants.tenantExists(o.client_reference_id) ? o.client_reference_id : null, tenants.slugForLink('stripe_subscription', String(o.object === 'subscription' ? o.id : ref(o.subscription) || '')), tenants.slugForLink('stripe_customer', ref(o.customer))].find(Boolean);
+  ok(res, slug ? await tenants.inTenant(slug, () => billing.handleStripeEvent(req.body)) : { ignored: true }); // compra de quem ainda não tem empresa: o cadastro aplica a assinatura depois
 }));
-api.get('/public/plans', wrap((_req, res) => ok(res, { configured: billing.stripeConfigured(), needsSetup: !get('SELECT 1 FROM users LIMIT 1'), order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE })));
+api.get('/public/plans', wrap((_req, res) => ok(res, { configured: billing.stripeConfigured(), needsSetup: multi() || !get('SELECT 1 FROM users LIMIT 1'), order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE })));
 api.post('/public/checkout', wrap(async (req, res) => {
   rateLimitLogin(`checkout|${req.ip}`);
-  if (get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(403, 'This installation already has an account. Sign in to change your plan.');
+  if (!multi() && get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(403, 'This installation already has an account. Sign in to change your plan.');
   const email = String(req.body.email || '').trim().toLowerCase();
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw bad('Enter a valid email');
   ok(res, await billing.createCheckout({ plan: req.body.plan, payroll: !!req.body.payroll, origin: billing.originOf(req), email: email || undefined, signup: true }));
 }));
 api.get('/public/signup', wrap(async (req, res) => {
-  if (get('SELECT 1 FROM users LIMIT 1')) return ok(res, { alreadySetup: true });
+  if (!multi() && get('SELECT 1 FROM users LIMIT 1')) return ok(res, { alreadySetup: true });
   if (req.query.plan === 'free') return ok(res, { email: '', plan: 'free', payroll: false });
   const v = await billing.verifyCheckoutSession(req.query.session_id);
+  if (multi() && v.customer && tenants.slugForLink('stripe_customer', v.customer)) return ok(res, { alreadySetup: true });
   ok(res, { email: v.email, plan: v.plan, payroll: v.payroll });
 }));
 
 api.use(requireAuth);
 api.post('/logout', wrap((req, res) => { run('DELETE FROM sessions WHERE token=?', req.headers.authorization.slice(7)); ok(res, {}); }));
 const planInfo = () => ({ plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, lockDate: getSetting('lock_date', ''), billing: billing.billingState(), limits: { bank_connections: limitFor('bank_connections'), invoices_per_month: limitFor('invoices_per_month'), users: limitFor('users'), invoices_used: invoicesThisMonth() } });
-api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), planInfo: planInfo() })));
+api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), tenant: multi() ? tenants.currentSlug() : '', planInfo: planInfo() })));
 api.get('/plan', wrap((_req, res) => ok(res, planInfo())));
 api.put('/plan', can('users', true), wrap((req, res) => {
   if (getSetting('billing_managed', '0') === '1' && process.env.FLUXO_ALLOW_MANUAL_PLAN !== '1') throw new HttpError(403, 'Your plan is managed by your subscription. Use Upgrade or Manage billing.');
@@ -152,6 +199,7 @@ api.post('/users', can('users', true), wrap((req, res) => {
   if (!ROLES[role]) throw bad('Invalid role');
   if (!password || password.length < 8) throw bad('Password must be at least 8 characters');
   if (get('SELECT 1 FROM users WHERE email=?', email.trim().toLowerCase())) throw bad('Email already registered');
+  if (multi() && !tenants.registerEmail(email, tenants.currentSlug())) throw bad('Email already registered');
   const uid = insert('INSERT INTO users(name,email,password_hash,role,custom_role_id) VALUES(?,?,?,?,?)', name.trim(), email.trim().toLowerCase(), hashPassword(password), role, custom);
   audit(req, 'create', 'user', uid, `${email} (${role})`); ok(res, publicUser(get('SELECT * FROM users WHERE id=?', uid)));
 }));
@@ -614,8 +662,8 @@ app.use((err, _req, res, _next) => {
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   const port = Number(process.env.PORT || 4000);
   app.listen(port, () => console.log(`Fluxo rodando em http://localhost:${port}`));
-  const tick = () => { try { const n = acc.runRecurring().length; if (n) console.log(`${n} fatura(s) recorrente(s) geradas`); } catch (e) { console.error(e); } };
+  const tick = () => { const job = () => { try { const n = acc.runRecurring().length; if (n) console.log(`${n} fatura(s) recorrente(s) geradas`); } catch (e) { console.error(e); } }; return multi() ? tenants.eachTenant(job) : job(); };
   tick(); setInterval(tick, 60 * 60 * 1000).unref();
-  const bankTick = () => { if (get('SELECT 1 FROM plaid_items LIMIT 1')) plaidSvc.syncAll().catch((e) => console.error('bank sync', e.message)); };
+  const bankTick = () => { const job = () => (get('SELECT 1 FROM plaid_items LIMIT 1') ? plaidSvc.syncAll().catch((e) => console.error('bank sync', e.message)) : undefined); return multi() ? tenants.eachTenant(job) : job(); };
   setInterval(bankTick, 60 * 60 * 1000).unref();
 }

@@ -1,6 +1,7 @@
 // Conexão bancária via Plaid: saldos, histórico, quem pagou, gastos por categoria. Também há um provedor "demo" sem chaves.
 import crypto from 'node:crypto';
 import { all, get, run, insert, tx, getSetting } from './db.js';
+import { link as linkTenant } from './tenants.js';
 import { HttpError, today, addDays, isDate, getAccount } from './accounting.js';
 import { encrypt, decrypt } from './secure.js';
 import { importTxns, isBankAccount } from './banking.js';
@@ -107,6 +108,7 @@ function assertCanAddConnection() {
 }
 
 function storeItem({ item_id, access_token, institution_name, institution_id, demo }, user) {
+  linkTenant('plaid_item', item_id);
   const existing = get('SELECT id FROM plaid_items WHERE item_id=?', item_id);
   if (existing) { run('UPDATE plaid_items SET access_token_enc=?, status=\'ok\', error_code=\'\' WHERE item_id=?', encrypt(access_token), item_id); return item_id; }
   insert('INSERT INTO plaid_items(item_id,access_token_enc,institution_name,institution_id,demo,created_by) VALUES(?,?,?,?,?,?)', item_id, encrypt(access_token), institution_name || '', institution_id || '', demo ? 1 : 0, user?.id ?? null);

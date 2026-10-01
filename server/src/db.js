@@ -2,15 +2,19 @@ import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const dbPath = process.env.FLUXO_DB || path.join(here, '..', 'data', 'fluxo.db');
-if (dbPath !== ':memory:') fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+export const dataDir = process.env.FLUXO_DB && process.env.FLUXO_DB !== ':memory:' ? path.dirname(process.env.FLUXO_DB) : path.join(here, '..', 'data');
+const dbPath = process.env.FLUXO_DB || path.join(dataDir, 'fluxo.db');
 
-export const db = new DatabaseSync(dbPath);
-db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+/** Banco da requisição atual. No modo multi-empresa cada empresa tem o seu arquivo; fora de uma empresa vale o banco padrão. */
+export const als = new AsyncLocalStorage();
+let defaultDb = null;
+const current = () => als.getStore()?.db ?? defaultDb;
+export const runInDb = (database, fn) => als.run({ db: database, slug: als.getStore()?.slug }, fn);
 
-db.exec(`
+const SCHEMA = `
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY, name TEXT NOT NULL, email TEXT NOT NULL UNIQUE,
@@ -162,33 +166,44 @@ CREATE TABLE IF NOT EXISTS payroll_remittances (
   id INTEGER PRIMARY KEY, component TEXT NOT NULL, amount INTEGER NOT NULL, date TEXT NOT NULL, account_id INTEGER NOT NULL REFERENCES accounts(id),
   memo TEXT DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
-`);
+`;
+
+/** Abre (ou cria) um banco de empresa com o esquema completo e as configurações padrão. */
+export function openDb(file) {
+  if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
+  const d = new DatabaseSync(file);
+  d.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+  d.exec(SCHEMA);
+  als.run({ db: d }, ensureDefaults);
+  return d;
+}
 
 /** Run fn inside a transaction; rolls back on throw. Nested calls join the outer transaction. */
-let depth = 0;
+const depths = new WeakMap();
 export function tx(fn) {
-  if (depth > 0) return fn();
-  db.exec('BEGIN');
-  depth++;
+  const d = current();
+  if (depths.get(d) > 0) return fn();
+  d.exec('BEGIN');
+  depths.set(d, 1);
   try {
     const r = fn();
-    db.exec('COMMIT');
+    d.exec('COMMIT');
     return r;
   } catch (e) {
-    db.exec('ROLLBACK');
+    d.exec('ROLLBACK');
     throw e;
   } finally {
-    depth--;
+    depths.set(d, 0);
   }
 }
 
-export const all = (sql, ...p) => db.prepare(sql).all(...p).map((r) => ({ ...r }));
+export const all = (sql, ...p) => current().prepare(sql).all(...p).map((r) => ({ ...r }));
 export const get = (sql, ...p) => {
-  const r = db.prepare(sql).get(...p);
+  const r = current().prepare(sql).get(...p);
   return r ? { ...r } : undefined;
 };
-export const run = (sql, ...p) => db.prepare(sql).run(...p);
-export const insert = (sql, ...p) => Number(db.prepare(sql).run(...p).lastInsertRowid);
+export const run = (sql, ...p) => current().prepare(sql).run(...p);
+export const insert = (sql, ...p) => Number(current().prepare(sql).run(...p).lastInsertRowid);
 
 export const getSetting = (k, d = '') => get('SELECT value FROM settings WHERE key=?', k)?.value ?? d;
 export const setSetting = (k, v) => run('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', k, String(v));
@@ -266,4 +281,6 @@ export function ensureDefaults() {
     stripe_customer_id: '', stripe_subscription_id: '', subscription_status: '', subscription_period_end: '', subscription_cancel_at_end: '0', billing_managed: '0' };
   for (const [k, v] of Object.entries(defaults)) if (get('SELECT 1 FROM settings WHERE key=?', k) === undefined) setSetting(k, v);
 }
-ensureDefaults();
+
+/** Banco padrão (modo uma empresa por instalação; no modo multi-empresa guarda só o que for global). */
+export const db = defaultDb = openDb(dbPath);

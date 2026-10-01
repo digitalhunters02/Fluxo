@@ -73,7 +73,7 @@ export default function DocView() {
   const { id } = useParams();
   const nav = useNavigate();
   const toast = useToast();
-  const { can, settings } = useAuth();
+  const { can, settings, user } = useAuth();
   const { data: d, loading, error, reload } = useLoad(() => api.get(`/doc/${id}`), [id]);
   const [run, busy] = useAction();
   const [paying, setPaying] = useState(false);
@@ -86,7 +86,7 @@ export default function DocView() {
   const mod = purchase ? 'purchases' : 'sales';
   const w = can(mod, true);
   const act = (a, msg) => run(async () => { await api.post(`/doc/${id}/${a}`); reload(); }, msg);
-  const link = `${location.origin}/p/${d.share_token}`;
+  const link = `${location.origin}/p/${user.tenant ? `${user.tenant}.` : ''}${d.share_token}`; // hospedado: o link leva a empresa junto
   const posted = !isQuote && !['draft', 'void'].includes(d.status);
 
   return (

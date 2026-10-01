@@ -3,6 +3,7 @@
 import crypto from 'node:crypto';
 import { get, run, tx, getSetting, setSetting } from './db.js';
 import { HttpError } from './accounting.js';
+import { link as linkTenant, currentSlug } from './tenants.js';
 import { PAID_PLANS, PLAN_PRICES, PAYROLL_ADDON_PRICE, setPlan } from './plans.js';
 
 const bad = (m) => new HttpError(400, m);
@@ -80,7 +81,8 @@ export function applySubscription(sub) {
   tx(() => {
     setSetting('billing_managed', '1');
     setSetting('stripe_subscription_id', sub.id || '');
-    if (sub.customer) setSetting('stripe_customer_id', typeof sub.customer === 'string' ? sub.customer : sub.customer.id);
+    if (sub.customer) { setSetting('stripe_customer_id', typeof sub.customer === 'string' ? sub.customer : sub.customer.id); linkTenant('stripe_customer', typeof sub.customer === 'string' ? sub.customer : sub.customer.id); }
+    linkTenant('stripe_subscription', sub.id);
     setSetting('subscription_status', sub.status || '');
     const end = sub.current_period_end ?? sub.items?.data?.[0]?.current_period_end;
     setSetting('subscription_period_end', end ? new Date(end * 1000).toISOString().slice(0, 10) : '');
@@ -103,7 +105,7 @@ export async function createCheckout({ plan, payroll, origin, email, signup = fa
     ...(customer && !signup ? { customer } : email ? { customer_email: email } : {}),
     success_url: signup ? `${origin}/welcome?session_id={CHECKOUT_SESSION_ID}` : `${origin}/settings/plan?checkout=success`,
     cancel_url: signup ? `${origin}/pricing?canceled=1` : `${origin}/settings/plan?checkout=canceled`,
-    allow_promotion_codes: 'true', client_reference_id: 'fluxo', metadata: { fluxo_signup: signup ? '1' : '0', plan, payroll: payroll ? '1' : '0' },
+    allow_promotion_codes: 'true', client_reference_id: currentSlug() || 'fluxo', metadata: { fluxo_signup: signup ? '1' : '0', plan, payroll: payroll ? '1' : '0' },
     subscription_data: { metadata: { fluxo_plan: plan } },
   });
   return { url: session.url, id: session.id };

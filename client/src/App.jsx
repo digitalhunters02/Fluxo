@@ -65,7 +65,7 @@ function AuthScreen({ status, onAuth }) {
           <div><div className="text-lg font-semibold text-slate-900">Fluxo</div><div className="text-xs text-slate-500">{t('Simple finance and accounting')}</div></div>
         </div>
         <div className="mb-4 flex justify-end"><LangSwitch /></div>
-        {status.needsSetup && status.billing && <p className="mb-3 rounded-lg bg-brand-50 p-3 text-sm text-brand-700">{t('New here?')} <a className="font-semibold underline" href="/pricing">{t('Choose a plan to get started')}</a></p>}
+        {((status.needsSetup && status.billing) || status.multi) && <p className="mb-3 rounded-lg bg-brand-50 p-3 text-sm text-brand-700">{t('New here?')} <a className="font-semibold underline" href="/pricing">{t('Choose a plan to get started')}</a></p>}
         <h1 className="mb-4 text-base font-semibold">{status.needsSetup ? t('Create your owner account') : t('Sign in to {0}', [status.company])}</h1>
         <div className="space-y-3">
           {status.needsSetup && <><Field label={t('Company name')}><Input value={f.company_name} onChange={set('company_name')} placeholder={t('My Company LLC')} /></Field><Field label={t('Currency')}><Select value={f.currency} onChange={set('currency')}>{['USD', 'EUR', 'GBP', 'CAD', 'MXN'].map((c) => <option key={c}>{c}</option>)}</Select></Field><Field label={t('Plan')} hint={t('You can change it later in Settings')}><Select value={f.plan} onChange={set('plan')}><option value="starter">Starter — $29</option><option value="essentials">Essentials — $65</option><option value="plus">Plus — $109</option><option value="advanced">Advanced — $269</option></Select></Field><Field label={t('Your name')}><Input required value={f.name} onChange={set('name')} /></Field></>}

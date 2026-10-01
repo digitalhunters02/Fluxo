@@ -81,3 +81,24 @@ Online card/ACH payments from customers (Stripe Connect), paying bills by ACH or
 UI strings use English keys (`t('Invoices')`). Portuguese and Spanish live in `client/src/locales/` and are generated from
 `tools/i18n-legacy.txt` and `tools/i18n-extra.txt` by `npm run i18n:build`. `npm run i18n:check` fails if any string is untranslated.
 Server errors are English and translated in the browser. Chart-of-accounts names, invoice prefixes and sample data follow the language chosen at setup.
+
+## Hosting it for many customers (multi-company mode)
+
+Set `FLUXO_MULTI=1` and every company gets its **own SQLite file** (`<data>/tenants/<slug>.db`), so data is isolated by construction. A small control database (`<data>/control.db`) only indexes companies, login emails and Stripe/Plaid ids.
+
+- Sign-up is public: **Start free** creates a company with no card; paid plans go through Stripe Checkout and the account is created after payment. Without a confirmed payment, a new company is always on the Free plan.
+- Login is email + password. The session token is `company.token`, so one domain serves everyone (no wildcard DNS). An email belongs to one company.
+- Public invoice links carry the company: `/p/<company>.<token>`.
+- Stripe and Plaid webhooks are routed to the right company through the control database. Recurring invoices and bank syncs run for each company.
+- Without `FLUXO_MULTI`, nothing changes: one company per installation.
+
+### Deploy
+`Dockerfile` and `render.yaml` are included. SQLite needs a **persistent disk** (mounted at `/data`), so use a host that offers one (Render, Fly.io, a VPS). Steps for Render:
+
+1. New → Blueprint → pick this repository. It creates the web service and a 10 GB disk.
+2. Set `APP_URL` (your public https URL) and, when you have them, the Stripe and Plaid keys.
+3. Stripe: add a webhook to `https://<your-domain>/api/stripe/webhook` for `checkout.session.completed`, `customer.subscription.*`, `invoice.paid`, `invoice.payment_failed`; copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
+4. Plaid: set `PLAID_WEBHOOK_URL` to `https://<your-domain>/api/plaid/webhook`.
+5. **Back up `/data`** (disk snapshots) and keep a copy of `FLUXO_ENCRYPTION_KEY`.
+
+One instance serves many small companies. Scaling beyond a single machine means moving the per-company files to a shared database, which is a separate piece of work.
