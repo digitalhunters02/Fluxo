@@ -42,6 +42,15 @@ function ExpenseModal({ exp, lookups, onClose, onSaved }) {
   );
 }
 
+/** Abre o comprovante como arquivo (blob), só se for imagem ou PDF. Nunca monta HTML com o conteúdo vindo do servidor. */
+function openReceipt(dataUrl) {
+  const m = /^data:(image\/(?:png|jpeg|webp|gif)|application\/pdf);base64,([A-Za-z0-9+/]+={0,2})$/.exec(String(dataUrl));
+  if (!m) { alert(t('This receipt cannot be shown.')); return; }
+  const bin = atob(m[2]), bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  window.open(URL.createObjectURL(new Blob([bytes], { type: m[1] })), '_blank', 'noopener');
+}
+
 export default function Expenses() {
   const { can } = useAuth();
   const { data, loading, error, reload } = useLoad(async () => {
@@ -55,7 +64,7 @@ export default function Expenses() {
   if (error) return <ErrorBox error={error} retry={reload} />;
   const rows = data.rows.filter((e) => !q || `${e.description} ${e.category} ${e.contact_name || ''}`.toLowerCase().includes(q.toLowerCase()));
   const total = rows.reduce((s, e) => s + e.amount, 0);
-  const viewReceipt = async (e) => { const r = await run(() => api.get(`/expenses/${e.id}/receipt`)); if (r) { const w = window.open(); if (w) { w.document.write(`<iframe src="${r.receipt}" style="border:0;width:100%;height:100%"></iframe>`); } } };
+  const viewReceipt = async (e) => { const r = await run(() => api.get(`/expenses/${e.id}/receipt`)); if (r) openReceipt(r.receipt); };
   return (
     <>
       <PageHeader title={t('Expenses')} subtitle={t('Expenses paid on the spot (for credit-terms purchases, use Bills)')}>

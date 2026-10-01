@@ -20,6 +20,17 @@ const bad = (m) => new HttpError(400, m);
 export const app = express();
 app.disable('x-powered-by');
 if (process.env.FLUXO_TRUST_PROXY === '1') app.set('trust proxy', 1); // atrás de um proxy (Render, Fly...): usa o IP real nos limites de tentativas
+// cabeçalhos de segurança: sem iframes de terceiros, sem scripts de fora (só o app e o Plaid Link), sem adivinhar tipo de arquivo
+const CSP = "default-src 'self'; script-src 'self' https://cdn.plaid.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https://*.plaid.com; frame-src https://cdn.plaid.com https://*.plaid.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', CSP);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+  if (req.secure) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
+  next();
+});
 app.get('/healthz', (_req, res) => res.json({ ok: true }));
 app.use(express.json({ limit: '4mb', verify: (req, _res, buf) => { req.rawBody = buf; } })); // rawBody: assinatura dos webhooks
 /** Modo multi-empresa: o token tem a forma "empresa.token"; escolhe o banco da empresa antes de qualquer consulta. */

@@ -426,7 +426,12 @@ export function saveExpense(input, user) {
   const exp = getAccount(input.account_id), from = getAccount(input.paid_from_id);
   if (exp.type !== 'expense' && exp.type !== 'asset') throw bad('Invalid expense category');
   if (!['asset', 'liability'].includes(from.type)) throw bad('Invalid payment account');
-  if (input.receipt && String(input.receipt).length > 2_500_000) throw bad('Receipt is too large (max ~1.8 MB)');
+  if (input.receipt) {
+    const r = String(input.receipt);
+    if (r.length > 2_500_000) throw bad('Receipt is too large (max ~1.8 MB)');
+    // só imagem ou PDF em base64: um link "javascript:" ou HTML aqui executaria no navegador de quem abrir o comprovante
+    if (!/^data:(image\/(png|jpeg|webp|gif)|application\/pdf);base64,[A-Za-z0-9+/]+={0,2}$/.test(r)) throw bad('The receipt must be an image or a PDF');
+  }
   return tx(() => {
     let id = input.id;
     if (id) {

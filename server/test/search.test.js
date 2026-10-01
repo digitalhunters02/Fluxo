@@ -36,4 +36,19 @@ test('busca global encontra clientes, documentos, produtos, despesas e contas, e
   const rt = (await call('/login', 'POST', { email: 'r@x.com', password: 'senha1234' })).body.token;
   assert.deepEqual((await call('/search?q=maple', 'GET', undefined, rt)).body, []);
 });
+
+test('segurança: comprovante só aceita imagem/PDF em base64 e a resposta traz cabeçalhos de proteção', async () => {
+  const exp = (receipt) => call('/expenses', 'POST', { date: '2026-01-05', account_id: 1, paid_from_id: 1, amount: 1000, description: 'r', receipt }, owner);
+  assert.equal((await exp('javascript:alert(document.cookie)')).status, 400);
+  assert.equal((await exp('data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==')).status, 400);
+  assert.equal((await exp('data:image/png;base64,AAAA"><script>alert(1)</script>')).status, 400);
+  assert.equal((await exp('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=')).status, 400);                   // SVG pode conter script
+  assert.equal((await exp('data:image/png;base64,iVBORw0KGgo=')).status, 200);
+  assert.equal((await exp('data:application/pdf;base64,JVBERi0xLjQK')).status, 200);
+  const h = await fetch(base + '/status');
+  assert.match(h.headers.get('content-security-policy'), /frame-ancestors 'none'/); assert.equal(h.headers.get('x-content-type-options'), 'nosniff'); assert.equal(h.headers.get('x-frame-options'), 'DENY');
+  const bad = await fetch(base + '/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{oops' });
+  assert.equal(bad.status, 400);                                                                           // JSON inválido não é erro 500
+});
+
 test.after(() => server.close());

@@ -1284,5 +1284,7 @@ export default {
  "Time zone": "Zona horaria",
  "Decides what \"today\" means for new documents and reminders.": "Define qué es \"hoy\" en los documentos nuevos y los recordatorios.",
  "Invalid request": "Solicitud no válida",
- "This record is in use and cannot be deleted. Deactivate it instead.": "Este registro está en uso y no se puede eliminar. Desactívelo."
+ "This record is in use and cannot be deleted. Deactivate it instead.": "Este registro está en uso y no se puede eliminar. Desactívelo.",
+ "The receipt must be an image or a PDF": "El comprobante debe ser una imagen o un PDF",
+ "This receipt cannot be shown.": "Este comprobante no se puede mostrar."
 };

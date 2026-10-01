@@ -756,3 +756,5 @@ Time zone || Fuso horário || Zona horaria
 Decides what "today" means for new documents and reminders. || Define o que é "hoje" nos novos documentos e lembretes. || Define qué es "hoy" en los documentos nuevos y los recordatorios.
 Invalid request || Requisição inválida || Solicitud no válida
 This record is in use and cannot be deleted. Deactivate it instead. || Este registro está em uso e não pode ser excluído. Desative-o. || Este registro está en uso y no se puede eliminar. Desactívelo.
+The receipt must be an image or a PDF || O comprovante deve ser uma imagem ou um PDF || El comprobante debe ser una imagen o un PDF
+This receipt cannot be shown. || Este comprovante não pode ser exibido. || Este comprobante no se puede mostrar.

@@ -1,0 +1,2 @@
+// Aplica o tema escuro antes de a página aparecer (evita o "piscar" de claro para escuro). Fica em arquivo próprio por causa da política de segurança (CSP).
+try { var t = localStorage.getItem('fluxo_theme') || 'system'; var d = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches); if (d && !location.pathname.startsWith('/p/')) document.documentElement.classList.add('dark'); } catch (e) { /* sem armazenamento: tema padrão */ }
