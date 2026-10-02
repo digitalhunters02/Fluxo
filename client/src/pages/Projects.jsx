@@ -18,7 +18,7 @@ function ProjectModal({ p, contacts, onClose, onSaved }) {
         <Field label={t('Name')} className="col-span-2"><Input value={f.name} onChange={set('name')} /></Field>
         <Field label={t('Customer')} className="col-span-2"><Select value={f.contact_id} onChange={set('contact_id')}><option value="">—</option>{contacts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></Field>
         <Field label={t('Hourly rate')}><Input inputMode="decimal" value={f.hourly_rate} onChange={set('hourly_rate')} /></Field><Field label={t('Estimate')}><Input inputMode="decimal" value={f.budget} onChange={set('budget')} /></Field>
-        <Field label={t('Status')} className="col-span-2"><Select value={f.status} onChange={set('status')}><option value="active">{t('Asset')}</option><option value="completed">{t('Completed')}</option><option value="archived">{t('Archived')}</option></Select></Field>
+        <Field label={t('Status')} className="col-span-2"><Select value={f.status} onChange={set('status')}><option value="active">{t('Active')}</option><option value="completed">{t('Completed')}</option><option value="archived">{t('Archived')}</option></Select></Field>
       </div>
     </Modal>
   );
@@ -76,7 +76,7 @@ export default function Projects() {
           {data.time.map((tx) => (
             <tr key={tx.id}><td className="td">{date(tx.date)}</td><td className="td">{tx.project_name}</td><td className="td">{tx.description}</td><td className="td">{tx.user_name}</td><td className="td num text-right">{number(tx.hours, 2)}</td>
               <td className="td">{tx.invoice_id ? <Badge status="paid">{t('Invoiced§f')}</Badge> : tx.billable ? <Badge status="partial">{t('To invoice')}</Badge> : <Badge status="draft">{t('Non-billable')}</Badge>}</td>
-              <td className="td text-right">{w && !tx.invoice_id && <button className="text-xs text-rose-600 hover:underline" onClick={() => run(async () => { await api.del(`/time/${tx.id}`); reload(); })}>{t('Delete')}</button>}</td></tr>
+              <td className="td text-right">{w && !tx.invoice_id && <button className="text-xs text-rose-600 hover:underline" onClick={() => confirm(t('Delete this time entry?')) && run(async () => { await api.del(`/time/${tx.id}`); reload(); })}>{t('Delete')}</button>}</td></tr>
           ))}
         </Table></Card>
       )}

@@ -35,7 +35,7 @@ function Bars({ rows, tone = 'bg-rose-400' }) {
   const max = Math.max(1, ...rows.map((r) => r.total));
   return (
     <ul className="space-y-3">{rows.map((r) => (
-      <li key={r.label}><div className="mb-1 flex justify-between gap-3 text-sm"><span className="truncate">{r.label}{r.sub && <span className="ml-2 text-xs text-slate-400">{r.sub}</span>}</span><span className="num shrink-0 font-medium">{money(r.total)}</span></div>
+      <li key={r.label}><div className="mb-1 flex justify-between gap-3 text-sm"><span className="min-w-0 truncate">{r.label}{r.sub && <span className="ml-2 text-xs text-slate-400">{r.sub}</span>}</span><span className="num shrink-0 font-medium">{money(r.total)}</span></div>
         <div className="h-1.5 rounded bg-slate-100"><div className={`h-1.5 rounded ${tone}`} style={{ width: `${(r.total / max) * 100}%` }} /></div></li>
     ))}</ul>
   );
@@ -60,14 +60,14 @@ function Overview({ onConnect, hasConnections }) {
         <Stat label={t('Net')} value={money(d.moneyIn - d.moneyOut)} tone={d.moneyIn - d.moneyOut < 0 ? 'bad' : 'good'} />
       </div>
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card title={t('Spending by category')}>{d.byCategory.length === 0 ? <p className="text-sm text-slate-400">{t('No spending in this period.')}</p> : <Bars rows={d.byCategory.map((c) => ({ label: catLabel(c.category), total: c.total, sub: `${c.count}×` }))} />}</Card>
-        <Card title={t('Who paid you')}>{d.payers.length === 0 ? <p className="text-sm text-slate-400">{t('No deposits in this period.')}</p> : <Bars tone="bg-emerald-500" rows={d.payers.map((p) => ({ label: p.name, total: p.total, sub: `${p.count}× · ${t('last')} ${date(p.last_date)}` }))} />}</Card>
-        <Card title={t('Where you spent the most')} pad={false}>
+        <Card title={t('Spending by category')} className="min-w-0">{d.byCategory.length === 0 ? <p className="text-sm text-slate-400">{t('No spending in this period.')}</p> : <Bars rows={d.byCategory.map((c) => ({ label: catLabel(c.category), total: c.total, sub: `${c.count}×` }))} />}</Card>
+        <Card title={t('Who paid you')} className="min-w-0">{d.payers.length === 0 ? <p className="text-sm text-slate-400">{t('No deposits in this period.')}</p> : <Bars tone="bg-emerald-500" rows={d.payers.map((p) => ({ label: p.name, total: p.total, sub: `${p.count}× · ${t('last')} ${date(p.last_date)}` }))} />}</Card>
+        <Card title={t('Where you spent the most')} pad={false} className="min-w-0">
           <Table head={[t('Merchant'), t('Category'), { label: t('Total'), right: true }]} empty={t('No spending in this period.')}>
             {d.topMerchants.map((m) => <tr key={m.name}><td className="td font-medium">{m.name}</td><td className="td text-slate-500">{catLabel(m.category)}</td><td className="td num text-right">{money(m.total)}</td></tr>)}
           </Table>
         </Card>
-        <Card title={t('Money in and out by month')}>
+        <Card title={t('Money in and out by month')} className="min-w-0">
           {months.length === 0 ? <p className="text-sm text-slate-400">{t('No data in this period.')}</p> : (
             <svg viewBox="0 0 360 150" className="w-full" role="img" aria-label={t('Money in and out by month')}>
               {months.map((m, i) => { const bw = 360 / months.length, x = i * bw + bw * 0.15, w = bw * 0.33, h = (v) => (v / maxM) * 110;

@@ -209,13 +209,17 @@ export function tx(fn) {
   }
 }
 
-export const all = (sql, ...p) => current().prepare(sql).all(...p).map((r) => ({ ...r }));
+// node:sqlite throws (instead of treating it as NULL) when a bound parameter is undefined, which turned
+// missing/invalid ids (a bad account_id, an unset contact_id) into an uncaught 500 instead of the intended
+// "not found"/validation error. Normalizing undefined -> null here makes every query site behave as already written.
+const nullify = (p) => p.map((v) => (v === undefined ? null : v));
+export const all = (sql, ...p) => current().prepare(sql).all(...nullify(p)).map((r) => ({ ...r }));
 export const get = (sql, ...p) => {
-  const r = current().prepare(sql).get(...p);
+  const r = current().prepare(sql).get(...nullify(p));
   return r ? { ...r } : undefined;
 };
-export const run = (sql, ...p) => current().prepare(sql).run(...p);
-export const insert = (sql, ...p) => Number(current().prepare(sql).run(...p).lastInsertRowid);
+export const run = (sql, ...p) => current().prepare(sql).run(...nullify(p));
+export const insert = (sql, ...p) => Number(current().prepare(sql).run(...nullify(p)).lastInsertRowid);
 
 export const getSetting = (k, d = '') => get('SELECT value FROM settings WHERE key=?', k)?.value ?? d;
 export const setSetting = (k, v) => run('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', k, String(v));
