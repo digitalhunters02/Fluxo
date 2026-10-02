@@ -22,6 +22,8 @@ const ctl = () => {
     CREATE TABLE IF NOT EXISTS links (kind TEXT NOT NULL, key TEXT NOT NULL, slug TEXT NOT NULL REFERENCES tenants(slug), PRIMARY KEY (kind, key));
   `);
   if (!control.prepare('PRAGMA table_info(tenants)').all().some((c) => c.name === 'status')) control.exec("ALTER TABLE tenants ADD COLUMN status TEXT NOT NULL DEFAULT 'active'");
+  // código de afiliado/referência que trouxe o cadastro (opcional); usado só para o Harbor consultar conversões.
+  if (!control.prepare('PRAGMA table_info(tenants)').all().some((c) => c.name === 'referral_code')) control.exec('ALTER TABLE tenants ADD COLUMN referral_code TEXT');
   return control;
 };
 const q = (sql, ...p) => ctl().prepare(sql).get(...p);
@@ -40,6 +42,8 @@ export function setStatus(slug, status) {
   return true;
 }
 export const listTenants = () => qa('SELECT slug,name,owner_email,status,created_at FROM tenants ORDER BY created_at DESC');
+/** Empresa que veio de um código de afiliado específico (cadastro público com ?ref=CODE). Usado só pelo Harbor. */
+export const tenantByReferralCode = (code) => (code ? q('SELECT slug,name,owner_email,status,created_at,referral_code FROM tenants WHERE referral_code=?', String(code).trim()) : null);
 export const allSlugs = () => qa('SELECT slug FROM tenants ORDER BY created_at').map((r) => r.slug);
 
 function openTenant(slug) {
@@ -73,12 +77,14 @@ export function registerEmail(email, slug) {
   return true;
 }
 
-/** Cria a empresa (arquivo novo + índice). Quem chama termina a configuração dentro de inTenant(). */
-export function createTenant({ name, ownerEmail }) {
+/** Cria a empresa (arquivo novo + índice). Quem chama termina a configuração dentro de inTenant().
+ * `referralCode`, quando vier do cadastro público (?ref=CODE), é só gravado aqui para o Harbor consultar depois. */
+export function createTenant({ name, ownerEmail, referralCode }) {
   const email = String(ownerEmail).trim().toLowerCase();
   if (slugForEmail(email)) return null;
   const slug = uniqueSlug(name);
-  qr('INSERT INTO tenants(slug,name,owner_email) VALUES(?,?,?)', slug, name || '', email);
+  const ref = referralCode ? String(referralCode).trim().slice(0, 64) : null;
+  qr('INSERT INTO tenants(slug,name,owner_email,referral_code) VALUES(?,?,?,?)', slug, name || '', email, ref || null);
   registerEmail(email, slug);
   openTenant(slug);
   return slug;

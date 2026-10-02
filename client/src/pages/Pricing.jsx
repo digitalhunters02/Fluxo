@@ -30,6 +30,7 @@ function Shell({ children }) {
 /** Página pública: o cliente escolhe o plano e vai direto para o pagamento no Stripe. */
 export function Pricing() {
   const [params] = useSearchParams();
+  const ref = params.get('ref') || ''; // código de afiliado (ex.: vindo de um link de parceiro); só repassado adiante, nunca mostrado
   const { data, loading, error } = useLoad(() => api.get('/public/plans'));
   const [payroll, setPayroll] = useState(false);
   const [email, setEmail] = useState('');
@@ -37,7 +38,7 @@ export function Pricing() {
   const [run, busy] = useAction();
   const nav = useNavigate();
   useEffect(() => { document.title = `${t('Pricing')} — Fluxo`; }, []);
-  const go = (plan) => plan === 'free' ? nav('/welcome?plan=free') : run(async () => { const r = await api.post('/public/checkout', { plan, payroll, email: email || undefined }); window.location.href = r.url; });
+  const go = (plan) => plan === 'free' ? nav(`/welcome?plan=free${ref ? `&ref=${encodeURIComponent(ref)}` : ''}`) : run(async () => { const r = await api.post('/public/checkout', { plan, payroll, email: email || undefined, ref: ref || undefined }); window.location.href = r.url; });
   return (
     <ToastProvider><Shell>
       <div className="mx-auto max-w-2xl py-8 text-center">
@@ -75,6 +76,7 @@ export function Welcome() {
   const nav = useNavigate();
   const sid = params.get('session_id');
   const free = params.get('plan') === 'free' && !sid;
+  const ref = params.get('ref') || ''; // plano free: vem direto da URL; plano pago: volta em `data.ref` (gravado na sessão do Stripe)
   const { data, loading, error } = useLoad(() => free ? api.get('/public/signup?plan=free') : api.get(`/public/signup?session_id=${encodeURIComponent(sid || '')}`), [sid, free]);
   const [f, setF] = useState({ company_name: '', name: '', email: '', password: '', currency: 'USD' });
   const [run, busy] = useAction();
@@ -82,7 +84,7 @@ export function Welcome() {
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const submit = async (e) => {
     e.preventDefault();
-    const r = await run(() => api.post('/setup', { ...f, lang, ...(free ? { plan: 'free' } : { checkout_session_id: sid }) }));
+    const r = await run(() => api.post('/setup', { ...f, lang, ref: (ref || data?.ref) || undefined, ...(free ? { plan: 'free' } : { checkout_session_id: sid }) }));
     if (r) { setToken(r.token); window.location.href = '/'; }
   };
   return (

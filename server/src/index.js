@@ -84,6 +84,8 @@ api.post('/setup', wrap(async (req, res) => {
   else if (!multi() && process.env.FLUXO_REQUIRE_PAYMENT === '1' && req.body.plan !== 'free') throw new HttpError(402, 'Payment required'); // o plano gratuito nunca exige pagamento
   const { company_name, name, email, password, demo, currency } = req.body;
   const lang = LANGS.includes(req.body.lang) ? req.body.lang : 'en';
+  // código de afiliado (?ref=CODE na página de preços, ou vindo da sessão do Stripe): só é gravado no cadastro da empresa, nada mais usa isso.
+  const ref = String(req.body.ref || req.query.ref || paid?.ref || '').trim().slice(0, 64) || undefined;
   need(name, 'Enter your name'); need(email, 'Enter the email');
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(email).trim())) throw bad('Enter a valid email');
   if (!password || password.length < 8) throw bad('The password must be at least 8 characters');
@@ -99,7 +101,7 @@ api.post('/setup', wrap(async (req, res) => {
   };
   if (!multi()) return ok(res, provision());
   if (paid?.customer && tenants.slugForLink('stripe_customer', paid.customer)) throw new HttpError(409, 'This purchase already has an account. Sign in instead.');
-  const slug = tenants.createTenant({ name: company_name, ownerEmail: email });
+  const slug = tenants.createTenant({ name: company_name, ownerEmail: email, referralCode: ref });
   if (!slug) throw new HttpError(409, 'Email already registered');
   try { ok(res, tenants.inTenant(slug, provision)); } catch (e) { tenants.dropTenant(slug); throw e; }
 }));
@@ -223,14 +225,31 @@ api.post('/public/checkout', wrap(async (req, res) => {
   if (!multi() && get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(403, 'This installation already has an account. Sign in to change your plan.');
   const email = String(req.body.email || '').trim().toLowerCase();
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw bad('Enter a valid email');
-  ok(res, await billing.createCheckout({ plan: req.body.plan, payroll: !!req.body.payroll, origin: billing.originOf(req), email: email || undefined, signup: true }));
+  const ref = String(req.body.ref || '').trim().slice(0, 64) || undefined;
+  ok(res, await billing.createCheckout({ plan: req.body.plan, payroll: !!req.body.payroll, origin: billing.originOf(req), email: email || undefined, signup: true, ref }));
 }));
 api.get('/public/signup', wrap(async (req, res) => {
   if (!multi() && get('SELECT 1 FROM users LIMIT 1')) return ok(res, { alreadySetup: true });
   if (req.query.plan === 'free') return ok(res, { email: '', plan: 'free', payroll: false });
   const v = await billing.verifyCheckoutSession(req.query.session_id);
   if (multi() && v.customer && tenants.slugForLink('stripe_customer', v.customer)) return ok(res, { alreadySetup: true });
-  ok(res, { email: v.email, plan: v.plan, payroll: v.payroll });
+  ok(res, { email: v.email, plan: v.plan, payroll: v.payroll, ...(v.ref ? { ref: v.ref } : {}) });
+}));
+
+// Invisível para o cliente — lido só pelo Harbor (admin interno) para saber como está a empresa que veio de um
+// código de afiliado, protegido por uma chave compartilhada em vez de login (mesmo contrato usado por
+// Binder/Parcel/Ledger/Rex/BuildFlow/CoolFlow nos seus respectivos /api/billing/admin-summary).
+api.get('/affiliate/tenant-summary', wrap(async (req, res) => {
+  const adminKey = process.env.ADMIN_SUMMARY_KEY;
+  if (!adminKey || req.headers['x-admin-key'] !== adminKey) return res.status(401).json({ error: 'Not authorized.' });
+  const t = tenants.tenantByReferralCode(req.query.code);
+  if (!t) return ok(res, { subscribers: [], billingEnabled: false });
+  const result = await tenants.inTenant(t.slug, async () => {
+    const summary = await billing.subscriptionSummary();
+    if (!summary) return { subscribers: [], billingEnabled: billing.stripeConfigured() };
+    return { subscribers: [{ email: t.owner_email, plan: currentPlan(), ...summary }], billingEnabled: true };
+  });
+  ok(res, result);
 }));
 
 api.use(requireAuth);

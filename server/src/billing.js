@@ -96,7 +96,7 @@ export function applySubscription(sub) {
 /* ------------------------------------ ações ------------------------------------ */
 const originOf = (req) => env().APP_URL || `${req.protocol}://${req.get('host')}`;
 
-export async function createCheckout({ plan, payroll, origin, email, signup = false }) {
+export async function createCheckout({ plan, payroll, origin, email, signup = false, ref }) {
   if (plan === 'free') throw bad('The Free plan needs no payment');
   if (!PAID_PLANS.includes(plan)) throw bad('Invalid plan');
   const customer = getSetting('stripe_customer_id', '');
@@ -105,7 +105,9 @@ export async function createCheckout({ plan, payroll, origin, email, signup = fa
     ...(customer && !signup ? { customer } : email ? { customer_email: email } : {}),
     success_url: signup ? `${origin}/welcome?session_id={CHECKOUT_SESSION_ID}` : `${origin}/settings/plan?checkout=success`,
     cancel_url: signup ? `${origin}/pricing?canceled=1` : `${origin}/settings/plan?checkout=canceled`,
-    allow_promotion_codes: 'true', client_reference_id: currentSlug() || 'fluxo', metadata: { fluxo_signup: signup ? '1' : '0', plan, payroll: payroll ? '1' : '0' },
+    allow_promotion_codes: 'true', client_reference_id: currentSlug() || 'fluxo',
+    // ref: código de afiliado capturado na página de preços (?ref=CODE); viaja na sessão do Stripe para sobreviver ao redirect e voltar em verifyCheckoutSession().
+    metadata: { fluxo_signup: signup ? '1' : '0', plan, payroll: payroll ? '1' : '0', ref: ref ? String(ref).slice(0, 64) : undefined },
     subscription_data: { metadata: { fluxo_plan: plan } },
   });
   return { url: session.url, id: session.id };
@@ -165,7 +167,29 @@ export async function verifyCheckoutSession(sessionId) {
   const sub = s.subscription ? await stripe('GET', `/v1/subscriptions/${typeof s.subscription === 'string' ? s.subscription : s.subscription.id}`) : null;
   const keys = (sub?.items?.data || []).map((i) => i.price?.lookup_key);
   return { email: s.customer_details?.email || s.customer_email || '', customer: typeof s.customer === 'string' ? s.customer : s.customer?.id, subscription: sub,
-    plan: PAID_PLANS.find((p) => keys.includes(KEY.plan(p))) || null, payroll: keys.includes(KEY.base) };
+    plan: PAID_PLANS.find((p) => keys.includes(KEY.plan(p))) || null, payroll: keys.includes(KEY.base), ref: s.metadata?.ref || s.params?.metadata?.ref || '' };
+}
+
+/** Resumo da assinatura desta empresa no Stripe (status, intervalo, valor real em dólares) — usado pelo endpoint
+ * /api/affiliate/tenant-summary que o Harbor consulta para saber como está o cliente que veio de um código de afiliado.
+ * null quando não há cobrança online configurada ou a empresa nunca teve assinatura (ex.: ainda no plano Free). */
+export async function subscriptionSummary() {
+  const subId = getSetting('stripe_subscription_id', '');
+  if (!stripeConfigured() || !subId) return null;
+  try {
+    const sub = await stripe('GET', `/v1/subscriptions/${subId}`);
+    const price = sub.items?.data?.[0]?.price;
+    return {
+      status: sub.status,
+      interval: price?.recurring?.interval || null,
+      amount: typeof price?.unit_amount === 'number' ? price.unit_amount / 100 : null,
+      cancelAtPeriodEnd: !!sub.cancel_at_period_end,
+      canceledAt: sub.canceled_at ? new Date(sub.canceled_at * 1000).toISOString() : null,
+    };
+  } catch {
+    // Stripe fora do ar: devolve o que sabemos pelo último webhook em vez de falhar o Harbor inteiro.
+    return { status: getSetting('subscription_status', '') || 'unknown', interval: null, amount: null, cancelAtPeriodEnd: getSetting('subscription_cancel_at_end', '0') === '1', canceledAt: null };
+  }
 }
 
 /* ------------------------------------ webhooks ------------------------------------ */
