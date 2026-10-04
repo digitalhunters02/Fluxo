@@ -40,3 +40,12 @@ select.field, input.field { min-width: 0; max-width: 100%; }
   body { background: white; }
   .card { box-shadow: none; border: none; }
 }
+
+/* iOS/Android: tapping a field whose text is under 16px zooms the whole page in
+   and it does not zoom back out. 16px on touch screens prevents that (pinch-zoom
+   stays enabled). */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea { font-size: 16px !important; }
+}
