@@ -14,6 +14,7 @@ import * as rep from './reports.js';
 import * as pay from './payroll.js';
 import * as plaidSvc from './plaid.js';
 import * as billing from './billing.js';
+import { reportLead } from './harborLead.js';
 import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, limitFor, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE } from './plans.js';
 import { cleanPerms, authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
 
@@ -128,11 +129,16 @@ api.post('/setup', wrap(async (req, res) => {
     if (demo && !paid) import('./seed.js').then((m) => m.loadDemo(lang)).catch((e) => console.error('seed', e));
     return { token: withSlug(createSession(uid)), user: publicUser(get('SELECT * FROM users WHERE id=?', uid)) };
   };
-  if (!multi()) return ok(res, provision());
+  // Tell Harbor about the new account (fire-and-forget; never delays or breaks the signup).
+  const tellHarbor = () => reportLead({ name, email, company: company_name, notes: paid ? 'Paid signup (checkout)' : (multi() ? 'Free plan signup' : 'Self-hosted setup') });
+  if (!multi()) { const out = provision(); tellHarbor(); return ok(res, out); }
   if (paid?.customer && tenants.slugForLink('stripe_customer', paid.customer)) throw new HttpError(409, 'This purchase already has an account. Sign in instead.');
   const slug = tenants.createTenant({ name: company_name, ownerEmail: email, referralCode: ref });
   if (!slug) throw new HttpError(409, 'Email already registered');
-  try { ok(res, tenants.inTenant(slug, provision)); } catch (e) { tenants.dropTenant(slug); throw e; }
+  let out;
+  try { out = tenants.inTenant(slug, provision); } catch (e) { tenants.dropTenant(slug); throw e; }
+  tellHarbor();
+  ok(res, out);
 }));
 
 api.post('/login', wrap((req, res) => {
@@ -279,6 +285,34 @@ api.get('/affiliate/tenant-summary', wrap(async (req, res) => {
     return { subscribers: [{ email: t.owner_email, plan: currentPlan(), ...summary }], billingEnabled: true };
   });
   ok(res, result);
+}));
+
+// Read by Harbor (Impact Digital's admin CRM) with the shared key in X-Admin-Key: one subscriber per company
+// (multi-company hosting) or a single row (own install). Same JSON shape as the other products' admin-summary.
+const safeEqual = (a, b) => crypto.timingSafeEqual(crypto.createHash('sha256').update(String(a ?? '')).digest(), crypto.createHash('sha256').update(String(b ?? '')).digest());
+api.get('/admin-summary', wrap((req, res) => {
+  const adminKey = process.env.ADMIN_SUMMARY_KEY;
+  if (!adminKey) throw new HttpError(503, 'ADMIN_SUMMARY_KEY is not configured on this server.');
+  if (!safeEqual(req.headers['x-admin-key'], adminKey)) throw new HttpError(401, 'Not authorized.');
+  const row = (email, company, createdAt, suspended) => {
+    const plan = currentPlan();
+    const b = billing.billingState();
+    return {
+      email, company, plan,
+      status: suspended ? 'suspended' : (b.status || (plan === 'free' ? 'free' : 'manual')),
+      interval: plan === 'free' ? null : 'month',
+      amount: PLAN_PRICES[plan] ?? null,
+      payroll: hasAddon('payroll'),
+      currentPeriodEnd: b.periodEnd || null,
+      cancelAtPeriodEnd: !!b.cancelAtPeriodEnd,
+      canceledAt: null,
+      createdAt: createdAt || null,
+    };
+  };
+  const subscribers = multi()
+    ? tenants.listTenants().slice().reverse().map((t) => tenants.inTenant(t.slug, () => row(t.owner_email, t.name, t.created_at, t.status === 'suspended')))
+    : (get('SELECT 1 FROM users LIMIT 1') ? [row(getSetting('company_email', '') || get('SELECT email FROM users ORDER BY id LIMIT 1')?.email || '', getSetting('company_name', ''), null, false)] : []);
+  ok(res, { subscribers, billingEnabled: billing.stripeConfigured() });
 }));
 
 api.use(requireAuth);
