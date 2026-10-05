@@ -37,7 +37,8 @@ test('primeira subida cria o dono, o login funciona e o plano é o topo', async 
 test('segunda subida não faz nada e não troca a senha', async () => {
   const before = logs.length;
   assert.equal(bootstrapOwner({ ...env, BOOTSTRAP_OWNER_PASSWORD: 'outra-senha-qualquer' }), false);
-  assert.equal(logs.length, before);
+  assert.deepEqual(logs.slice(before), ['bootstrap owner: an account for dono@exemplo.com already exists, left unchanged']);
+  assert.ok(!logs.join('\n').includes('outra-senha-qualquer'));
   assert.equal((await login('outra-senha-qualquer')).status, 401);
   assert.equal((await login(env.BOOTSTRAP_OWNER_PASSWORD)).status, 200);
 });

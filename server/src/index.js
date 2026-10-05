@@ -95,11 +95,11 @@ export function bootstrapOwner(env = process.env) {
   const name = String(env.BOOTSTRAP_OWNER_NAME || 'Owner').trim().slice(0, 100);
   const make = () => { setPlan({ plan: 'advanced', payroll: true }); createOwnerUser({ company_name, name, email, password, lang }); };
   if (!multi()) {
-    if (get('SELECT 1 FROM users LIMIT 1')) return false; // instalação própria: só quando ainda não há ninguém (mesma regra do /setup)
+    if (get('SELECT 1 FROM users LIMIT 1')) { console.log('bootstrap owner: this installation already has users, nothing created'); return false; } // instalação própria: só quando ainda não há ninguém (mesma regra do /setup)
     tx(make);
   } else {
     const slug = tenants.createTenant({ name: company_name, ownerEmail: email });
-    if (!slug) return false; // o e-mail já tem conta
+    if (!slug) { console.log(`bootstrap owner: an account for ${email} already exists, left unchanged`); return false; } // o e-mail já tem conta
     try { tenants.inTenant(slug, () => tx(make)); } catch (e) { tenants.dropTenant(slug); throw e; }
   }
   console.log(`bootstrap owner created for ${email}`);
