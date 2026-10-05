@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { t } from '../i18n.jsx';
+import { useKeyboardSafeViewport } from './ui.jsx';
 import { api } from '../api.js';
 import { date, money } from '../format.js';
 
@@ -10,6 +11,7 @@ const target = (r) => (r.link.startsWith('/document') ? r.link : `${r.link}?q=${
 
 /** A lupa: procura clientes, documentos, produtos, despesas, contas e funcionários de uma vez só. */
 export default function GlobalSearch({ onClose }) {
+  useKeyboardSafeViewport();
   const nav = useNavigate();
   const [q, setQ] = useState('');
   const [rows, setRows] = useState([]);
@@ -35,14 +37,14 @@ export default function GlobalSearch({ onClose }) {
     else if (e.key === 'Enter' && rows[i]) go(rows[i]);
   };
   return (
-    <div className="no-print fixed inset-0 z-[70] flex items-start justify-center bg-slate-900/50 p-3 safe-top" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="no-print fixed inset-0 z-[70] flex items-start justify-center bg-slate-900/50 p-3 safe-top" style={{ top: 'var(--vvt, 0px)', height: 'var(--vvh, 100%)' }} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" aria-label={t('Search')} className="mt-2 w-full max-w-xl overflow-hidden rounded-xl bg-white shadow-2xl md:mt-16">
         <div className="flex items-center gap-2 border-b border-slate-100 px-3">
           <span aria-hidden="true">🔍</span>
           <input autoFocus type="search" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={key} placeholder={t('Search customers, invoices, items…')} aria-label={t('Search')} className="h-12 flex-1 bg-transparent text-base outline-none" />
           <button type="button" onClick={onClose} aria-label={t('Close')} className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100">✕</button>
         </div>
-        <ul className="max-h-[60vh] overflow-y-auto" role="listbox">
+        <ul className="max-h-[min(60vh,calc(var(--vvh,100vh)_-_9rem))] overflow-y-auto overscroll-contain" style={{ touchAction: 'pan-y pinch-zoom' }} role="listbox">
           {rows.map((r, n) => (
             <li key={`${r.type}-${r.id}-${r.link}`} role="option" aria-selected={n === i}>
               <button type="button" onClick={() => go(r)} onMouseEnter={() => setI(n)} className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left text-sm ${n === i ? 'bg-brand-50' : ''}`}>

@@ -102,11 +102,56 @@ export function Table({ head, children, empty = t('Nothing here yet.') }) {
   );
 }
 
+// On phones the on-screen keyboard covers the bottom of the screen but the page itself does not shrink
+// (iOS/Android keep the 'layout viewport' full height), so a centered modal ends up with its fields hidden
+// behind the keyboard and nothing to scroll. We follow the *visual* viewport instead: the overlay is
+// sized/positioned to the visible area (--vvh / --vvt on <html>), the dialog scrolls inside it, the page
+// behind is frozen on touch devices, and the field that gets focus is scrolled into view.
+// Reference-counted, so stacked modals (form + confirm) share one set of listeners.
+let kbUsers = 0;
+let kbRestore = null;
+export function useKeyboardSafeViewport() {
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const root = document.documentElement;
+    const sync = () => {
+      if (!vv) return;
+      root.style.setProperty('--vvh', `${Math.round(vv.height)}px`);
+      root.style.setProperty('--vvt', `${Math.round(vv.offsetTop)}px`);
+    };
+    if (kbUsers++ === 0 && getComputedStyle(document.body).position !== 'fixed' && window.matchMedia?.('(pointer: coarse)').matches) {
+      const prev = root.style.overflow;
+      root.style.overflow = 'hidden'; // page behind the modal must not scroll (touch devices only: no scrollbar jump on desktop; skipped when the app already pins <body>)
+      kbRestore = () => { root.style.overflow = prev; };
+    }
+    sync();
+    vv?.addEventListener('resize', sync);
+    vv?.addEventListener('scroll', sync);
+    return () => {
+      vv?.removeEventListener('resize', sync);
+      vv?.removeEventListener('scroll', sync);
+      if (--kbUsers === 0) {
+        root.style.removeProperty('--vvh');
+        root.style.removeProperty('--vvt');
+        if (kbRestore) { kbRestore(); kbRestore = null; }
+      }
+    };
+  }, []);
+}
+
+// onFocusCapture handler for the dialog: once the keyboard animation is done, bring the field to the middle of the visible area.
+export function revealFocusedField(e) {
+  const el = e.target;
+  if (!el || !/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return;
+  setTimeout(() => el.scrollIntoView?.({ block: 'center', behavior: 'smooth' }), 320);
+}
+
 export function Modal({ title, onClose, children, wide = false, footer }) {
   useEffect(() => { const h = (e) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, [onClose]);
+  useKeyboardSafeViewport();
   return (
-    <div className="no-print fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label={title} className={`mt-10 w-full min-w-0 ${wide ? 'max-w-3xl' : 'max-w-lg'} rounded-xl bg-white shadow-2xl`}>
+    <div className="no-print fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain bg-slate-900/40 p-4" style={{ top: 'var(--vvt, 0px)', height: 'var(--vvh, 100%)', touchAction: 'pan-y pinch-zoom', WebkitOverflowScrolling: 'touch' }} onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div role="dialog" aria-modal="true" aria-label={title} onFocusCapture={revealFocusedField} className={`mt-10 w-full min-w-0 ${wide ? 'max-w-3xl' : 'max-w-lg'} rounded-xl bg-white shadow-2xl`}>
         <header className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5"><h3 className="font-semibold text-slate-900">{title}</h3><button onClick={onClose} aria-label={t('Close')} className="text-slate-400 hover:text-slate-700">✕</button></header>
         <div className="p-5">{children}</div>
         {footer && <footer className="flex justify-end gap-2 border-t border-slate-100 px-5 py-3">{footer}</footer>}
