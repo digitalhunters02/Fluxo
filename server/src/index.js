@@ -75,6 +75,37 @@ api.get('/status', wrap((_req, res) => ok(res, multi()
   ? { needsSetup: false, multi: true, company: '', billing: billing.stripeConfigured(), requirePayment: false, recovery: mailer.recoveryReady() }
   : { needsSetup: !get('SELECT 1 FROM users LIMIT 1'), company: getSetting('company_name'), billing: billing.stripeConfigured(), requirePayment: process.env.FLUXO_REQUIRE_PAYMENT === '1', recovery: mailer.recoveryReady() })));
 
+/** Idioma/moeda, nome da empresa e o usuário dono — dentro do banco da empresa atual. Usado pelo cadastro (/setup) e pelo bootstrapOwner(). */
+function createOwnerUser({ company_name, name, email, password, lang, currency }) {
+  applyLanguage(lang, { currency: ['USD', 'EUR', 'GBP', 'CAD', 'MXN'].includes(currency) ? currency : undefined });
+  if (company_name) setSetting('company_name', company_name);
+  return insert('INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,\'owner\')', name.trim(), email.trim().toLowerCase(), hashPassword(password));
+}
+
+/** Conta de dono criada na subida do servidor (BOOTSTRAP_OWNER_EMAIL + BOOTSTRAP_OWNER_PASSWORD), sem passar pelo navegador.
+ * Usa o mesmo createOwnerUser() do cadastro. Idempotente: se o e-mail já tem conta, não faz nada (nunca troca a senha).
+ * Plano 'advanced' + folha de pagamento (o topo, sem os limites do Free: 5 faturas/mês, 1 usuário). Não há "teste grátis" neste produto. */
+export function bootstrapOwner(env = process.env) {
+  const email = String(env.BOOTSTRAP_OWNER_EMAIL || '').trim().toLowerCase();
+  const password = String(env.BOOTSTRAP_OWNER_PASSWORD || '');
+  if (!email || !password) return false;
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || password.length < 8) { console.error('bootstrap owner skipped: BOOTSTRAP_OWNER_EMAIL is not a valid email or the password is shorter than 8 characters'); return false; }
+  const company_name = String(env.BOOTSTRAP_OWNER_COMPANY || 'My Company').trim().slice(0, 120);
+  const lang = LANGS.includes(env.BOOTSTRAP_OWNER_LANG) ? env.BOOTSTRAP_OWNER_LANG : 'en';
+  const name = String(env.BOOTSTRAP_OWNER_NAME || 'Owner').trim().slice(0, 100);
+  const make = () => { setPlan({ plan: 'advanced', payroll: true }); createOwnerUser({ company_name, name, email, password, lang }); };
+  if (!multi()) {
+    if (get('SELECT 1 FROM users LIMIT 1')) return false; // instalação própria: só quando ainda não há ninguém (mesma regra do /setup)
+    tx(make);
+  } else {
+    const slug = tenants.createTenant({ name: company_name, ownerEmail: email });
+    if (!slug) return false; // o e-mail já tem conta
+    try { tenants.inTenant(slug, () => tx(make)); } catch (e) { tenants.dropTenant(slug); throw e; }
+  }
+  console.log(`bootstrap owner created for ${email}`);
+  return true;
+}
+
 api.post('/setup', wrap(async (req, res) => {
   if (multi()) rateLimitLogin(`signup|${req.ip}`); // cada chamada cria uma empresa nova: limita por IP
   else if (get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(403, 'System is already set up');
@@ -92,9 +123,7 @@ api.post('/setup', wrap(async (req, res) => {
   const provision = () => {
     if (multi()) { if (!paid) setPlan({ plan: 'free' }); } // hospedado: sem pagamento confirmado, só o plano gratuito
     else if (req.body.plan) setPlan({ plan: req.body.plan });
-    applyLanguage(lang, { currency: ['USD', 'EUR', 'GBP', 'CAD', 'MXN'].includes(currency) ? currency : undefined });
-    if (company_name) setSetting('company_name', company_name);
-    const uid = insert('INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,\'owner\')', name.trim(), email.trim().toLowerCase(), hashPassword(password));
+    const uid = createOwnerUser({ company_name, name, email, password, lang, currency });
     if (paid?.subscription) billing.applySubscription(paid.subscription);
     if (demo && !paid) import('./seed.js').then((m) => m.loadDemo(lang)).catch((e) => console.error('seed', e));
     return { token: withSlug(createSession(uid)), user: publicUser(get('SELECT * FROM users WHERE id=?', uid)) };
@@ -818,6 +847,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   process.on('unhandledRejection', (e) => console.error('unhandledRejection', e));
   process.on('uncaughtException', (e) => console.error('uncaughtException', e));
   const port = Number(process.env.PORT || 4000);
+  try { bootstrapOwner(); } catch (e) { console.error('bootstrap owner failed:', e.message); } // banco já aberto; antes de aceitar conexões
   app.listen(port, () => console.log(`Fluxo rodando em http://localhost:${port}`));
   const tick = () => { const job = () => { try { const n = hasFeature('recurring') ? acc.runRecurring().length : 0; if (n) console.log(`${n} fatura(s) recorrente(s) geradas`); auto.generate(); auto.dailyBackup(); } catch (e) { console.error(e); } }; return multi() ? tenants.eachTenant(job) : job(); };
   tick(); setInterval(tick, 60 * 60 * 1000).unref();
