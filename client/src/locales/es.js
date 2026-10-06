@@ -1300,5 +1300,7 @@ export default {
  "Ask for a new link": "Pedir un enlace nuevo",
  "Repeat the new password": "Repita la contraseña nueva",
  "The passwords do not match": "Las contraseñas no coinciden",
- "This link is invalid or has expired. Ask for a new one.": "Este enlace no es válido o venció. Pida uno nuevo."
+ "This link is invalid or has expired. Ask for a new one.": "Este enlace no es válido o venció. Pida uno nuevo.",
+ "Install app": "Instalar app",
+ "To install: tap the Share button, then “Add to Home Screen”.": "Para instalar: toca Compartir y luego “Añadir a pantalla de inicio”."
 };

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Fluxo — Offline</title>
+    <meta name="theme-color" content="#1E1B4B" />
+    <style>
+      body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #f4f1ea; color: #1a1815; font-family: system-ui, sans-serif; text-align: center; padding: 24px; }
+      .card { max-width: 340px; }
+      img { width: 64px; height: 64px; border-radius: 16px; }
+      h1 { font-size: 20px; margin: 16px 0 6px; }
+      p { color: #6a675f; font-size: 14px; line-height: 1.5; margin: 0 0 18px; }
+      button { background: #4F46E5; color: #fff; border: 0; border-radius: 10px; height: 40px; padding: 0 18px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <img src="/icons/icon-192.png" alt="Fluxo" />
+      <h1 id="t">You are offline</h1>
+      <p id="m">Fluxo needs an internet connection. Check your connection and try again.</p>
+      <button id="b" type="button">Try again</button>
+    </div>
+    <script src="/offline.js"></script>
+  </body>
+</html>

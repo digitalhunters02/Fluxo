@@ -1,0 +1,37 @@
+{
+  "id": "/",
+  "name": "Fluxo — Cash flow & accounting",
+  "short_name": "Fluxo",
+  "description": "Fluxo: bookkeeping, banking, invoices and payroll for U.S. small businesses.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "lang": "en-US",
+  "categories": [
+    "business",
+    "finance"
+  ],
+  "background_color": "#F4F1EA",
+  "theme_color": "#1E1B4B",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

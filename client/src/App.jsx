@@ -27,6 +27,7 @@ import PublicDoc from './pages/PublicDoc.jsx';
 import { Gate, Lock } from './components/plan.jsx';
 import Connections from './pages/Connections.jsx';
 import { Pricing, Welcome } from './pages/Pricing.jsx';
+import InstallApp from './components/InstallApp.jsx';
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
@@ -89,6 +90,7 @@ function AuthScreen({ status, onAuth }) {
           {status.needsSetup && <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={f.demo} onChange={set('demo')} />{' '}{t('Load sample data (6 months of activity)')}</label>}
         </div>
         <Button className="mt-5 w-full" disabled={busy}>{busy ? t('Please wait…') : status.needsSetup ? t('Get started') : t('Sign in')}</Button>
+        <div className="mt-4 flex justify-center text-center"><InstallApp /></div>
         {!status.needsSetup && <a href="/forgot" className="mt-3 block text-center text-sm text-brand-700 hover:underline">{t('Forgot your password?')}</a>}
       </form>
     </div>
@@ -157,6 +159,7 @@ function Shell({ user, settings, logout }) {
           <div className="font-medium text-white">{user.name}</div><div>{user.email}</div>
           <div className="mt-3"><LangSwitch dark /></div>
           <button onClick={logout} className="mt-3 block underline hover:text-white">{t('Sign out')}</button>
+          <InstallApp dark className="mt-3" />
         </div>
       </aside>
       {searching && <GlobalSearch onClose={() => setSearching(false)} />}

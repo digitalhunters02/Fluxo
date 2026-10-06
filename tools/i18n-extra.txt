@@ -773,3 +773,5 @@ Repeat the new password || Repita a nova senha || Repita la contraseña nueva
 The passwords do not match || As senhas não são iguais || Las contraseñas no coinciden
 Change password || Alterar senha || Cambiar contraseña
 This link is invalid or has expired. Ask for a new one. || Este link é inválido ou venceu. Peça um novo. || Este enlace no es válido o venció. Pida uno nuevo.
+Install app || Instalar app || Instalar app
+To install: tap the Share button, then “Add to Home Screen”. || Para instalar: toque em Compartilhar e depois em “Adicionar à Tela de Início”. || Para instalar: toca Compartir y luego “Añadir a pantalla de inicio”.

@@ -1,0 +1,12 @@
+{
+  "appId": "network.impactdigital.fluxo",
+  "appName": "Fluxo",
+  "webDir": "client/dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "always"
+  }
+}
