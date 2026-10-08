@@ -95,6 +95,24 @@ export function bootstrapOwner(env = process.env) {
   const lang = LANGS.includes(env.BOOTSTRAP_OWNER_LANG) ? env.BOOTSTRAP_OWNER_LANG : 'en';
   const name = String(env.BOOTSTRAP_OWNER_NAME || 'Owner').trim().slice(0, 100);
   const make = () => { setPlan({ plan: 'advanced', payroll: true }); createOwnerUser({ company_name, name, email, password, lang }); };
+  // Recuperar o acesso: com BOOTSTRAP_OWNER_RESET=1, se este e-mail JÁ é dono de uma conta, a senha dele passa a ser BOOTSTRAP_OWNER_PASSWORD
+  // (as sessões abertas caem). Só quem controla as variáveis do servidor consegue isso. Remova a variável depois de entrar, senão toda subida repete.
+  if (String(env.BOOTSTRAP_OWNER_RESET || '') === '1') {
+    const reset = () => {
+      const u = get("SELECT id, name FROM users WHERE email=? AND role='owner' AND active=1", email);
+      if (!u) return false;
+      tx(() => {
+        run('UPDATE users SET password_hash=? WHERE id=?', hashPassword(password), u.id);
+        run('DELETE FROM sessions WHERE user_id=?', u.id);
+        run('INSERT INTO audit_log(user_id,user_name,action,entity,entity_id,detail) VALUES(?,?,?,?,?,?)', u.id, u.name, 'reset', 'user', u.id, 'owner password reset at server start (BOOTSTRAP_OWNER_RESET)');
+      });
+      return true;
+    };
+    let done = false;
+    if (!multi()) done = reset();
+    else { const slug = tenants.slugForEmail(email); done = slug ? !!tenants.inTenant(slug, reset) : false; }
+    if (done) { console.log(`bootstrap owner: password reset for ${email}. Remove BOOTSTRAP_OWNER_RESET now, or every restart repeats it`); return true; }
+  }
   if (!multi()) {
     if (get('SELECT 1 FROM users LIMIT 1')) { console.log('bootstrap owner: this installation already has users, nothing created'); return false; } // instalação própria: só quando ainda não há ninguém (mesma regra do /setup)
     tx(make);

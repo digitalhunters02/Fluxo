@@ -54,3 +54,18 @@ test('o cadastro normal continua começando no Free', async () => {
 });
 
 test.after(() => { console.log = origLog; server.close(); });
+
+test('BOOTSTRAP_OWNER_RESET=1 troca a senha do dono que já existe e derruba as sessões; sem a variável nada muda', async () => {
+  const old = (await login(env.BOOTSTRAP_OWNER_PASSWORD)).body.token;
+  const before = logs.length;
+  assert.equal(bootstrapOwner({ ...env, BOOTSTRAP_OWNER_PASSWORD: 'senha-nova-do-dono' }), false); // sem RESET: segue sem trocar
+  assert.equal((await login('senha-nova-do-dono')).status, 401);
+
+  assert.equal(bootstrapOwner({ ...env, BOOTSTRAP_OWNER_PASSWORD: 'senha-nova-do-dono', BOOTSTRAP_OWNER_RESET: '1' }), true);
+  assert.ok(logs.slice(before).some((l) => l.includes('password reset for dono@exemplo.com')));
+  assert.ok(!logs.join('\n').includes('senha-nova-do-dono'));
+  assert.equal((await login('senha-nova-do-dono')).status, 200);
+  assert.equal((await login(env.BOOTSTRAP_OWNER_PASSWORD)).status, 401);
+  assert.equal((await call('/me', 'GET', undefined, old)).status, 401, 'sessão antiga caiu');
+
+});
