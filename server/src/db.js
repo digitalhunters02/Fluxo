@@ -169,6 +169,31 @@ CREATE TABLE IF NOT EXISTS payroll_remittances (
 CREATE TABLE IF NOT EXISTS password_resets (
   token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS api_keys (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL, prefix TEXT NOT NULL, key_hash TEXT NOT NULL UNIQUE, scope TEXT NOT NULL DEFAULT 'write',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, last_used_at TEXT, revoked INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS webhooks (
+  id TEXT PRIMARY KEY, url TEXT NOT NULL, secret TEXT NOT NULL, events TEXT NOT NULL DEFAULT '["*"]', active INTEGER NOT NULL DEFAULT 1,
+  failures INTEGER NOT NULL DEFAULT 0, last_status INTEGER, last_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS webhook_deliveries (
+  id TEXT PRIMARY KEY, webhook_id TEXT NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE, event TEXT NOT NULL, status INTEGER, ok INTEGER NOT NULL DEFAULT 0,
+  error TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS fixed_assets (
+  id INTEGER PRIMARY KEY, name TEXT NOT NULL, acquired_date TEXT NOT NULL, cost INTEGER NOT NULL, salvage INTEGER NOT NULL DEFAULT 0, life_months INTEGER NOT NULL,
+  asset_account_id INTEGER NOT NULL REFERENCES accounts(id), accum_account_id INTEGER NOT NULL REFERENCES accounts(id), expense_account_id INTEGER NOT NULL REFERENCES accounts(id),
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','disposed')), disposed_date TEXT, disposal_proceeds INTEGER, notes TEXT DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS asset_depr (
+  id INTEGER PRIMARY KEY, asset_id INTEGER NOT NULL REFERENCES fixed_assets(id) ON DELETE CASCADE, period TEXT NOT NULL, amount INTEGER NOT NULL, entry_id INTEGER,
+  UNIQUE (asset_id, period)
+);
+CREATE TABLE IF NOT EXISTS close_tasks (
+  period TEXT NOT NULL, key TEXT NOT NULL, done_by TEXT, done_at TEXT, PRIMARY KEY (period, key)
+);
 CREATE TABLE IF NOT EXISTS reminders (
   id INTEGER PRIMARY KEY, kind TEXT NOT NULL, ref_key TEXT NOT NULL UNIQUE, title TEXT NOT NULL, detail TEXT DEFAULT '', link TEXT DEFAULT '', data TEXT DEFAULT '',
   due_date TEXT, snoozed_until TEXT, done_at TEXT, repeat TEXT NOT NULL DEFAULT '', manual INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -186,6 +211,15 @@ export function openDb(file) {
   addColumn('recurring', 'anchor_day', 'INTEGER');                  // dia do mês original: evita que "dia 31" derive para 28 depois de fevereiro
   addColumn('recurring', 'last_error', "TEXT NOT NULL DEFAULT ''");  // por que a última geração falhou (aparece na tela e vira lembrete)
   addColumn('recurring', 'last_run', 'TEXT');
+  addColumn('docs', 'external_id', 'TEXT');                         // id do outro sistema (API): reenviar o mesmo id nunca duplica
+  addColumn('contacts', 'external_id', 'TEXT');
+  addColumn('docs', 'emailed_at', 'TEXT');                          // quando a fatura foi enviada por e-mail pelo sistema
+  addColumn('docs', 'approval_status', "TEXT NOT NULL DEFAULT ''"); // '', approved, rejected (aprovação de contas a pagar)
+  addColumn('docs', 'approved_by', 'TEXT');
+  addColumn('docs', 'approved_at', 'TEXT');
+  addColumn('docs', 'approved_total', 'INTEGER');
+  d.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_docs_external ON docs(external_id) WHERE external_id IS NOT NULL');
+  d.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_external ON contacts(external_id) WHERE external_id IS NOT NULL');
   als.run({ db: d }, ensureDefaults);
   return d;
 }

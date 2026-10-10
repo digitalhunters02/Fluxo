@@ -28,7 +28,7 @@ test('primeira subida cria o dono, o login funciona e o plano é o topo', async 
   assert.equal(r.status, 200);
   assert.equal(r.body.user.role, 'owner');
   const me = await call('/me', 'GET', undefined, r.body.token);
-  assert.equal(me.body.planInfo.plan, 'advanced');
+  assert.equal(me.body.planInfo.plan, 'enterprise');
   assert.equal(me.body.planInfo.payroll, true);
   assert.equal(me.body.planInfo.limits.users, null);               // o Free tem 1 usuário
   assert.equal(me.body.planInfo.limits.invoices_per_month, null);   // o Free tem 5 faturas por mês

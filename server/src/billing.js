@@ -24,13 +24,14 @@ export function encodeForm(obj, prefix = '', out = []) {
   return out;
 }
 
-async function stripe(method, path, params = {}) {
+/** Chamada à API do Stripe. `headers` extras servem para agir em nome de uma conta conectada (Stripe-Account). */
+async function stripe(method, path, params = {}, headers = {}) {
   if (!stripeConfigured()) throw new HttpError(503, 'Online billing is not configured on this server');
   const form = new URLSearchParams(encodeForm(params));
   const url = method === 'GET' && form.toString() ? `${apiBase()}${path}?${form}` : `${apiBase()}${path}`;
   const res = await fetch(url, {
     method,
-    headers: { Authorization: `Bearer ${env().STRIPE_SECRET_KEY}`, ...(method !== 'GET' ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}) },
+    headers: { Authorization: `Bearer ${env().STRIPE_SECRET_KEY}`, ...(method !== 'GET' ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}), ...headers },
     body: method === 'GET' ? undefined : form.toString(),
   });
   const data = await res.json().catch(() => ({}));
@@ -40,7 +41,7 @@ async function stripe(method, path, params = {}) {
 
 /* ------------------------------------ preços ------------------------------------ */
 const KEY = { plan: (p) => `fluxo_plan_${p}_monthly`, base: 'fluxo_payroll_base_monthly', seat: 'fluxo_payroll_seat_monthly' };
-const NAME = { free: 'Free', starter: 'Starter', essentials: 'Essentials', plus: 'Plus', advanced: 'Advanced' };
+const NAME = { free: 'Free', starter: 'Starter', essentials: 'Essentials', plus: 'Plus', advanced: 'Advanced', business: 'Business', enterprise: 'Enterprise' };
 const priceCache = new Map();
 export const _resetPriceCache = () => priceCache.clear();
 
@@ -232,4 +233,4 @@ export async function handleStripeEvent(event) {
   return { handled: event.type };
 }
 
-export { originOf };
+export { originOf, stripe as stripeRequest };

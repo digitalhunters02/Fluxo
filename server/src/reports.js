@@ -1,5 +1,5 @@
 import { all, get } from './db.js';
-import { today, addDays, addMonths } from './accounting.js';
+import { today, addDays, addMonths, advance, computeLines } from './accounting.js';
 
 /** Saldo na natureza da conta (positivo = normal). */
 const natural = (r) => (['asset', 'expense'].includes(r.type) ? r.debit - r.credit : r.credit - r.debit);
@@ -227,4 +227,36 @@ export function plByClass(from, to) {
   const net = {};
   for (const c of classes) { const k = c.id ?? 'none'; net[k] = rows.reduce((s, r) => s + (r.type === 'income' ? 1 : -1) * (r.byClass[k] || 0), 0); }
   return { from, to, classes: classes.map((c) => ({ id: c.id ?? 'none', name: c.name })), income: rows.filter((r) => r.type === 'income'), expense: rows.filter((r) => r.type === 'expense'), net };
+}
+
+/** Previsão de caixa semanal: saldo dos bancos hoje + contas a receber e a pagar abertas (por vencimento) + recorrências ativas. */
+export function cashForecast(weeks = 13, from = today()) {
+  const w = Math.min(Math.max(Math.round(Number(weeks)) || 13, 1), 52);
+  const horizon = addDays(from, w * 7 - 1);
+  const buckets = Array.from({ length: w }, (_, i) => ({ from: addDays(from, i * 7), to: addDays(from, i * 7 + 6), inflow: 0, outflow: 0, recurringIn: 0, recurringOut: 0 }));
+  const place = (date, key, amt) => {
+    const d = date < from ? from : date; // vencido: entra na primeira semana
+    const b = buckets.find((x) => d >= x.from && d <= x.to);
+    if (b) b[key] += amt;
+  };
+  const start = all("SELECT a.id FROM accounts a WHERE a.type='asset' AND a.subtype='bank' AND a.active=1").reduce((s, a) =>
+    s + get('SELECT COALESCE(SUM(jl.debit-jl.credit),0) AS v FROM journal_lines jl JOIN journal_entries je ON je.id=jl.entry_id WHERE jl.account_id=? AND je.date<=?', a.id, from).v, 0);
+  for (const d of all("SELECT type,due_date,total-paid AS open FROM docs WHERE type IN ('invoice','bill') AND status IN ('sent','open','partial') AND total-paid>0")) {
+    place(d.due_date, d.type === 'invoice' ? 'inflow' : 'outflow', d.open);
+  }
+  for (const r of all('SELECT * FROM recurring WHERE active=1')) {
+    let t; try { t = JSON.parse(r.template); } catch { continue; }
+    let total = 0; try { total = computeLines(t.type === 'bill' ? 'bill' : 'invoice', t.lines || []).total; } catch { continue; }
+    for (let date = r.next_date, n = 0; date <= horizon && (!r.end_date || date <= r.end_date) && n < 60; date = advance(date, r.frequency, r.anchor_day), n++) {
+      place(date, t.type === 'bill' ? 'recurringOut' : 'recurringIn', total);
+    }
+  }
+  let balance = start, lowest = { balance: start, week: 0 };
+  const rows = buckets.map((b, i) => {
+    const inflow = b.inflow + b.recurringIn, outflow = b.outflow + b.recurringOut;
+    balance += inflow - outflow;
+    if (balance < lowest.balance) lowest = { balance, week: i + 1 };
+    return { ...b, inflowTotal: inflow, outflowTotal: outflow, net: inflow - outflow, ending: balance };
+  });
+  return { from, to: horizon, weeks: w, startingCash: start, endingCash: balance, lowest, rows };
 }

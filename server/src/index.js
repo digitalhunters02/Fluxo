@@ -15,6 +15,8 @@ import * as pay from './payroll.js';
 import * as plaidSvc from './plaid.js';
 import * as billing from './billing.js';
 import { reportLead } from './harborLead.js';
+import { registerGrowth, registerGrowthPublic } from './growth.js';
+import { createV1Router } from './integrations.js';
 import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, limitFor, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE } from './plans.js';
 import { cleanPerms, authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
 
@@ -85,7 +87,7 @@ function createOwnerUser({ company_name, name, email, password, lang, currency }
 
 /** Conta de dono criada na subida do servidor (BOOTSTRAP_OWNER_EMAIL + BOOTSTRAP_OWNER_PASSWORD), sem passar pelo navegador.
  * Usa o mesmo createOwnerUser() do cadastro. Idempotente: se o e-mail já tem conta, não faz nada (nunca troca a senha).
- * Plano 'advanced' + folha de pagamento (o topo, sem os limites do Free: 5 faturas/mês, 1 usuário). Não há "teste grátis" neste produto. */
+ * Plano 'enterprise' + folha de pagamento (o topo, sem os limites do Free: 5 faturas/mês, 1 usuário). Não há "teste grátis" neste produto. */
 export function bootstrapOwner(env = process.env) {
   const email = String(env.BOOTSTRAP_OWNER_EMAIL || '').trim().toLowerCase();
   const password = String(env.BOOTSTRAP_OWNER_PASSWORD || '');
@@ -94,7 +96,7 @@ export function bootstrapOwner(env = process.env) {
   const company_name = String(env.BOOTSTRAP_OWNER_COMPANY || 'My Company').trim().slice(0, 120);
   const lang = LANGS.includes(env.BOOTSTRAP_OWNER_LANG) ? env.BOOTSTRAP_OWNER_LANG : 'en';
   const name = String(env.BOOTSTRAP_OWNER_NAME || 'Owner').trim().slice(0, 100);
-  const make = () => { setPlan({ plan: 'advanced', payroll: true }); createOwnerUser({ company_name, name, email, password, lang }); };
+  const make = () => { setPlan({ plan: 'enterprise', payroll: true }); createOwnerUser({ company_name, name, email, password, lang }); };
   // Recuperar o acesso: com BOOTSTRAP_OWNER_RESET=1, se este e-mail JÁ é dono de uma conta, a senha dele passa a ser BOOTSTRAP_OWNER_PASSWORD
   // (as sessões abertas caem). Só quem controla as variáveis do servidor consegue isso. Remova a variável depois de entrar, senão toda subida repete.
   if (String(env.BOOTSTRAP_OWNER_RESET || '') === '1') {
@@ -239,7 +241,8 @@ api.get('/public/doc/:token', publicTenant, wrap((req, res) => {
   const c = get('SELECT name,email,phone,tax_id,address FROM contacts WHERE id=?', d.contact_id);
   const company = Object.fromEntries(all('SELECT key,value FROM settings').filter((s) => ['company_name', 'currency', 'locale', 'invoice_footer', 'company_tax_id', 'company_address', 'company_email', 'company_phone', 'company_logo', 'brand_color'].includes(s.key)).map((s) => [s.key, s.value]));
   const { share_token, created_by, ...safe } = d;
-  ok(res, { doc: safe, customer: c, company });
+  const payOnline = hasFeature('online_payments') && getSetting('connect_ready', '0') === '1' && d.type === 'invoice' && d.balance > 0 && ['sent', 'partial'].includes(d.status);
+  ok(res, { doc: safe, customer: c, company, payOnline });
 }));
 
 // o cliente aceita um orçamento pelo link público (assinatura digitada)
@@ -333,7 +336,9 @@ api.get('/admin-summary', wrap((req, res) => {
   ok(res, { subscribers, billingEnabled: billing.stripeConfigured() });
 }));
 
+registerGrowthPublic(api, { wrap, ok, publicTenant, withSlug });
 api.use(requireAuth);
+registerGrowth(api, { wrap, ok, can, requireFeature, audit, id, withSlug, multi });
 api.post('/logout', wrap((req, res) => { run('DELETE FROM sessions WHERE token=?', req.headers.authorization.slice(7)); ok(res, {}); }));
 const planInfo = () => ({ plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, lockDate: getSetting('lock_date', ''), billing: billing.billingState(), limits: { bank_connections: limitFor('bank_connections'), invoices_per_month: limitFor('invoices_per_month'), users: limitFor('users'), invoices_used: invoicesThisMonth() } });
 api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), tenant: multi() ? tenants.currentSlug() : '', planInfo: planInfo() })));
@@ -875,6 +880,7 @@ api.put('/automations', can('settings', true), wrap((req, res) => { const r = au
 
 
 api.use((req, _res, next) => next(new HttpError(404, 'Route not found')));
+app.use('/api/v1', createV1Router());
 app.use('/api', api);
 
 /* ---------------------------- frontend estático --------------------------- */

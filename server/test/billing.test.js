@@ -29,7 +29,7 @@ let evId = 0; const ev = (type, object) => ({ id: `evt_${++evId}`, type, data: {
 test('a página de preços pública informa os valores e que a cobrança está configurada', async () => {
   const r = await call('/public/plans', 'GET', undefined, '');
   assert.equal(r.status, 200); assert.equal(r.body.configured, true); assert.equal(r.body.needsSetup, true);
-  assert.deepEqual(r.body.prices, { free: 0, starter: 29, essentials: 65, plus: 109, advanced: 269 });
+  assert.deepEqual(r.body.prices, { free: 0, starter: 29, essentials: 65, plus: 109, advanced: 269, business: 599, enterprise: null });
 });
 
 test('checkout público cria os preços sob demanda e abre uma assinatura mensal', async () => {

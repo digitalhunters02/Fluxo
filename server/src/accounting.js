@@ -1,6 +1,8 @@
 // Motor contábil: toda movimentação vira lançamento de partidas dobradas (débito = crédito).
 import crypto from 'node:crypto';
 import { all, get, run, insert, tx, getSetting, setSetting } from './db.js';
+import { emit } from './events.js';
+import { approvalBlocksPayment } from './guard.js';
 
 export class HttpError extends Error {
   constructor(status, message, extra) { super(message); this.status = status; this.extra = extra; }
@@ -256,8 +258,16 @@ export function saveDoc(input, user) {
     }
     const doc = loadDoc(id);
     if (isPosted(doc)) { postDoc(doc, user?.id); recomputeStatus(id); }
-    return loadDoc(id);
+    const saved = loadDoc(id);
+    if (!existing && isPosted(saved)) emitDoc(saved);
+    return saved;
   });
+}
+
+/** Avisa os webhooks que uma fatura ou conta a pagar foi emitida. */
+function emitDoc(d) {
+  if (d.type === 'invoice') emit('invoice.created', { id: d.id, number: d.number, customerId: d.contact_id, totalCents: d.total, dueDate: d.due_date, externalId: d.external_id || null });
+  else if (d.type === 'bill') emit('bill.created', { id: d.id, number: d.number, vendorId: d.contact_id, totalCents: d.total, dueDate: d.due_date });
 }
 
 export function setDocStatus(id, action, user) {
@@ -268,6 +278,7 @@ export function setDocStatus(id, action, user) {
       if (isQuote(d.type) || d.status !== 'draft') throw bad('Only drafts can be issued');
       run('UPDATE docs SET status=? WHERE id=?', ['bill', 'credit'].includes(d.type) ? 'open' : 'sent', id);
       postDoc(loadDoc(id), user?.id); recomputeStatus(id);
+      emitDoc(loadDoc(id));
     } else if (action === 'void') {
       if (d.status === 'void') throw bad('Already voided');
       if (d.payments.length) throw bad('Remove the payments before voiding');
@@ -391,6 +402,8 @@ export function addPayment(doc_id, { date, amount, account_id, method = '', ref 
     if (!isDate(date)) throw bad('Invalid date');
     if (amt <= 0) throw bad('Amount must be positive');
     if (amt > d.balance) throw bad('Amount is larger than the open balance');
+    const blocked = approvalBlocksPayment(d);
+    if (blocked) throw new HttpError(409, blocked, { code: 'approval_required' });
     const acc = getAccount(account_id);
     if (!['asset', 'liability'].includes(acc.type) || ['ar', 'ap', 'tax'].includes(acc.subtype)) throw bad('Invalid payment account');
     const pid = insert('INSERT INTO payments(doc_id,date,amount,account_id,method,ref) VALUES(?,?,?,?,?,?)', doc_id, date, amt, account_id, method, ref);
@@ -401,7 +414,10 @@ export function addPayment(doc_id, { date, amount, account_id, method = '', ref 
     postEntry({ date, memo: `${memoText('payment')} ${d.number}`, source_type: 'payment', source_id: pid, lines, user_id: user?.id });
     run('UPDATE docs SET paid = paid + ? WHERE id=?', amt, doc_id);
     recomputeStatus(doc_id);
-    return loadDoc(doc_id);
+    const after = loadDoc(doc_id);
+    emit('payment.received', { id: pid, documentId: doc_id, number: d.number, type: d.type, amountCents: amt, date, method });
+    if (d.type === 'invoice' && after.status === 'paid') emit('invoice.paid', { id: doc_id, number: d.number, totalCents: after.total });
+    return after;
   });
 }
 

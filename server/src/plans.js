@@ -2,10 +2,13 @@
 import { getSetting, setSetting } from './db.js';
 import { HttpError } from './accounting.js';
 
-export const PLAN_ORDER = ['free', 'starter', 'essentials', 'plus', 'advanced'];
+export const PLAN_ORDER = ['free', 'starter', 'essentials', 'plus', 'advanced', 'business', 'enterprise'];
 /** Planos com assinatura no Stripe (o plano free não tem preço nem cobrança). */
-export const PAID_PLANS = PLAN_ORDER.filter((p) => p !== 'free');
-export const PLAN_PRICES = { free: 0, starter: 29, essentials: 65, plus: 109, advanced: 269 };
+// Enterprise é contrato anual sob consulta: não tem preço nem assinatura no Stripe (o plano é definido pelo administrador).
+export const PAID_PLANS = PLAN_ORDER.filter((p) => p !== 'free' && p !== 'enterprise');
+export const PLAN_PRICES = { free: 0, starter: 29, essentials: 65, plus: 109, advanced: 269, business: 599, enterprise: null };
+/** Enterprise: valor de partida (contrato anual sob consulta). */
+export const ENTERPRISE_FROM = 1500;
 export const PAYROLL_ADDON_PRICE = { base: 35, perEmployee: 5 };
 
 /** recurso -> plano mínimo. Recursos que não aparecem aqui valem para todos os planos. */
@@ -14,6 +17,9 @@ export const FEATURES = {
   bills: 'essentials', recurring: 'essentials', time_tracking: 'essentials', audit_log: 'essentials', reports_full: 'essentials',
   bank_feeds: 'essentials', inventory: 'plus', project_profit: 'plus', contractors_1099: 'plus', budgets: 'plus', purchase_orders: 'plus', period_lock: 'plus', classes: 'plus',
   custom_roles: 'advanced', batch_invoices: 'advanced',
+  email_invoices: 'essentials', forecast: 'plus', api: 'advanced', online_payments: 'advanced',
+  approvals: 'business', fixed_assets: 'business', multi_company: 'business', close_checklist: 'business', audit_export: 'business',
+  sso: 'enterprise',
 };
 export const ADDON_FEATURES = ['payroll'];
 /** Limites numéricos por plano (conexões bancárias automáticas). */
@@ -21,11 +27,14 @@ export const LIMITS = {
   bank_connections: { free: 0, starter: 0, essentials: 2, plus: 5, advanced: 15 },
   invoices_per_month: { free: 5 }, // plano free: 5 faturas novas por mês; os demais planos não têm limite
   users: { free: 1 },
+  group_companies: { business: 5 }, // empresas do mesmo grupo na consolidação; Enterprise sem limite
 };
 /** Limite do plano atual; null = sem limite. */
 export const limitFor = (name) => LIMITS[name][currentPlan()] ?? null;
 
 export const currentPlan = () => { const p = getSetting('plan', 'advanced'); return PLAN_ORDER.includes(p) ? p : 'advanced'; };
+/** Plano de uma empresa específica (usado pela consolidação do grupo, que lê várias empresas). */
+export const planRank = (name) => PLAN_ORDER.indexOf(name);
 export const hasAddon = (a) => getSetting(`addon_${a}`, '0') === '1';
 export function hasFeature(f) {
   if (ADDON_FEATURES.includes(f)) return hasAddon(f);
