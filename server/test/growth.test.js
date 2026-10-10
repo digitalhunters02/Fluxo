@@ -79,6 +79,9 @@ test('API: chave, uso, idempotência, somente leitura e revogação', async () =
   assert.equal((await call('/v1/customers', 'GET', undefined, '')).status, 401);
   const auth = { authorization: `Bearer ${k.body.key}` };
   const v1 = (p, m = 'GET', b, h = auth) => call(`/v1${p}`, m, b, '', h);
+  const me = await v1('/me');
+  assert.equal(me.status, 200); assert.equal(me.body.product, 'fluxo'); assert.equal(me.body.features.api, true);
+  assert.equal(typeof me.body.bank.allowed, 'boolean'); assert.equal(me.body.bank.connected, 0);
   const c1 = await v1('/customers', 'POST', { name: 'Web Customer', email: 'w@x.com', externalId: 'web-1' });
   assert.equal(c1.status, 201);
   const c2 = await v1('/customers', 'POST', { name: 'Web Customer', externalId: 'web-1' });

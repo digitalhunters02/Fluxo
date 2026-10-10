@@ -7,7 +7,8 @@ import express from 'express';
 import { all, get, run, insert } from './db.js';
 import * as acc from './accounting.js';
 import * as tenants from './tenants.js';
-import { hasFeature } from './plans.js';
+import { hasFeature, currentPlan, limitFor } from './plans.js';
+import { appUrl } from './mailer.js';
 import { assertSafeUrl, deliver, EVENTS, emit } from './events.js';
 
 const { HttpError, today, isDate } = acc;
@@ -104,6 +105,18 @@ export function createV1Router() {
     if (v.customerExternalId) { const c = get('SELECT id FROM contacts WHERE external_id=?', String(v.customerExternalId)); if (c) return c.id; }
     throw bad('Unknown customer (send customerId or customerExternalId)');
   };
+
+  // Quem sou eu: o CRM usa ao ligar a conexão (plano, endereço do site e banco) para sugerir o endereço
+  // certo e não deixar o cliente sem banco.
+  r.get('/me', wrap((_req, res) => {
+    const max = limitFor('bank_connections');
+    const plan = currentPlan();
+    res.json({
+      product: 'fluxo', plan, planName: plan.charAt(0).toUpperCase() + plan.slice(1), appUrl: appUrl(),
+      features: { api: hasFeature('api'), online_payments: hasFeature('online_payments') },
+      bank: { allowed: hasFeature('bank_feeds') && (max === null || max > 0), max, connected: get('SELECT COUNT(*) AS n FROM plaid_items').n },
+    });
+  }));
 
   r.get('/customers', wrap((req, res) => res.json({ customers: all("SELECT * FROM contacts WHERE active=1 AND kind IN ('customer','both') ORDER BY name LIMIT 1000").map(contactOut) })));
   r.post('/customers', wrap((req, res) => {
