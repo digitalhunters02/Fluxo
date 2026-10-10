@@ -98,6 +98,13 @@ export async function createLinkToken(user, itemId = null) {
     body.access_token = decrypt(it.access_token_enc);
   } else body.products = ['transactions'];
   if (env().PLAID_WEBHOOK_URL) body.webhook = env().PLAID_WEBHOOK_URL;
+  // Sem isto o Plaid traz só 90 dias de histórico. Pedimos até 24 meses (PLAID_HISTORY_DAYS, 30 a 730);
+  // vale para bancos conectados depois desta mudança — o valor é fixado na conexão.
+  if (!itemId) {
+    const days = Math.min(730, Math.max(30, parseInt(env().PLAID_HISTORY_DAYS || '730', 10) || 730));
+    try { return (await plaid('/link/token/create', { ...body, transactions: { days_requested: days } })).link_token; }
+    catch (e) { if (e.status !== 400) throw e; /* recusado: conecta com o padrão do Plaid */ }
+  }
   return (await plaid('/link/token/create', body)).link_token;
 }
 
