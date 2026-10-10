@@ -773,3 +773,226 @@ Repeat the new password || Repita a nova senha || Repita la contraseña nueva
 The passwords do not match || As senhas não são iguais || Las contraseñas no coinciden
 Change password || Alterar senha || Cambiar contraseña
 This link is invalid or has expired. Ask for a new one. || Este link é inválido ou venceu. Peça um novo. || Este enlace no es válido o venció. Pida uno nuevo.
+Type your email first, then choose single sign-on. || Digite primeiro o seu e-mail e depois escolha o login único. || Escriba primero su correo y luego elija el inicio de sesión único.
+Sign in with single sign-on || Entrar com login único || Entrar con inicio de sesión único
+Fixed assets || Ativos fixos || Activos fijos
+Month-end close || Fechamento do mês || Cierre del mes
+Business || Business || Business
+Enterprise || Enterprise || Enterprise
+Asset added || Ativo cadastrado || Activo agregado
+New fixed asset || Novo ativo fixo || Nuevo activo fijo
+Purchase date || Data da compra || Fecha de compra
+Salvage value || Valor residual || Valor residual
+What it is worth at the end of its life || Quanto vale no fim da vida útil || Cuánto vale al final de su vida útil
+Useful life (years) || Vida útil (anos) || Vida útil (años)
+Straight-line depreciation, one entry per month, starting in the month of purchase. || Depreciação linear, um lançamento por mês, começando no mês da compra. || Depreciación lineal, un asiento por mes, comenzando en el mes de la compra.
+Asset disposed || Ativo baixado || Activo dado de baja
+Sell or dispose of {0} || Vender ou baixar {0} || Vender o dar de baja {0}
+Amount received || Valor recebido || Monto recibido
+Fluxo depreciates up to this month, removes the asset and records the gain or loss. || O Fluxo deprecia até este mês, tira o ativo e lança o ganho ou a perda. || Fluxo deprecia hasta este mes, retira el activo y registra la ganancia o la pérdida.
+Equipment, vehicles and other things you use for years, with monthly depreciation. || Equipamentos, veículos e outros bens que você usa por anos, com depreciação mensal. || Equipos, vehículos y otros bienes que usa por años, con depreciación mensual.
+New asset || Novo ativo || Nuevo activo
+Depreciate through || Depreciar até || Depreciar hasta
+Posted {0} entries ({1}). || {0} lançamentos feitos ({1}). || {0} asientos registrados ({1}).
+Nothing new to post. || Nada novo para lançar. || Nada nuevo que registrar.
+{0} months were skipped because the period is closed. || {0} meses foram pulados porque o período está fechado. || Se omitieron {0} meses porque el período está cerrado.
+Post depreciation || Lançar depreciação || Registrar depreciación
+Purchased || Comprado em || Comprado
+Depreciated || Depreciado || Depreciado
+Book value || Valor contábil || Valor en libros
+No fixed assets yet. || Ainda não há ativos fixos. || Aún no hay activos fijos.
+Disposed {0} || Baixado em {0} || Dado de baja el {0}
+Fully depreciated || Totalmente depreciado || Totalmente depreciado
+{0} of {1} months || {0} de {1} meses || {0} de {1} meses
+Sell / dispose || Vender / baixar || Vender / dar de baja
+Delete this asset? || Apagar este ativo? || ¿Eliminar este activo?
+Bank and card accounts are reconciled || As contas de banco e cartão estão conciliadas || Las cuentas de banco y tarjeta están conciliadas
+Depreciation is posted || A depreciação está lançada || La depreciación está registrada
+No bill is waiting for approval || Nenhuma conta a pagar espera aprovação || Ninguna cuenta por pagar espera aprobación
+No pay run is left in draft || Nenhuma folha ficou em rascunho || Ninguna nómina quedó en borrador
+I reviewed the accounts receivable aging || Conferi o envelhecimento das contas a receber || Revisé la antigüedad de las cuentas por cobrar
+I reviewed the accounts payable aging || Conferi o envelhecimento das contas a pagar || Revisé la antigüedad de las cuentas por pagar
+I reviewed the income statement and balance sheet || Conferi o resultado e o balanço || Revisé el estado de resultados y el balance
+Go through the checklist, then close the month to lock it against changes. || Passe pela lista e depois feche o mês para travá-lo contra alterações. || Recorra la lista y luego cierre el mes para bloquearlo contra cambios.
+Month || Mês || Mes
+{0} of {1} done || {0} de {1} feitos || {0} de {1} hechos
+Checklist || Lista de verificação || Lista de verificación
+checked by Fluxo || conferido pelo Fluxo || verificado por Fluxo
+Closed through {0} || Fechado até {0} || Cerrado hasta {0}
+Close {0}? Nobody will be able to add or change entries up to {1}. || Fechar {0}? Ninguém poderá lançar nem alterar até {1}. || ¿Cerrar {0}? Nadie podrá agregar ni cambiar asientos hasta {1}.
+Month closed || Mês fechado || Mes cerrado
+Close the month || Fechar o mês || Cerrar el mes
+Finish every item to close. || Termine todos os itens para fechar. || Termine todos los puntos para cerrar.
+Email sent || E-mail enviado || Correo enviado
+Email {0} || Enviar {0} por e-mail || Enviar {0} por correo
+Send || Enviar || Enviar
+Email is not set up on this server yet. Ask your administrator to configure an email provider. || O e-mail ainda não está configurado neste servidor. Peça ao administrador para configurar um provedor de e-mail. || El correo aún no está configurado en este servidor. Pida al administrador que configure un proveedor de correo.
+Message (optional) || Mensagem (opcional) || Mensaje (opcional)
+The email has a link to view the document online. || O e-mail leva um link para ver o documento online. || El correo incluye un enlace para ver el documento en línea.
+Email to customer || Enviar por e-mail ao cliente || Enviar por correo al cliente
+Needs approval || Precisa de aprovação || Necesita aprobación
+Approved || Aprovada || Aprobada
+Approve || Aprovar || Aprobar
+Rejected || Recusada || Rechazada
+Reject || Recusar || Rechazar
+Copied || Copiado || Copiado
+Copy || Copiar || Copiar
+API keys || Chaves de API || Claves de API
+Let other systems read and send data (customers, invoices, payments). Send requests to {0} with the header Authorization: Bearer <key>. Amounts are in cents. || Deixe outros sistemas lerem e enviarem dados (clientes, faturas, pagamentos). Mande as requisições para {0} com o cabeçalho Authorization: Bearer <chave>. Os valores são em centavos. || Permita que otros sistemas lean y envíen datos (clientes, facturas, pagos). Envíe las solicitudes a {0} con el encabezado Authorization: Bearer <clave>. Los montos están en centavos.
+Copy this key now. It will not be shown again: || Copie esta chave agora. Ela não será mostrada de novo: || Copie esta clave ahora. No se mostrará de nuevo:
+Key name (for example: Website form) || Nome da chave (por exemplo: Formulário do site) || Nombre de la clave (por ejemplo: Formulario del sitio)
+Access || Acesso || Acceso
+Read and write || Ler e gravar || Leer y escribir
+Read only || Só leitura || Solo lectura
+Create key || Criar chave || Crear clave
+Key || Chave || Clave
+Last used || Último uso || Último uso
+No keys yet. || Ainda não há chaves. || Aún no hay claves.
+never || nunca || nunca
+Revoke this key? Systems using it stop working. || Revogar esta chave? Os sistemas que a usam param de funcionar. || ¿Revocar esta clave? Los sistemas que la usan dejan de funcionar.
+Revoke || Revogar || Revocar
+Webhooks || Webhooks || Webhooks
+Fluxo calls your address when something happens. Each call is signed in the X-Fluxo-Signature header (HMAC-SHA256). || O Fluxo chama o seu endereço quando algo acontece. Cada chamada vai assinada no cabeçalho X-Fluxo-Signature (HMAC-SHA256). || Fluxo llama a su dirección cuando algo ocurre. Cada llamada va firmada en el encabezado X-Fluxo-Signature (HMAC-SHA256).
+Copy this signing secret now. It will not be shown again: || Copie este segredo de assinatura agora. Ele não será mostrado de novo: || Copie este secreto de firma ahora. No se mostrará de nuevo:
+Webhook address (https) || Endereço do webhook (https) || Dirección del webhook (https)
+Add webhook || Adicionar webhook || Agregar webhook
+No webhooks yet. || Ainda não há webhooks. || Aún no hay webhooks.
+{0} failures in a row || {0} falhas seguidas || {0} fallos seguidos
+Turned off after failures || Desligado após falhas || Desactivado tras fallos
+Test delivered ({0}). || Teste entregue ({0}). || Prueba entregada ({0}).
+Test failed: {0} || O teste falhou: {0} || La prueba falló: {0}
+Send test || Enviar teste || Enviar prueba
+Email is set up: you can send invoices and estimates to customers from the document page. || O e-mail está configurado: você pode enviar faturas e orçamentos aos clientes pela página do documento. || El correo está configurado: puede enviar facturas y presupuestos a los clientes desde la página del documento.
+Back from Stripe. Updating… || De volta do Stripe. Atualizando… || De vuelta de Stripe. Actualizando…
+Online payments || Pagamentos online || Pagos en línea
+Your customers pay invoices by card or bank transfer from the invoice link. The money goes straight to your own Stripe account and the payment is recorded in Fluxo automatically. || Seus clientes pagam as faturas por cartão ou transferência bancária pelo link da fatura. O dinheiro vai direto para a sua conta do Stripe e o pagamento é registrado no Fluxo automaticamente. || Sus clientes pagan las facturas con tarjeta o transferencia bancaria desde el enlace de la factura. El dinero va directo a su cuenta de Stripe y el pago se registra en Fluxo automáticamente.
+Ready to take payments || Pronto para receber pagamentos || Listo para recibir pagos
+Finish setting up in Stripe || Termine a configuração no Stripe || Termine la configuración en Stripe
+Not connected || Não conectado || No conectado
+Platform fee: {0}% per payment || Taxa da plataforma: {0}% por pagamento || Comisión de la plataforma: {0}% por pago
+Continue in Stripe || Continuar no Stripe || Continuar en Stripe
+Connect with Stripe || Conectar com o Stripe || Conectar con Stripe
+Deposit online payments into || Depositar os pagamentos online em || Depositar los pagos en línea en
+The bank account in your books that receives these payments. || A conta bancária, nos seus livros, que recebe esses pagamentos. || La cuenta bancaria, en sus libros, que recibe estos pagos.
+First bank account || Primeira conta bancária || Primera cuenta bancaria
+Bill approvals || Aprovação de contas a pagar || Aprobación de cuentas por pagar
+Bills at or above this amount cannot be paid until someone approves them. Leave 0 to turn approvals off. || Contas a pagar a partir deste valor não podem ser pagas até alguém aprovar. Deixe 0 para desligar as aprovações. || Las cuentas por pagar desde este monto no se pueden pagar hasta que alguien las apruebe. Deje 0 para desactivar las aprobaciones.
+Approval limit ($) || Limite de aprovação ($) || Límite de aprobación ($)
+The person who entered a bill cannot approve it || Quem lançou a conta não pode aprová-la || Quien registró la cuenta no puede aprobarla
+Waiting for approval || Esperando aprovação || Esperando aprobación
+Nothing is waiting for approval. || Nada espera aprovação. || Nada espera aprobación.
+Single sign-on (SSO) || Login único (SSO) || Inicio de sesión único (SSO)
+Let your team sign in with your company identity provider (Google Workspace, Microsoft Entra ID, Okta or any OpenID Connect provider). People still need to be added as users here first. || Deixe a sua equipe entrar com o provedor de identidade da empresa (Google Workspace, Microsoft Entra ID, Okta ou qualquer provedor OpenID Connect). As pessoas ainda precisam ser cadastradas como usuários aqui antes. || Permita que su equipo entre con el proveedor de identidad de la empresa (Google Workspace, Microsoft Entra ID, Okta o cualquier proveedor OpenID Connect). Las personas aún deben agregarse como usuarios aquí primero.
+Redirect address to register at the provider: {0} || Endereço de retorno para cadastrar no provedor: {0} || Dirección de retorno para registrar en el proveedor: {0}
+Provider address || Endereço do provedor || Dirección del proveedor
+Client ID || Client ID || Client ID
+Client secret || Client secret || Client secret
+Saved. Type a new one only to replace it. || Salvo. Digite um novo só para trocar. || Guardado. Escriba uno nuevo solo para reemplazarlo.
+Allowed email domains (optional) || Domínios de e-mail permitidos (opcional) || Dominios de correo permitidos (opcional)
+Turn on single sign-on || Ligar o login único || Activar el inicio de sesión único
+QuickBooks: Reports > Account List, export as CSV. Xero: Accounting > Chart of accounts > Export. || QuickBooks: Reports > Account List, exporte como CSV. Xero: Accounting > Chart of accounts > Export. || QuickBooks: Reports > Account List, exporte como CSV. Xero: Accounting > Chart of accounts > Export.
+Customers and vendors || Clientes e fornecedores || Clientes y proveedores
+QuickBooks: Reports > Customer Contact List (or Vendor), export as CSV. Xero: Contacts > Export. || QuickBooks: Reports > Customer Contact List (ou Vendor), exporte como CSV. Xero: Contacts > Export. || QuickBooks: Reports > Customer Contact List (o Vendor), exporte como CSV. Xero: Contacts > Export.
+Opening balances || Saldos iniciais || Saldos iniciales
+QuickBooks or Xero: Trial Balance report as of the day before you start in Fluxo, export as CSV. Import the chart of accounts first. || QuickBooks ou Xero: relatório Trial Balance do dia anterior ao início no Fluxo, exporte como CSV. Importe antes o plano de contas. || QuickBooks o Xero: informe Trial Balance del día anterior al inicio en Fluxo, exporte como CSV. Importe antes el plan de cuentas.
+Import finished || Importação concluída || Importación terminada
+Import from QuickBooks or Xero || Importar do QuickBooks ou do Xero || Importar desde QuickBooks o Xero
+Bring your data from another system in three steps: chart of accounts, then customers and vendors, then opening balances. Check the preview first; nothing is saved until you press Import. || Traga os dados de outro sistema em três passos: plano de contas, depois clientes e fornecedores, depois saldos iniciais. Veja a prévia antes; nada é salvo até você apertar Importar. || Traiga los datos de otro sistema en tres pasos: plan de cuentas, luego clientes y proveedores, luego saldos iniciales. Vea primero la vista previa; no se guarda nada hasta que pulse Importar.
+What to import || O que importar || Qué importar
+These are || Estes são || Estos son
+Detect from the file || Detectar pelo arquivo || Detectar por el archivo
+Balances as of || Saldos em || Saldos al
+CSV file || Arquivo CSV || Archivo CSV
+Preview || Prévia || Vista previa
+Imported || Importado || Importado
+Total debits {0} · total credits {1} || Total de débitos {0} · total de créditos {1} || Total de débitos {0} · total de créditos {1}
+Difference {0} || Diferença {0} || Diferencia {0}
+These accounts were not found. Import the chart of accounts first: || Estas contas não foram encontradas. Importe antes o plano de contas: || Estas cuentas no se encontraron. Importe antes el plan de cuentas:
+{0} to create · {1} already exist · {2} linked to existing accounts · {3} with problems || {0} para criar · {1} já existem · {2} ligados a contas existentes · {3} com problemas || {0} por crear · {1} ya existen · {2} vinculados a cuentas existentes · {3} con problemas
+Result || Resultado || Resultado
+will be created || será criado || se creará
+already exists || já existe || ya existe
+linked to existing || ligado ao existente || vinculado al existente
+Group of companies || Grupo de empresas || Grupo de empresas
+Put several companies in a group to see their numbers added together in the Reports (Group income statement and balance sheet). Each company keeps its own books. Name accounts between your companies "Intercompany …" and they are taken out of the totals. || Coloque várias empresas num grupo para ver os números somados nos Relatórios (resultado e balanço do grupo). Cada empresa mantém a sua contabilidade. Dê às contas entre as suas empresas o nome "Intercompany …" e elas saem dos totais. || Ponga varias empresas en un grupo para ver sus números sumados en los Informes (estado de resultados y balance del grupo). Cada empresa mantiene su contabilidad. Nombre "Intercompany …" a las cuentas entre sus empresas y se excluyen de los totales.
+New group name || Nome do novo grupo || Nombre del nuevo grupo
+Create group || Criar grupo || Crear grupo
+Creating a group needs the Business plan. || Criar um grupo exige o plano Business. || Crear un grupo requiere el plan Business.
+Have an invitation code? || Tem um código de convite? || ¿Tiene un código de invitación?
+Joined the group || Entrou no grupo || Se unió al grupo
+Join group || Entrar no grupo || Unirse al grupo
+Up to {0} companies on this plan. || Até {0} empresas neste plano. || Hasta {0} empresas en este plan.
+No limit on the number of companies. || Sem limite de empresas. || Sin límite de empresas.
+owner || dono || propietaria
+Give this code to the owner of the other company. It works once, for 7 days: || Entregue este código ao dono da outra empresa. Vale uma vez, por 7 dias: || Entregue este código al propietario de la otra empresa. Sirve una vez, por 7 días:
+Invite a company || Convidar uma empresa || Invitar a una empresa
+Leaving closes the whole group for everyone. Continue? || Sair fecha o grupo inteiro para todos. Continuar? || Salir cierra todo el grupo para todos. ¿Continuar?
+Leave this group? || Sair deste grupo? || ¿Salir de este grupo?
+Close group || Fechar grupo || Cerrar grupo
+Leave group || Sair do grupo || Salir del grupo
+Exporting the audit log to CSV is part of the Business plan. || Exportar a trilha de auditoria em CSV faz parte do plano Business. || Exportar el registro de auditoría a CSV es parte del plan Business.
+Could not export || Não foi possível exportar || No se pudo exportar
+Export audit log (CSV) || Exportar trilha de auditoria (CSV) || Exportar registro de auditoría (CSV)
+Online payments (card and bank) with Stripe || Pagamentos online (cartão e banco) com Stripe || Pagos en línea (tarjeta y banco) con Stripe
+API keys & webhooks || Chaves de API e webhooks || Claves de API y webhooks
+Controls and several companies || Controles e várias empresas || Controles y varias empresas
+Everything in Advanced || Tudo do Advanced || Todo lo de Advanced
+Bill approvals & separation of duties || Aprovação de contas e separação de funções || Aprobación de cuentas y separación de funciones
+Group of companies & consolidated reports || Grupo de empresas e relatórios consolidados || Grupo de empresas e informes consolidados
+Fixed assets & depreciation || Ativos fixos e depreciação || Activos fijos y depreciación
+Month-end close checklist || Lista de fechamento do mês || Lista de cierre del mes
+Audit log export || Exportação da trilha de auditoria || Exportación del registro de auditoría
+Single sign-on and a contract for your company || Login único e contrato para a sua empresa || Inicio de sesión único y contrato para su empresa
+Everything in Business || Tudo do Business || Todo lo de Business
+No limit on companies in a group || Sem limite de empresas no grupo || Sin límite de empresas en el grupo
+Annual contract and priority support || Contrato anual e suporte prioritário || Contrato anual y soporte prioritario
+From ${0} || A partir de ${0} || Desde ${0}
+Contact us || Fale conosco || Contáctenos
+Annual contract, quoted for your company. Ask your Fluxo contact. || Contrato anual, orçado para a sua empresa. Fale com o seu contato do Fluxo. || Contrato anual, cotizado para su empresa. Hable con su contacto de Fluxo.
+Delete this time entry? || Apagar este lançamento de horas? || ¿Eliminar este registro de horas?
+Thank you! Your payment was received. It can take a moment to show here. || Obrigado! Recebemos o seu pagamento. Pode levar um instante para aparecer aqui. || ¡Gracias! Recibimos su pago. Puede tardar un momento en aparecer aquí.
+Pay {0} online || Pagar {0} online || Pagar {0} en línea
+Secure payment by card or bank transfer, processed by Stripe. || Pagamento seguro por cartão ou transferência bancária, processado pelo Stripe. || Pago seguro con tarjeta o transferencia bancaria, procesado por Stripe.
+Cash forecast || Previsão de caixa || Pronóstico de caja
+Week starting || Semana de || Semana del
+Balance at end || Saldo no fim || Saldo al final
+Starting from your bank balances today, adding open invoices and recurring invoices on their due dates and subtracting open bills and recurring bills. Payroll and one-off expenses are not included. || Parte dos saldos dos seus bancos hoje, soma faturas abertas e recorrentes na data de vencimento e subtrai contas a pagar abertas e recorrentes. Folha e despesas avulsas não entram. || Parte de los saldos de sus bancos hoy, suma facturas abiertas y recurrentes en su vencimiento y resta cuentas por pagar abiertas y recurrentes. La nómina y los gastos sueltos no se incluyen.
+Cash today || Caixa hoje || Caja hoy
+Cash in {0} weeks || Caixa em {0} semanas || Caja en {0} semanas
+Lowest point || Ponto mais baixo || Punto más bajo
+week {0} || semana {0} || semana {0}
+Group income statement || Resultado do grupo || Estado de resultados del grupo
+By company || Por empresa || Por empresa
+Taken out as intercompany: income {0}, expenses {1}. || Retirado como entre empresas: receitas {0}, despesas {1}. || Excluido como entre empresas: ingresos {0}, gastos {1}.
+They do not match: difference {0}. || Não batem: diferença de {0}. || No coinciden: diferencia de {0}.
+Group balance sheet || Balanço do grupo || Balance del grupo
+Warning: the group balance sheet does not balance. Check the intercompany accounts. || Atenção: o balanço do grupo não fecha. Confira as contas entre empresas. || Atención: el balance del grupo no cuadra. Revise las cuentas entre empresas.
+Taken out as intercompany: assets {0}, liabilities {1}. || Retirado como entre empresas: ativos {0}, passivos {1}. || Excluido como entre empresas: activos {0}, pasivos {1}.
+Forecast & group || Previsão e grupo || Pronóstico y grupo
+Email invoices from Fluxo || Enviar faturas por e-mail pelo Fluxo || Enviar facturas por correo desde Fluxo
+Annual contract, quoted for your company. Ask your Fluxo contact to switch you to Enterprise. || Contrato anual, orçado para a sua empresa. Peça ao seu contato do Fluxo para mudar você para o Enterprise. || Contrato anual, cotizado para su empresa. Pida a su contacto de Fluxo que lo cambie a Enterprise.
+Integrations || Integrações || Integraciones
+Approvals || Aprovações || Aprobaciones
+Group || Grupo || Grupo
+Single sign-on || Login único || Inicio de sesión único
+This bill needs approval before it can be paid || Esta conta a pagar precisa ser aprovada antes de ser paga || Esta cuenta por pagar necesita aprobación antes de pagarse
+This bill was rejected and cannot be paid || Esta conta a pagar foi recusada e não pode ser paga || Esta cuenta por pagar fue rechazada y no se puede pagar
+You cannot approve a bill you entered yourself || Você não pode aprovar uma conta que lançou || No puede aprobar una cuenta que registró usted mismo
+Approvals are not turned on || As aprovações não estão ligadas || Las aprobaciones no están activadas
+Email is not set up on this server yet || O e-mail ainda não está configurado neste servidor || El correo aún no está configurado en este servidor
+Opening balances were already imported || Os saldos iniciais já foram importados || Los saldos iniciales ya se importaron
+Choose a CSV file first || Escolha primeiro um arquivo CSV || Elija primero un archivo CSV
+This company is not set up to take online payments || Esta empresa não está configurada para receber pagamentos online || Esta empresa no está configurada para recibir pagos en línea
+This invoice cannot be paid online || Esta fatura não pode ser paga online || Esta factura no se puede pagar en línea
+Online payments are not configured on this server || Os pagamentos online não estão configurados neste servidor || Los pagos en línea no están configurados en este servidor
+Finish every item before closing the month || Termine todos os itens antes de fechar o mês || Termine todos los puntos antes de cerrar el mes
+Choose the opening balance date || Escolha a data dos saldos iniciais || Elija la fecha de los saldos iniciales
+This company is not in a group yet || Esta empresa ainda não está num grupo || Esta empresa aún no está en un grupo
+This code is invalid or has expired || Este código é inválido ou venceu || Este código no es válido o venció
+This company already belongs to a group || Esta empresa já pertence a um grupo || Esta empresa ya pertenece a un grupo
+Only the company that created the group can invite others || Só a empresa que criou o grupo pode convidar outras || Solo la empresa que creó el grupo puede invitar a otras
+Enter the invitation code || Digite o código de convite || Escriba el código de invitación
+Name the group || Dê um nome ao grupo || Nombre el grupo
+Give the key a name (for example: Website form) || Dê um nome à chave (por exemplo: Formulário do site) || Dé un nombre a la clave (por ejemplo: Formulario del sitio)
+Invalid or revoked API key || Chave de API inválida ou revogada || Clave de API inválida o revocada
+Your plan does not include this feature || Seu plano não inclui este recurso || Su plan no incluye esta función

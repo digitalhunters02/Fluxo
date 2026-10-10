@@ -9,7 +9,9 @@ const PLAN_INFO = {
   starter: { name: t('Starter'), blurb: t('Invoicing and bookkeeping basics'), features: [t('Everything in Free'), t('Unlimited invoices'), t('Credit memos'), t('Logo & brand color on invoices'), t('Unlimited users')] },
   essentials: { name: t('Essentials'), blurb: t('Bills, time and automatic banks'), features: [t('Everything in Starter'), t('Bills & vendor payments'), t('Recurring invoices'), t('Time tracking'), t('Connect banks automatically (2)')] },
   plus: { name: t('Plus'), blurb: t('Inventory, projects and budgets'), features: [t('Everything in Essentials'), t('Inventory (average cost)'), t('Purchase orders'), t('Budgets, classes & 1099 report'), t('Connect up to 5 banks')] },
-  advanced: { name: t('Advanced'), blurb: t('Teams, permissions and scale'), features: [t('Everything in Plus'), t('Custom roles & permissions'), t('Batch invoicing'), t('Connect up to 15 banks')] },
+  advanced: { name: t('Advanced'), blurb: t('Teams, permissions and scale'), features: [t('Everything in Plus'), t('Custom roles & permissions'), t('Batch invoicing'), t('Connect up to 15 banks'), t('Online payments (card and bank) with Stripe'), t('API keys & webhooks')] },
+  business: { name: t('Business'), blurb: t('Controls and several companies'), features: [t('Everything in Advanced'), t('Bill approvals & separation of duties'), t('Group of companies & consolidated reports'), t('Fixed assets & depreciation'), t('Month-end close checklist'), t('Audit log export')] },
+  enterprise: { name: t('Enterprise'), blurb: t('Single sign-on and a contract for your company'), features: [t('Everything in Business'), t('Single sign-on (SSO)'), t('No limit on companies in a group'), t('Annual contract and priority support')] },
 };
 
 function Shell({ children }) {
@@ -54,13 +56,13 @@ export function Pricing() {
             <Field label={t('Your email (for the receipt)')} className="min-w-[16rem] flex-1"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" autoComplete="email" /></Field>
             <label className="mb-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={payroll} onChange={(e) => setPayroll(e.target.checked)} /> {t('Add U.S. payroll (${0}/mo + ${1} per employee)', [data.payrollPrice.base, data.payrollPrice.perEmployee])}</label>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {data.order.map((p) => (
               <Card key={p} className={chosen === p ? 'ring-2 ring-brand-500' : ''}>
                 <h2 className="text-lg font-semibold">{PLAN_INFO[p].name}</h2><p className="text-sm text-slate-500">{PLAN_INFO[p].blurb}</p>
-                <div className="num my-3 text-4xl font-bold">${data.prices[p]}<span className="text-sm font-normal text-slate-500">{t('/month')}</span></div>
+                <div className="num my-3 text-4xl font-bold">{data.prices[p] === null ? t('From ${0}', [data.enterpriseFrom]) : `$${data.prices[p]}`}<span className="text-sm font-normal text-slate-500">{t('/month')}</span></div>
                 <ul className="mb-5 space-y-1.5 text-sm">{PLAN_INFO[p].features.map((f) => <li key={f}>✓ {f}</li>)}</ul>
-                <Button className="w-full" disabled={busy || !data.needsSetup || (p !== 'free' && !data.configured)} onClick={() => { setChosen(p); go(p); }}>{busy && chosen === p ? t('Please wait…') : p === 'free' ? t('Start free') : t('Choose {0}', [PLAN_INFO[p].name])}</Button>
+                {p === 'enterprise' ? (data.salesEmail ? <a className="btn btn-primary w-full" href={`mailto:${data.salesEmail}?subject=${encodeURIComponent('Fluxo Enterprise')}`}>{t('Contact us')}</a> : <p className="text-sm text-slate-500">{t('Annual contract, quoted for your company. Ask your Fluxo contact.')}</p>) : <Button className="w-full" disabled={busy || !data.needsSetup || (p !== 'free' && !data.configured)} onClick={() => { setChosen(p); go(p); }}>{busy && chosen === p ? t('Please wait…') : p === 'free' ? t('Start free') : t('Choose {0}', [PLAN_INFO[p].name])}</Button>}
               </Card>
             ))}
           </div>

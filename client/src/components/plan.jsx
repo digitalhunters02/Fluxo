@@ -3,7 +3,7 @@ import { t } from '../i18n.jsx';
 import { useAuth } from '../App.jsx';
 import { Card } from './ui.jsx';
 
-export const PLAN_LABEL = { free: t('Free'), starter: t('Starter'), essentials: t('Essentials'), plus: t('Plus'), advanced: t('Advanced'), addon: t('Payroll add-on') };
+export const PLAN_LABEL = { free: t('Free'), starter: t('Starter'), essentials: t('Essentials'), plus: t('Plus'), advanced: t('Advanced'), business: t('Business'), enterprise: t('Enterprise'), addon: t('Payroll add-on') };
 
 /** Aviso mostrado no lugar de uma tela que o plano atual não inclui. */
 export function UpgradeNotice({ feature }) {

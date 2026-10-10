@@ -1,4 +1,4 @@
-import { t, lang, LANGS, setLang } from './i18n.jsx';
+import { t, tr, lang, LANGS, setLang } from './i18n.jsx';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { Link, NavLink, Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { getTheme, isDark, setTheme } from './theme.js';
@@ -20,6 +20,8 @@ import Reports from './pages/Reports.jsx';
 import Settings from './pages/Settings.jsx';
 import Payroll from './pages/Payroll.jsx';
 import Admin from './pages/Admin.jsx';
+import Assets from './pages/Assets.jsx';
+import Close from './pages/Close.jsx';
 import { Forgot, Reset } from './pages/Recover.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import Reminders, { useReminderCount } from './pages/Reminders.jsx';
@@ -50,7 +52,7 @@ function LangSwitch({ dark = false }) {
   );
 }
 
-function AuthScreen({ status, onAuth }) {
+function AuthScreen({ status, onAuth, ssoError }) {
   const [run, busy] = useAction();
   const [f, setF] = useState({ company_name: '', name: '', email: '', password: '', demo: true, currency: 'USD', plan: 'advanced' });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
@@ -89,6 +91,8 @@ function AuthScreen({ status, onAuth }) {
           {status.needsSetup && <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={f.demo} onChange={set('demo')} />{' '}{t('Load sample data (6 months of activity)')}</label>}
         </div>
         <Button className="mt-5 w-full" disabled={busy}>{busy ? t('Please wait…') : status.needsSetup ? t('Get started') : t('Sign in')}</Button>
+        {ssoError && <p className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700" data-testid="sso-error">{tr(ssoError)}</p>}
+        {!status.needsSetup && <button type="button" data-testid="sso-button" className="btn btn-ghost mt-3 w-full" onClick={() => (f.email ? (window.location.href = `/api/sso/start?email=${encodeURIComponent(f.email)}`) : alert(t('Type your email first, then choose single sign-on.')))}>{t('Sign in with single sign-on')}</button>}
         {!status.needsSetup && <a href="/forgot" className="mt-3 block text-center text-sm text-brand-700 hover:underline">{t('Forgot your password?')}</a>}
       </form>
     </div>
@@ -101,7 +105,7 @@ const NAV = [
   { group: t('Sales'), items: [['/invoices', t('Invoices'), 'sales'], ['/estimates', t('Estimates'), 'sales'], ['/credit-memos', t('Credit memos'), 'sales', 'credit_memos'], ['/recurring', t('Recurring'), 'sales', 'recurring'], ['/customers', t('Customers'), 'sales']] },
   { group: t('Purchases'), items: [['/bills', t('Bills'), 'purchases', 'bills'], ['/purchase-orders', t('Purchase orders'), 'purchases', 'purchase_orders'], ['/expenses', t('Expenses'), 'purchases'], ['/vendors', t('Vendors'), 'sales']] },
   { group: t('Banking'), items: [['/connections', t('Connected banks'), 'banking', 'bank_feeds'], ['/banking', t('Transactions & reconciliation'), 'banking']] },
-  { group: t('Management'), items: [['/products', t('Products & inventory'), 'inventory'], ['/projects', t('Projects & time'), 'projects', 'time_tracking'], ['/payroll', t('Payroll'), 'payroll', 'payroll'], ['/reports', t('Reports'), 'reports'], ['/accounting', t('Accounting'), 'accounting']] },
+  { group: t('Management'), items: [['/products', t('Products & inventory'), 'inventory'], ['/projects', t('Projects & time'), 'projects', 'time_tracking'], ['/payroll', t('Payroll'), 'payroll', 'payroll'], ['/reports', t('Reports'), 'reports'], ['/accounting', t('Accounting'), 'accounting'], ['/assets', t('Fixed assets'), 'accounting', 'fixed_assets'], ['/close', t('Month-end close'), 'accounting', 'close_checklist']] },
   { to: '/settings', label: t('Settings'), icon: '⚙', read: 'settings' },
 ];
 
@@ -184,6 +188,8 @@ function Shell({ user, settings, logout }) {
           <Route path="/payroll/:tab?" element={<Gate feature="payroll"><Payroll /></Gate>} />
           <Route path="/reports/:report?" element={<Reports />} />
           <Route path="/accounting" element={<Accounting />} />
+          <Route path="/assets" element={<Gate feature="fixed_assets"><Assets /></Gate>} />
+          <Route path="/close" element={<Gate feature="close_checklist"><Close /></Gate>} />
           <Route path="/settings/:tab?" element={<Settings reloadSettings={settings.reload} />} />
           <Route path="*" element={<Navigate to={home} replace />} />
         </Routes>
@@ -198,6 +204,15 @@ export default function App() {
   const [settings, setSettings] = useState(null);
   const loc = useLocation();
   const nav = useNavigate();
+
+  const [ssoError, setSsoError] = useState('');
+  useEffect(() => { // voltou do login único: o servidor manda o token (ou o motivo do erro) no fragmento do endereço
+    const h = window.location.hash || '';
+    const tk = h.match(/sso_token=([^&]+)/)?.[1], er = h.match(/sso_error=([^&]+)/)?.[1];
+    if (tk) setToken(decodeURIComponent(tk));
+    if (er) setSsoError(decodeURIComponent(er));
+    if (tk || er) window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  }, []);
 
   const boot = useCallback(async () => {
     try {
@@ -225,7 +240,7 @@ export default function App() {
   return (
     <ToastProvider>
       {!user || !settings
-        ? <AuthScreen status={status} onAuth={boot} />
+        ? <AuthScreen status={status} onAuth={boot} ssoError={ssoError} />
         : <AuthCtx.Provider value={{ user, settings, planInfo: user.planInfo, has: (f) => !!user.planInfo.features[f], refresh: boot, can: (m, w) => user.permissions[w ? 'write' : 'read'].includes(m) }}>
             <Shell user={user} settings={{ ...settings, reload: async () => { const s = await api.get('/settings'); setFormat(s); setSettings(s); } }} logout={logout} />
           </AuthCtx.Provider>}

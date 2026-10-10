@@ -110,15 +110,45 @@ const REPORTS = {
   'trial-balance': { title: t('Trial balance'), asof: true, url: '/reports/trial-balance', csv: (d) => [[t('Code'), t('Account'), t('Debit'), t('Credit')], ...d.rows.map((r) => [r.code, r.name, r.debitBalance / 100, r.creditBalance / 100])],
     View: ({ d }) => <Table head={[t('Code'), t('Account'), { label: t('Debit'), right: true }, { label: t('Credit'), right: true }]}>{[...d.rows.map((r) => <tr key={r.id}><td className="td font-mono text-xs">{r.code}</td><td className="td">{r.name}</td><td className="td num text-right">{r.debitBalance ? money(r.debitBalance) : ''}</td><td className="td num text-right">{r.creditBalance ? money(r.creditBalance) : ''}</td></tr>),
       <tr key="t" className="border-t-2 bg-slate-50 font-semibold"><td className="td" colSpan={2}>{t('Totals')}{' '}{d.totalDebit === d.totalCredit ? '✓' : t('⚠ out of balance')}</td><td className="td num text-right">{money(d.totalDebit)}</td><td className="td num text-right">{money(d.totalCredit)}</td></tr>]}</Table> },
+  forecast: { title: t('Cash forecast'), url: '/reports/forecast', csv: (d) => [[t('Week starting'), t('Money in'), t('Money out'), t('Net'), t('Balance at end')], ...d.rows.map((r) => [r.from, r.inflowTotal / 100, r.outflowTotal / 100, r.net / 100, r.ending / 100])],
+    View: ({ d }) => (<>
+      <p className="border-b border-slate-100 p-3 text-sm text-slate-600">{t('Starting from your bank balances today, adding open invoices and recurring invoices on their due dates and subtracting open bills and recurring bills. Payroll and one-off expenses are not included.')}</p>
+      <div className="grid gap-3 p-3 sm:grid-cols-3"><div><div className="text-xs uppercase text-slate-500">{t('Cash today')}</div><div className="num text-lg font-semibold">{money(d.startingCash)}</div></div><div><div className="text-xs uppercase text-slate-500">{t('Cash in {0} weeks', [d.weeks])}</div><div className="num text-lg font-semibold">{money(d.endingCash)}</div></div><div><div className="text-xs uppercase text-slate-500">{t('Lowest point')}</div><div className={`num text-lg font-semibold ${d.lowest.balance < 0 ? 'text-rose-600' : ''}`}>{money(d.lowest.balance)}{d.lowest.week ? ` · ${t('week {0}', [d.lowest.week])}` : ''}</div></div></div>
+      <Table head={[t('Week starting'), { label: t('Money in'), right: true }, { label: t('Money out'), right: true }, { label: t('Net'), right: true }, { label: t('Balance at end'), right: true }]}>
+        {d.rows.map((r) => <tr key={r.from}><td className="td">{date(r.from)}</td><td className="td num text-right">{money(r.inflowTotal)}</td><td className="td num text-right">{money(r.outflowTotal)}</td><td className="td num text-right">{money(r.net)}</td><td className={`td num text-right font-medium ${r.ending < 0 ? 'text-rose-600' : ''}`}>{money(r.ending)}</td></tr>)}
+      </Table></>) },
+  'group-pnl': { title: t('Group income statement'), range: true, url: '/group/reports/pnl', csv: (d) => [[t('Account'), t('Amount')], ...d.income.map((r) => [r.name, r.total / 100]), [t('Total income§csv'), d.totalIncome / 100], ...d.opex.map((r) => [r.name, r.total / 100]), [t('Net income'), d.netIncome / 100]],
+    View: ({ d }) => (<>
+      <Table head={['', { label: `${date(d.from)} – ${date(d.to)}`, right: true }]}>
+        <tr><td className="td font-semibold" colSpan={2}>{t('Income')}</td></tr>{d.income.map((r) => <tr key={r.name}><td className="td pl-8">{r.name}</td><td className="td num text-right">{money(r.total)}</td></tr>)}
+        <Row bold label={t('Total income')} v={d.totalIncome} />
+        {d.cogs.length > 0 && <><tr><td className="td font-semibold" colSpan={2}>{t('Cost of goods sold')}</td></tr>{d.cogs.map((r) => <tr key={r.name}><td className="td pl-8">{r.name}</td><td className="td num text-right">{money(r.total)}</td></tr>)}</>}
+        <Row bold label={t('Gross profit')} v={d.grossProfit} />
+        <tr><td className="td font-semibold" colSpan={2}>{t('Operating expenses')}</td></tr>{d.opex.map((r) => <tr key={r.name}><td className="td pl-8">{r.name}</td><td className="td num text-right">{money(r.total)}</td></tr>)}
+        <Row bold label={t('Total expenses')} v={d.totalOpex} />
+        <tr className="border-t-2 border-slate-300 bg-slate-100 text-base font-bold"><td className="td">{t('Net income')}</td><td className="td num text-right">{money(d.netIncome)}</td></tr>
+      </Table>
+      <div className="border-t border-slate-100 p-3 text-sm text-slate-600"><div className="mb-1 font-semibold">{t('By company')}</div>{d.companies.map((c) => <div key={c.slug} className="flex justify-between"><span>{c.name}</span><span className="num">{money(c.netIncome)}</span></div>)}
+        <p className="mt-2 text-xs text-slate-500">{t('Taken out as intercompany: income {0}, expenses {1}.', [money(d.eliminated.income), money(d.eliminated.expense)])} {d.eliminated.difference !== 0 && <span className="font-semibold text-rose-600">{t('They do not match: difference {0}.', [money(d.eliminated.difference)])}</span>}</p></div></>) },
+  'group-balance': { title: t('Group balance sheet'), asof: true, url: '/group/reports/balance-sheet', csv: (d) => [[t('Account'), t('Amount')], ...d.assets.map((r) => [r.name, r.total / 100]), [t('Total assets'), d.totalAssets / 100], ...d.liabilities.map((r) => [r.name, r.total / 100]), [t('Total liabilities'), d.totalLiabilities / 100], ...d.equity.map((r) => [r.name, r.total / 100]), [t('Total equity'), d.totalEquity / 100]],
+    View: ({ d }) => (<>
+      {!d.balanced && <ErrorBox error={t('Warning: the group balance sheet does not balance. Check the intercompany accounts.')} />}
+      <Table head={['', { label: `Em ${date(d.asof)}`, right: true }]}>
+        <tr><td className="td font-semibold" colSpan={2}>{t('Asset')}</td></tr>{d.assets.map((r) => <tr key={r.name}><td className="td pl-8">{r.name}</td><td className="td num text-right">{money(r.total)}</td></tr>)}<Row bold label={t('Total assets')} v={d.totalAssets} />
+        <tr><td className="td font-semibold" colSpan={2}>{t('Liability')}</td></tr>{d.liabilities.map((r) => <tr key={r.name}><td className="td pl-8">{r.name}</td><td className="td num text-right">{money(r.total)}</td></tr>)}<Row bold label={t('Total liabilities')} v={d.totalLiabilities} />
+        <tr><td className="td font-semibold" colSpan={2}>{t('Equity')}</td></tr>{d.equity.map((r) => <tr key={r.name}><td className="td pl-8">{r.name}</td><td className="td num text-right">{money(r.total)}</td></tr>)}<Row indent label={t('Current-year earnings (retained)')} v={d.currentEarnings} /><Row bold label={t('Total equity')} v={d.totalEquity} />
+      </Table>
+      <p className="border-t border-slate-100 p-3 text-xs text-slate-500">{t('Taken out as intercompany: assets {0}, liabilities {1}.', [money(d.eliminated.assets), money(d.eliminated.liabilities)])} {d.eliminated.difference !== 0 && <span className="font-semibold text-rose-600">{t('They do not match: difference {0}.', [money(d.eliminated.difference)])}</span>}</p></>) },
 };
-const FEATURE_OF = { 'ap-aging': 'reports_full', 'expenses-by-vendor': 'reports_full', tax: 'reports_full', 'trial-balance': 'reports_full', inventory: 'inventory', budget: 'budgets', 'pnl-class': 'classes' };
-const GROUPS = [[t('Performance'), ['pnl', 'balance-sheet', 'cash-flow', 'budget', 'pnl-class']], [t('Customers & vendors'), ['ar-aging', 'ap-aging', 'sales-by-customer']], [t('Expenses'), ['expenses-by-category', 'expenses-by-vendor']], [t('Other'), ['tax', 'inventory', 'trial-balance']]];
+const FEATURE_OF = { forecast: 'forecast', 'ap-aging': 'reports_full', 'expenses-by-vendor': 'reports_full', tax: 'reports_full', 'trial-balance': 'reports_full', inventory: 'inventory', budget: 'budgets', 'pnl-class': 'classes' };
+const GROUPS = [[t('Performance'), ['pnl', 'balance-sheet', 'cash-flow', 'budget', 'pnl-class']], [t('Customers & vendors'), ['ar-aging', 'ap-aging', 'sales-by-customer']], [t('Expenses'), ['expenses-by-category', 'expenses-by-vendor']], [t('Other'), ['tax', 'inventory', 'trial-balance']], [t('Forecast & group'), ['forecast', 'group-pnl', 'group-balance']]];
 
 export default function Reports() {
   const { report = 'pnl' } = useParams();
-  const { has } = useAuth();
+  const { has, user } = useAuth();
   const nav = useNavigate();
   const cfg = REPORTS[report];
+  const groups = GROUPS.map(([g, keys]) => [g, keys.filter((k) => !k.startsWith('group-') || user.tenant)]).filter(([, keys]) => keys.length); // consolidação só no modo hospedado
   const [[from, to], setRange] = useState(PRESETS.year[1]());
   const [asof, setAsof] = useState(today());
   const locked = cfg && FEATURE_OF[report] && !has(FEATURE_OF[report]);
@@ -132,8 +162,8 @@ export default function Reports() {
         <Button variant="ghost" disabled={!data || locked} onClick={() => download(`${report}.csv`, cfg.csv(data))}>{t('Export CSV')}</Button><Button variant="ghost" onClick={() => window.print()}>{t('Print / PDF')}</Button>
       </PageHeader>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[14rem_minmax(0,1fr)]">
-        <Select className="field no-print lg:hidden" aria-label={t('Report')} value={report} onChange={(e) => nav(`/reports/${e.target.value}`)}>{GROUPS.map(([g, keys]) => <optgroup key={g} label={g}>{keys.map((k) => <option key={k} value={k}>{REPORTS[k].title}</option>)}</optgroup>)}</Select>
-        <nav className="no-print hidden space-y-4 lg:block">{GROUPS.map(([g, keys]) => <div key={g}><div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{g}</div>
+        <Select className="field no-print lg:hidden" aria-label={t('Report')} value={report} onChange={(e) => nav(`/reports/${e.target.value}`)}>{groups.map(([g, keys]) => <optgroup key={g} label={g}>{keys.map((k) => <option key={k} value={k}>{REPORTS[k].title}</option>)}</optgroup>)}</Select>
+        <nav className="no-print hidden space-y-4 lg:block">{groups.map(([g, keys]) => <div key={g}><div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{g}</div>
           {keys.map((k) => <NavLink key={k} to={`/reports/${k}`} className={({ isActive }) => `block rounded-lg px-2 py-1.5 text-sm ${isActive ? 'bg-brand-50 font-medium text-brand-700' : 'text-slate-600 hover:bg-slate-100'}`}>{REPORTS[k].title}{FEATURE_OF[k] && !has(FEATURE_OF[k]) && <Lock />}</NavLink>)}</div>)}</nav>
         <Card title={title} pad={false}>
           {(cfg.range || cfg.asof) && <div className="no-print flex flex-wrap items-end gap-3 border-b border-slate-100 p-3">

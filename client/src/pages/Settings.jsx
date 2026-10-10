@@ -7,6 +7,7 @@ import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader
 import { useAuth } from '../App.jsx';
 import { SearchBox, useSearch } from '../components/search.jsx';
 import { Gate, Lock, PLAN_LABEL } from '../components/plan.jsx';
+import { IntegrationsTab, PaymentsTab, ApprovalsTab, SsoTab, ImportTab, GroupTab, AuditExport } from './GrowthSettings.jsx';
 
 function Company({ reload }) {
   const { can, has } = useAuth();
@@ -183,7 +184,10 @@ const PLAN_FEATURES = [
   ['Unlimited invoices', 'starter'], ['Credit memos', 'starter'], ['Logo & brand color on invoices', 'starter'], ['Unlimited users', 'starter'],
   ['Bills & vendor payments', 'essentials'], ['Automatic bank connection (Plaid)', 'essentials'], ['Recurring invoices', 'essentials'], ['Time tracking', 'essentials'], ['Full report set & audit log', 'essentials'],
   ['Inventory (average cost)', 'plus'], ['Project profitability', 'plus'], ['Purchase orders', 'plus'], ['Budgets & budget vs actual', 'plus'], ['Classes & P&L by class', 'plus'], ['1099 contractor report', 'plus'], ['Close the books (period lock)', 'plus'],
-  ['Custom roles & permissions', 'advanced'], ['Batch invoicing', 'advanced'],
+  ['Email invoices from Fluxo', 'essentials'], ['Cash forecast', 'plus'],
+  ['Custom roles & permissions', 'advanced'], ['Batch invoicing', 'advanced'], ['API keys & webhooks', 'advanced'], ['Online payments (card and bank) with Stripe', 'advanced'],
+  ['Bill approvals & separation of duties', 'business'], ['Fixed assets & depreciation', 'business'], ['Group of companies & consolidated reports', 'business'], ['Month-end close checklist', 'business'], ['Audit log export', 'business'],
+  ['Single sign-on (SSO)', 'enterprise'],
 ];
 const FEATURE_LABEL = {
   '5 invoices per month & unlimited estimates': t('5 invoices per month & unlimited estimates'), 'Send by link, email button or PDF': t('Send by link, email button or PDF'), 'Unlimited invoices': t('Unlimited invoices'), 'Credit memos': t('Credit memos'), 'Unlimited users': t('Unlimited users'),
@@ -192,6 +196,9 @@ const FEATURE_LABEL = {
   'Time tracking': t('Time tracking'), 'Full report set & audit log': t('Full report set & audit log'), 'Inventory (average cost)': t('Inventory (average cost)'), 'Project profitability': t('Project profitability'),
   'Purchase orders': t('Purchase orders'), 'Budgets & budget vs actual': t('Budgets & budget vs actual'), 'Classes & P&L by class': t('Classes & P&L by class'), '1099 contractor report': t('1099 contractor report'),
   'Close the books (period lock)': t('Close the books (period lock)'), 'Custom roles & permissions': t('Custom roles & permissions'), 'Batch invoicing': t('Batch invoicing'),
+  'Email invoices from Fluxo': t('Email invoices from Fluxo'), 'Cash forecast': t('Cash forecast'), 'API keys & webhooks': t('API keys & webhooks'), 'Online payments (card and bank) with Stripe': t('Online payments (card and bank) with Stripe'),
+  'Bill approvals & separation of duties': t('Bill approvals & separation of duties'), 'Fixed assets & depreciation': t('Fixed assets & depreciation'), 'Group of companies & consolidated reports': t('Group of companies & consolidated reports'),
+  'Month-end close checklist': t('Month-end close checklist'), 'Audit log export': t('Audit log export'), 'Single sign-on (SSO)': t('Single sign-on (SSO)'),
 };
 
 function PlanTab() {
@@ -235,18 +242,19 @@ function PlanTab() {
         </Card>
       )}
       {stripeOn && !bill.managed && owner && <label className="mb-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={withPayroll} onChange={(e) => setWithPayroll(e.target.checked)} /> {t('Include U.S. payroll (${0}/mo + ${1} per employee)', [planInfo.payrollPrice.base, planInfo.payrollPrice.perEmployee])}</label>}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" data-testid="plan-grid">
         {planInfo.order.map((p) => {
           const current = p === planInfo.plan && (!stripeOn || bill.managed || p === 'free');
           const up = rank(p) > rank(planInfo.plan);
           return (
             <Card key={p} className={current ? 'ring-2 ring-brand-500' : ''}>
               <div className="flex items-baseline justify-between"><h3 className="text-lg font-semibold">{PLAN_LABEL[p]}</h3>{current && <Badge status="paid">{t('Current plan')}</Badge>}</div>
-              <div className="num my-2 text-3xl font-bold">${planInfo.prices[p]}<span className="text-sm font-normal text-slate-500">{t('/month')}</span></div>
+              <div className="num my-2 text-3xl font-bold">{planInfo.prices[p] === null ? t('From ${0}', [planInfo.enterpriseFrom]) : `$${planInfo.prices[p]}`}<span className="text-sm font-normal text-slate-500">{t('/month')}</span></div>
               <ul className="space-y-1.5 text-sm">
                 {PLAN_FEATURES.map(([f, min]) => <li key={f} className={rank(p) >= rank(min) ? '' : 'text-slate-300 line-through'}>{rank(p) >= rank(min) ? '✓' : '·'} {FEATURE_LABEL[f]}</li>)}
               </ul>
-              {owner && !current && (stripeOn
+              {p === 'enterprise' && !current && <p className="mt-4 text-sm text-slate-600">{t('Annual contract, quoted for your company. Ask your Fluxo contact to switch you to Enterprise.')}</p>}
+              {owner && !current && p !== 'enterprise' && (stripeOn
                 ? (bill.managed
                   ? <Button className="mt-4 w-full" variant={up ? 'primary' : 'ghost'} disabled={busy} onClick={() => confirm(p === 'free' ? t('Switch to Free? Your paid plan keeps running until the end of the period you already paid.') : t('Switch to the {0} plan? The difference is prorated on your next invoice.', [PLAN_LABEL[p]])) && change({ plan: p })}>{up ? t('Upgrade') : t('Downgrade')}</Button>
                   : <Button className="mt-4 w-full" disabled={busy} onClick={() => subscribe(p)}>{t('Subscribe')}</Button>)
@@ -314,8 +322,11 @@ export default function Settings({ reloadSettings }) {
   const nav = useNavigate();
   const owner = user.role === 'owner';
   const tabs = [['company', t('Company')], ['plan', t('Plan')], ['account', t('My account')], ['automations', t('Automations')],
-    ...(owner ? [['users', t('Users')], ['roles', <>{t('Roles')}{!has('custom_roles') && <Lock />}</>], ['audit', <>{t('Audit log')}{!has('audit_log') && <Lock />}</>]] : [])];
+    ...(owner ? [['users', t('Users')], ['roles', <>{t('Roles')}{!has('custom_roles') && <Lock />}</>], ['audit', <>{t('Audit log')}{!has('audit_log') && <Lock />}</>],
+      ['import', t('Import')], ['integrations', <>{t('Integrations')}{!has('api') && <Lock />}</>], ['payments', <>{t('Online payments')}{!has('online_payments') && <Lock />}</>],
+      ['approvals', <>{t('Approvals')}{!has('approvals') && <Lock />}</>], ...(user.tenant ? [['group', <>{t('Group')}{!has('multi_company') && <Lock />}</>]] : []), ['sso', <>{t('Single sign-on')}{!has('sso') && <Lock />}</>]] : [])];
   return (<><PageHeader title={t('Settings')} /><Tabs tabs={tabs} value={tab} onChange={(k) => nav(`/settings/${k}`)} />
     {tab === 'company' && <><Company reload={reloadSettings} /><LockDate /></>}{tab === 'plan' && <PlanTab />}{tab === 'automations' && <AutomationsTab />}{tab === 'account' && <Account />}{tab === 'users' && owner && <Users />}
-    {tab === 'roles' && owner && <Gate feature="custom_roles"><RolesTab /></Gate>}{tab === 'audit' && owner && <Gate feature="audit_log"><Audit /></Gate>}</>);
+    {tab === 'roles' && owner && <Gate feature="custom_roles"><RolesTab /></Gate>}{tab === 'audit' && owner && <Gate feature="audit_log"><AuditExport /><Audit /></Gate>}
+    {tab === 'import' && owner && <ImportTab />}{tab === 'integrations' && owner && <IntegrationsTab />}{tab === 'payments' && owner && <PaymentsTab />}{tab === 'approvals' && owner && <ApprovalsTab />}{tab === 'group' && owner && user.tenant && <GroupTab />}{tab === 'sso' && owner && <SsoTab />}</>);
 }

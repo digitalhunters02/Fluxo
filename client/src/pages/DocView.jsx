@@ -28,6 +28,23 @@ function ApplyCreditModal({ credit, onClose, onDone }) {
   );
 }
 
+function EmailModal({ doc, onClose, onDone }) {
+  const [run, busy] = useAction();
+  const { data: st } = useLoad(() => api.get('/email/status'));
+  const [f, setF] = useState({ to: doc.contact_email || '', message: '' });
+  const send = async () => { const r = await run(() => api.post(`/doc/${doc.id}/email`, f), t('Email sent')); if (r) onDone(); };
+  return (
+    <Modal title={t('Email {0}', [doc.number])} onClose={onClose} footer={<><Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button><Button disabled={busy || !f.to || st?.ready === false} onClick={send}>{t('Send')}</Button></>}>
+      {st?.ready === false && <p className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{t('Email is not set up on this server yet. Ask your administrator to configure an email provider.')}</p>}
+      <div className="grid gap-3">
+        <Field label={t('To')}><Input type="email" value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} /></Field>
+        <Field label={t('Message (optional)')}><textarea className="field" rows={4} value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} /></Field>
+      </div>
+      <p className="mt-3 text-xs text-slate-400">{t('The email has a link to view the document online.')}</p>
+    </Modal>
+  );
+}
+
 function RefundModal({ credit, onClose, onDone }) {
   const [act, busy] = useAction();
   const { data: accounts } = useLoad(() => api.get('/banking/accounts'));
@@ -73,12 +90,14 @@ export default function DocView() {
   const { id } = useParams();
   const nav = useNavigate();
   const toast = useToast();
-  const { can, settings, user } = useAuth();
+  const { can, settings, user, has } = useAuth();
   const { data: d, loading, error, reload } = useLoad(() => api.get(`/doc/${id}`), [id]);
   const [run, busy] = useAction();
   const [paying, setPaying] = useState(false);
   const [applying, setApplying] = useState(false);
   const [refunding, setRefunding] = useState(false);
+  const [emailing, setEmailing] = useState(false);
+  const appr = useLoad(() => (has('approvals') && d?.type === 'bill' ? api.get('/approvals') : null), [id, d?.status, d?.total, d?.approval_status]);
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} retry={reload} />;
   const purchase = ['bill', 'po'].includes(d.type);
@@ -88,6 +107,7 @@ export default function DocView() {
   const act = (a, msg) => run(async () => { await api.post(`/doc/${id}/${a}`); reload(); }, msg);
   const link = `${location.origin}/p/${user.tenant ? `${user.tenant}.` : ''}${d.share_token}`; // hospedado: o link leva a empresa junto
   const posted = !isQuote && !['draft', 'void'].includes(d.status);
+  const needsApproval = !!appr.data?.pending?.some((p) => p.id === d.id);
 
   return (
     <>
@@ -96,9 +116,12 @@ export default function DocView() {
         {!purchase && <Button variant="ghost" onClick={() => window.print()}>{t('Print / PDF')}</Button>}
         {!purchase && <Button variant="ghost" onClick={async () => { try { await navigator.clipboard.writeText(link); toast(t('Link copied')); } catch { prompt(t('Copy the link:'), link); } }}>{t('Copy link')}</Button>}
         {!purchase && d.contact_email && <a className="btn btn-ghost" href={`mailto:${d.contact_email}?subject=${encodeURIComponent(`${NAMES[d.type]} ${d.number}`)}&body=${encodeURIComponent(t('Hi! Here is the link to view the document: {0}', [link]))}`}>{t('Send by email')}</a>}
+        {!purchase && posted && has('email_invoices') && w && <Button variant="ghost" onClick={() => setEmailing(true)}>{t('Email to customer')}</Button>}
+        {d.type === 'bill' && needsApproval && <span className="rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800" data-testid="needs-approval">{t('Needs approval')}</span>}
+        {w && d.type === 'bill' && needsApproval && <><Button disabled={busy} onClick={() => act('approve', t('Approved'))}>{t('Approve')}</Button><Button variant="ghost" disabled={busy} onClick={() => act('reject', t('Rejected'))}>{t('Reject')}</Button></>}
         {w && !['void', 'invoiced', 'billed'].includes(d.status) && <Link className="btn btn-ghost" to={`/document/${d.type}/${d.id}/edit`}>{t('Edit')}</Link>}
         {w && d.status === 'draft' && ['invoice', 'credit'].includes(d.type) && <Button disabled={busy} onClick={() => act('post', t('Document issued'))}>{t('Issue')}</Button>}
-        {w && posted && ['invoice', 'bill'].includes(d.type) && d.balance > 0 && <Button disabled={busy} onClick={() => setPaying(true)}>{d.type === 'invoice' ? t('Record payment received') : t('Record payment')}</Button>}
+        {w && posted && ['invoice', 'bill'].includes(d.type) && d.balance > 0 && <Button disabled={busy || needsApproval} onClick={() => setPaying(true)}>{d.type === 'invoice' ? t('Record payment received') : t('Record payment')}</Button>}
         {w && d.type === 'credit' && posted && d.balance > 0 && <><Button disabled={busy} onClick={() => setApplying(true)}>{t('Apply to invoice')}</Button><Button variant="ghost" disabled={busy} onClick={() => setRefunding(true)}>{t('Refund')}</Button></>}
         {w && d.type === 'po' && ['draft', 'sent', 'accepted'].includes(d.status) && <Button disabled={busy} onClick={() => run(async () => { const b = await api.post(`/doc/${id}/convert-po`); nav(`/document/${b.id}`); }, t('Converted to bill (draft)'))}>{t('Convert to bill')}</Button>}
         {w && d.type === 'estimate' && ['draft', 'sent', 'accepted'].includes(d.status) && <Button disabled={busy} onClick={() => run(async () => { const inv = await api.post(`/doc/${id}/convert`); nav(`/document/${inv.id}`); }, t('Converted to invoice (draft)'))}>{t('Convert to invoice')}</Button>}
@@ -161,6 +184,7 @@ export default function DocView() {
       )}
       {applying && <ApplyCreditModal credit={d} onClose={() => setApplying(false)} onDone={() => { setApplying(false); reload(); }} />}
       {refunding && <RefundModal credit={d} onClose={() => setRefunding(false)} onDone={() => { setRefunding(false); reload(); }} />}
+      {emailing && <EmailModal doc={d} onClose={() => setEmailing(false)} onDone={() => { setEmailing(false); reload(); }} />}
       {paying && <PaymentModal doc={d} onClose={() => setPaying(false)} onDone={() => { setPaying(false); reload(); }} />}
     </>
   );

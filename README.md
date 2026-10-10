@@ -113,3 +113,26 @@ One instance serves many small companies. Scaling beyond a single machine means 
 
 ## Password recovery
 "Forgot your password?" on the sign-in page emails a one-time link (valid 1 hour, stored only as a hash, invalidates open sessions when used). The reply never reveals whether an account exists, and requests are rate-limited. It needs an email provider (`SMTP_HOST…` or `RESEND_API_KEY`, plus `MAIL_FROM`) **and** `APP_URL`; until both are set the page tells people to ask the account owner, who can set a new password under Settings > Users. In multi-company mode the link carries the company, so it only ever touches that company's database. Use `FLUXO_MAIL_FILE=/tmp/emails.jsonl` to try it locally without sending anything.
+
+## Growth pack (Business and Enterprise plans, integrations, online payments)
+
+New plans: **Business** ($599/month, Stripe checkout) and **Enterprise** (from $1,500/month, annual contract; no Stripe price, set by the platform admin or the owner of a self-hosted install). `FLUXO_SALES_EMAIL` shows a "Contact us" button on the pricing page.
+
+| Feature | Minimum plan | Where |
+|---|---|---|
+| Import from QuickBooks / Xero (chart of accounts, customers and vendors, opening balances from a trial balance) | all plans | Settings > Import |
+| Email invoices and estimates from Fluxo (needs `SMTP_*` or `RESEND_API_KEY`) | Essentials | Document page |
+| Cash forecast (13 weeks, from open invoices/bills and recurring items) | Plus | Reports |
+| API keys (`flx_live_<company>.<secret>`, `/api/v1`), signed webhooks (`X-Fluxo-Signature`) | Advanced | Settings > Integrations |
+| Online payments of invoices (Stripe Connect Express, optional platform fee `CONNECT_FEE_PCT`) | Advanced | Settings > Online payments; public invoice link |
+| Bill approvals with a limit and separation of duties | Business | Settings > Approvals |
+| Fixed assets and monthly straight-line depreciation, disposal with gain/loss | Business | Fixed assets |
+| Month-end close checklist (locks the period) | Business | Month-end close |
+| Group of companies and consolidated P&L / balance sheet with intercompany elimination (hosted mode, up to 5 companies; Enterprise unlimited) | Business | Settings > Group, Reports |
+| Audit log CSV export | Business | Settings > Audit log |
+| Single sign-on (OpenID Connect) per company | Enterprise | Settings > Single sign-on |
+
+Environment: `STRIPE_CONNECT_WEBHOOK_SECRET` (webhook endpoint `POST /api/stripe/connect-webhook` for connected accounts, events `checkout.session.completed` and `account.updated`), `CONNECT_FEE_PCT`, `FLUXO_SALES_EMAIL`, `SSO_STATE_SECRET` (optional), `WEBHOOK_ALLOW_INSECURE=1` only for local tests.
+SSO: register `<APP_URL>/api/sso/callback` as the redirect address at the identity provider; users must already exist in Fluxo.
+
+Deliberately not built yet (needs a partner, contract or a large change): Postgres/shared database, SOC 2, multi-currency, revenue recognition, payroll tax filing and direct deposit (payroll partner), paying bills by ACH or check, automatic sales tax rates, open-invoice import.

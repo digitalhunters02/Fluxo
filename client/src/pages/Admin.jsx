@@ -12,7 +12,7 @@ async function call(method, path, body) {
   if (!res.ok) { if (res.status === 401 && store.get()) store.set(''); throw Object.assign(new Error(data.error ? tr(data.error) : `Error ${res.status}`), { status: res.status }); }
   return data;
 }
-const PLAN = { free: 'Free', starter: 'Starter', essentials: 'Essentials', plus: 'Plus', advanced: 'Advanced' };
+const PLAN = { free: 'Free', starter: 'Starter', essentials: 'Essentials', plus: 'Plus', advanced: 'Advanced', business: 'Business', enterprise: 'Enterprise' };
 
 /** Painel do dono da plataforma: quem são os clientes, em que plano estão e quem está suspenso. */
 export default function Admin() {
@@ -51,7 +51,7 @@ export default function Admin() {
           <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
             <Card><div className="text-xs uppercase text-slate-500">{t('Companies')}</div><div className="num text-2xl font-semibold">{data.total}</div></Card>
             <Card><div className="text-xs uppercase text-slate-500">{t('Active')}</div><div className="num text-2xl font-semibold">{data.active}</div></Card>
-            {['free', 'starter', 'essentials', 'plus', 'advanced'].filter((p) => data.byPlan[p]).slice(0, 2).map((p) => <Card key={p}><div className="text-xs uppercase text-slate-500">{PLAN[p]}</div><div className="num text-2xl font-semibold">{data.byPlan[p]}</div></Card>)}
+            {['free', 'starter', 'essentials', 'plus', 'advanced', 'business', 'enterprise'].filter((p) => data.byPlan[p]).slice(0, 2).map((p) => <Card key={p}><div className="text-xs uppercase text-slate-500">{PLAN[p]}</div><div className="num text-2xl font-semibold">{data.byPlan[p]}</div></Card>)}
           </div>
           <Card pad={false}>
             <Table head={[t('Company'), t('Owner'), t('Plan'), t('Users'), t('Invoices'), t('Created'), t('Status'), '']} empty={t('No companies yet.')}>
