@@ -3,9 +3,11 @@ const KEY = 'fluxo_token';
 export const getToken = () => { try { return localStorage.getItem(KEY); } catch { return null; } };
 export const setToken = (t) => { try { t ? localStorage.setItem(KEY, t) : localStorage.removeItem(KEY); } catch { /* ignore */ } };
 let onUnauthorized = () => {};
+let askReauth = null; // janela "confirme a senha": devolve uma promessa de true/false
+export const setReauthHandler = (fn) => { askReauth = fn; };
 export const setUnauthorizedHandler = (fn) => { onUnauthorized = fn; };
 
-async function req(method, path, body) {
+async function req(method, path, body, retried = false) {
   const res = await fetch('/api' + path, {
     method,
     headers: { 'Content-Type': 'application/json', ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) },
@@ -13,8 +15,12 @@ async function req(method, path, body) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    if (res.status === 401 && getToken()) onUnauthorized();
-    throw new Error(data.error ? tr(data.error) : t('Error {0}', [res.status]));
+    if (res.status === 401 && getToken() && !data.needs_2fa) onUnauthorized();
+    // ação sensível e a empresa pede a senha de novo: abre a janela e repete o pedido uma vez
+    if (res.status === 403 && data.code === 'reauth_required' && askReauth && !retried && (await askReauth())) return req(method, path, body, true);
+    const err = new Error(data.error ? tr(data.error) : t('Error {0}', [res.status]));
+    err.data = data;
+    throw err;
   }
   return data;
 }

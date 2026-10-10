@@ -18,7 +18,8 @@ import { reportLead } from './harborLead.js';
 import { registerGrowth, registerGrowthPublic } from './growth.js';
 import { createV1Router } from './integrations.js';
 import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, limitFor, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE, ENTERPRISE_FROM } from './plans.js';
-import { cleanPerms, authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
+import { cleanPerms, authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, endSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
+import * as twofa from './twofa.js';
 
 const { HttpError, today, isDate, cents } = acc;
 const bad = (m) => new HttpError(400, m);
@@ -167,6 +168,7 @@ api.post('/login', wrap((req, res) => {
   const attempt = () => {
     const u = get('SELECT * FROM users WHERE email=? AND active=1', email);
     if (!u || !verifyPassword(String(req.body.password || ''), u.password_hash)) throw new HttpError(401, 'Incorrect email or password');
+    twofa.enforceAtLogin(u, req.body.code); // com 2FA ligado, pede o código do aplicativo (ou um código de recuperação)
     clearAttempts(email + '|' + req.ip);
     return { token: withSlug(createSession(u.id)), user: publicUser(u) };
   };
@@ -338,10 +340,12 @@ api.get('/admin-summary', wrap((req, res) => {
 
 registerGrowthPublic(api, { wrap, ok, publicTenant, withSlug });
 api.use(requireAuth);
+api.use(twofa.setupGate); // com "2FA obrigatório", quem ainda não ativou só vê a tela de ativação
+twofa.registerTwoFactor(api, { wrap, ok, can, audit, listUsers });
 registerGrowth(api, { wrap, ok, can, requireFeature, audit, id, withSlug, multi });
-api.post('/logout', wrap((req, res) => { run('DELETE FROM sessions WHERE token=?', req.headers.authorization.slice(7)); ok(res, {}); }));
+api.post('/logout', wrap((req, res) => { endSession(req.headers.authorization.slice(7)); ok(res, {}); }));
 const planInfo = () => ({ enterpriseFrom: ENTERPRISE_FROM, plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, lockDate: getSetting('lock_date', ''), billing: billing.billingState(), limits: { bank_connections: limitFor('bank_connections'), invoices_per_month: limitFor('invoices_per_month'), users: limitFor('users'), invoices_used: invoicesThisMonth() } });
-api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), tenant: multi() ? tenants.currentSlug() : '', planInfo: planInfo() })));
+api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), tenant: multi() ? tenants.currentSlug() : '', planInfo: planInfo(), twofa: twofa.twofaState(req.user), reauthOn: twofa.reauthOn() })));
 api.get('/plan', wrap((_req, res) => ok(res, planInfo())));
 api.put('/plan', can('users', true), wrap((req, res) => {
   if (getSetting('billing_managed', '0') === '1' && process.env.FLUXO_ALLOW_MANUAL_PLAN !== '1') throw new HttpError(403, 'Your plan is managed by your subscription. Use Upgrade or Manage billing.');
@@ -367,7 +371,7 @@ api.put('/settings', can('settings', true), wrap((req, res) => {
 }));
 
 api.get('/users', can('users'), wrap((_req, res) => ok(res, { users: listUsers(), roles: ROLES, customRoles: hasFeature('custom_roles') ? all('SELECT id,name FROM roles ORDER BY name') : [] })));
-api.post('/users', can('users', true), wrap((req, res) => {
+api.post('/users', can('users', true), twofa.requireFresh, wrap((req, res) => {
   const { name, email, password } = req.body;
   const userCap = limitFor('users');
   if (userCap !== null && get('SELECT COUNT(*) n FROM users WHERE active=1').n >= userCap) throw new HttpError(402, 'Your plan includes one user. Upgrade to add more.', { feature: 'users', required: 'starter' });
@@ -384,7 +388,7 @@ api.post('/users', can('users', true), wrap((req, res) => {
   const uid = insert('INSERT INTO users(name,email,password_hash,role,custom_role_id,custom_perms) VALUES(?,?,?,?,?,?)', name.trim(), email.trim().toLowerCase(), hashPassword(password), role, custom, perms);
   audit(req, 'create', 'user', uid, `${email} (${role})`); ok(res, publicUser(get('SELECT * FROM users WHERE id=?', uid)));
 }));
-api.put('/users/:id', can('users', true), wrap((req, res) => {
+api.put('/users/:id', can('users', true), twofa.requireFresh, wrap((req, res) => {
   const uid = id(req); const u = get('SELECT * FROM users WHERE id=?', uid);
   if (!u) throw new HttpError(404, 'User not found');
   let custom = u.custom_role_id, perms = u.custom_perms;
@@ -580,6 +584,7 @@ api.post('/doc/:id/payments', wrap((req, res) => {
   const cur = get('SELECT type FROM docs WHERE id=?', id(req));
   if (!cur) throw new HttpError(404, 'Document not found');
   gateType(cur.type); can(docModule(cur.type), true)(req, res, (e) => { if (e) throw e; });
+  if (cur.type === 'bill') twofa.assertFresh(req); // pagar conta: pede a senha de novo se a empresa ligou isso
   const d = acc.addPayment(id(req), req.body, req.user);
   audit(req, 'payment', d.type, d.id, `${d.number}: ${req.body.amount}`); ok(res, d);
 }));
@@ -804,11 +809,11 @@ const roleBody = (b) => {
   return [b.name.trim(), JSON.stringify(clean(b.read)), JSON.stringify(clean(b.write))];
 };
 api.get('/roles', can('users'), requireFeature('custom_roles'), wrap((_req, res) => ok(res, { modules: MODULES.filter((m) => m !== 'settings'), roles: all('SELECT * FROM roles ORDER BY name').map((r) => ({ ...r, read: JSON.parse(r.read), write: JSON.parse(r.write) })) })));
-api.post('/roles', can('users', true), requireFeature('custom_roles'), wrap((req, res) => {
+api.post('/roles', can('users', true), twofa.requireFresh, requireFeature('custom_roles'), wrap((req, res) => {
   const b = roleBody(req.body); if (get('SELECT 1 FROM roles WHERE name=?', b[0])) throw bad('A role with this name already exists');
   const nid = insert('INSERT INTO roles(name,read,write) VALUES(?,?,?)', ...b); audit(req, 'create', 'role', nid, b[0]); ok(res, { id: nid });
 }));
-api.put('/roles/:id', can('users', true), requireFeature('custom_roles'), wrap((req, res) => {
+api.put('/roles/:id', can('users', true), twofa.requireFresh, requireFeature('custom_roles'), wrap((req, res) => {
   if (!get('SELECT 1 FROM roles WHERE id=?', id(req))) throw new HttpError(404, 'Role not found');
   run('UPDATE roles SET name=?, read=?, write=? WHERE id=?', ...roleBody(req.body), id(req)); audit(req, 'update', 'role', id(req)); ok(res, {});
 }));

@@ -8,6 +8,7 @@ import { useAuth } from '../App.jsx';
 import { SearchBox, useSearch } from '../components/search.jsx';
 import { Gate, Lock, PLAN_LABEL } from '../components/plan.jsx';
 import { IntegrationsTab, PaymentsTab, ApprovalsTab, SsoTab, ImportTab, GroupTab, AuditExport } from './GrowthSettings.jsx';
+import { TwoFactorCard, SecurityTab } from './SecurityUI.jsx';
 
 function Company({ reload }) {
   const { can, has } = useAuth();
@@ -123,6 +124,7 @@ function Account() {
     const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = `fluxo-backup-${new Date().toISOString().slice(0, 10)}.json`; a.click();
   };
   return (<div className="grid max-w-3xl gap-4">
+    <TwoFactorCard />
     <Card title={t('Change password')}><div className="grid max-w-sm gap-3"><Field label={t('Current password')}><Input type="password" value={f.current} onChange={(e) => setF({ ...f, current: e.target.value })} /></Field><Field label={t('New password')}><Input type="password" value={f.next} onChange={(e) => setF({ ...f, next: e.target.value })} /></Field>
       <Button disabled={busy || !f.current || f.next.length < 8} onClick={async () => { const r = await run(() => api.post('/me/password', f), t('Password changed')); if (r) setF({ current: '', next: '' }); }}>{t('Change')}</Button></div></Card>
     {user.role === 'owner' && <Card title={t('Data backup')}><p className="mb-3 text-sm text-slate-500">{t('Download a complete copy (JSON) of all your data. Your data is yours: no lock-in, no fees.')}</p><Button variant="ghost" onClick={backup}>{t('Download backup')}</Button></Card>}
@@ -324,9 +326,9 @@ export default function Settings({ reloadSettings }) {
   const tabs = [['company', t('Company')], ['plan', t('Plan')], ['account', t('My account')], ['automations', t('Automations')],
     ...(owner ? [['users', t('Users')], ['roles', <>{t('Roles')}{!has('custom_roles') && <Lock />}</>], ['audit', <>{t('Audit log')}{!has('audit_log') && <Lock />}</>],
       ['import', t('Import')], ['integrations', <>{t('Integrations')}{!has('api') && <Lock />}</>], ['payments', <>{t('Online payments')}{!has('online_payments') && <Lock />}</>],
-      ['approvals', <>{t('Approvals')}{!has('approvals') && <Lock />}</>], ...(user.tenant ? [['group', <>{t('Group')}{!has('multi_company') && <Lock />}</>]] : []), ['sso', <>{t('Single sign-on')}{!has('sso') && <Lock />}</>]] : [])];
+      ['approvals', <>{t('Approvals')}{!has('approvals') && <Lock />}</>], ['security', t('Security')], ...(user.tenant ? [['group', <>{t('Group')}{!has('multi_company') && <Lock />}</>]] : []), ['sso', <>{t('Single sign-on')}{!has('sso') && <Lock />}</>]] : [])];
   return (<><PageHeader title={t('Settings')} /><Tabs tabs={tabs} value={tab} onChange={(k) => nav(`/settings/${k}`)} />
     {tab === 'company' && <><Company reload={reloadSettings} /><LockDate /></>}{tab === 'plan' && <PlanTab />}{tab === 'automations' && <AutomationsTab />}{tab === 'account' && <Account />}{tab === 'users' && owner && <Users />}
     {tab === 'roles' && owner && <Gate feature="custom_roles"><RolesTab /></Gate>}{tab === 'audit' && owner && <Gate feature="audit_log"><AuditExport /><Audit /></Gate>}
-    {tab === 'import' && owner && <ImportTab />}{tab === 'integrations' && owner && <IntegrationsTab />}{tab === 'payments' && owner && <PaymentsTab />}{tab === 'approvals' && owner && <ApprovalsTab />}{tab === 'group' && owner && user.tenant && <GroupTab />}{tab === 'sso' && owner && <SsoTab />}</>);
+    {tab === 'import' && owner && <ImportTab />}{tab === 'integrations' && owner && <IntegrationsTab />}{tab === 'payments' && owner && <PaymentsTab />}{tab === 'approvals' && owner && <ApprovalsTab />}{tab === 'group' && owner && user.tenant && <GroupTab />}{tab === 'sso' && owner && <SsoTab />}{tab === 'security' && owner && <SecurityTab />}</>);
 }

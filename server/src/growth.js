@@ -9,6 +9,7 @@ import * as billing from './billing.js';
 import * as connect from './connect.js';
 import * as mig from './migrate.js';
 import * as approvals from './approvals.js';
+import { requireFresh } from './twofa.js';
 import * as assets from './assets.js';
 import * as close from './close.js';
 import * as groups from './groups.js';
@@ -81,7 +82,7 @@ export function registerGrowth(api, h) {
   api.get('/approvals', can('purchases'), requireFeature('approvals'), wrap((_req, res) => ok(res, { settings: approvals.approvalSettings(), pending: approvals.pendingApprovals() })));
   api.put('/approvals/settings', can('settings', true), requireFeature('approvals'), wrap((req, res) => { const r = approvals.saveApprovalSettings(req.body || {}); audit(req, 'update', 'settings', null, 'approvals'); ok(res, r); }));
   for (const action of ['approve', 'reject']) {
-    api.post(`/doc/:id/${action}`, can('purchases', true), requireFeature('approvals'), wrap((req, res) => { const d = approvals.decide(id(req), action, req.user); audit(req, action, 'bill', d.id, d.number); ok(res, d); }));
+    api.post(`/doc/:id/${action}`, can('purchases', true), requireFresh, requireFeature('approvals'), wrap((req, res) => { const d = approvals.decide(id(req), action, req.user); audit(req, action, 'bill', d.id, d.number); ok(res, d); }));
   }
 
   /* ------------------------------ ativos fixos ------------------------------ */

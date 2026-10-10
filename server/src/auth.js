@@ -53,21 +53,31 @@ export function verifyPassword(pw, stored) {
   return crypto.timingSafeEqual(h, Buffer.from(hash, 'hex'));
 }
 
+// O código de sessão que o navegador guarda NUNCA fica no banco: só o resumo (SHA-256). Quem lesse o banco não conseguiria usar as sessões.
+export const hashToken = (t) => crypto.createHash('sha256').update(String(t)).digest('hex');
 export function createSession(user_id) {
   const token = crypto.randomBytes(32).toString('hex');
-  insert('INSERT INTO sessions(token,user_id) VALUES(?,?)', token, user_id);
+  insert('INSERT INTO sessions(token,user_id,verified_at) VALUES(?,?,CURRENT_TIMESTAMP)', hashToken(token), user_id);
   run('DELETE FROM sessions WHERE created_at < datetime(\'now\',\'-30 days\')');
   return token;
 }
+/** Apaga a sessão que usa este código (aceita também sessões antigas, guardadas sem resumo). */
+export const endSession = (token) => run('DELETE FROM sessions WHERE token IN (?,?)', hashToken(token), String(token));
 
-export const publicUser = (u) => ({ id: u.id, name: u.name, email: u.email, role: u.role, custom_role_id: u.custom_role_id || null, custom_perms: u.custom_perms ? (() => { try { return JSON.parse(u.custom_perms); } catch { return null; } })() : null, active: !!u.active, permissions: effectivePerms(u) });
+export const publicUser = (u) => ({ totp_enabled: !!u.totp_enabled, id: u.id, name: u.name, email: u.email, role: u.role, custom_role_id: u.custom_role_id || null, custom_perms: u.custom_perms ? (() => { try { return JSON.parse(u.custom_perms); } catch { return null; } })() : null, active: !!u.active, permissions: effectivePerms(u) });
 
 export function authenticate(req, _res, next) {
   const h = req.headers.authorization || '';
   const token = h.startsWith('Bearer ') ? h.slice(7) : null;
   if (token) {
-    const u = get("SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token=? AND u.active=1 AND s.created_at > datetime('now','-30 days')", token);
-    if (u) req.user = u;
+    const hashed = hashToken(token);
+    // sessões antigas (código guardado sem resumo) ainda valem e são trocadas pelo resumo no primeiro uso
+    const row = get("SELECT s.token AS skey, u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token IN (?,?) AND u.active=1 AND s.created_at > datetime('now','-30 days')", hashed, token);
+    if (row) {
+      const { skey, ...u } = row;
+      if (skey !== hashed) run('UPDATE sessions SET token=? WHERE token=?', hashed, skey);
+      req.user = u; req.sessionKey = hashed;
+    }
   }
   next();
 }

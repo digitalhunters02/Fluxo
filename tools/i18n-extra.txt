@@ -996,3 +996,51 @@ Name the group || Dê um nome ao grupo || Nombre el grupo
 Give the key a name (for example: Website form) || Dê um nome à chave (por exemplo: Formulário do site) || Dé un nombre a la clave (por ejemplo: Formulario del sitio)
 Invalid or revoked API key || Chave de API inválida ou revogada || Clave de API inválida o revocada
 Your plan does not include this feature || Seu plano não inclui este recurso || Su plan no incluye esta función
+Verification code || Código de verificação || Código de verificación
+6-digit code from your authenticator app, or a recovery code || Código de 6 dígitos do seu aplicativo autenticador, ou um código de recuperação || Código de 6 dígitos de su aplicación de autenticación, o un código de recuperación
+Two-step verification is on. Save these recovery codes somewhere safe. Each one works once if you lose your phone. They will not be shown again. || A verificação em dois passos está ativa. Guarde estes códigos de recuperação em um lugar seguro. Cada um vale uma vez se você perder o celular. Eles não serão mostrados de novo. || La verificación en dos pasos está activa. Guarde estos códigos de recuperación en un lugar seguro. Cada uno vale una vez si pierde el teléfono. No se mostrarán de nuevo.
+Copy codes || Copiar códigos || Copiar códigos
+I saved them || Já guardei || Ya los guardé
+1. Open an authenticator app (Google Authenticator, Authy, 1Password…) and add an account with this key. || 1. Abra um aplicativo autenticador (Google Authenticator, Authy, 1Password…) e adicione uma conta com esta chave. || 1. Abra una aplicación de autenticación (Google Authenticator, Authy, 1Password…) y agregue una cuenta con esta clave.
+Open in my authenticator app || Abrir no meu aplicativo autenticador || Abrir en mi aplicación de autenticación
+2. Type the 6-digit code the app shows || 2. Digite o código de 6 dígitos que o aplicativo mostra || 2. Escriba el código de 6 dígitos que muestra la aplicación
+A second step protects your books even if someone learns your password. Confirm your password to start. || Um segundo passo protege a sua contabilidade mesmo que alguém descubra a sua senha. Confirme a sua senha para começar. || Un segundo paso protege su contabilidad aunque alguien descubra su contraseña. Confirme su contraseña para empezar.
+Continue || Continuar || Continuar
+Two-step verification || Verificação em dois passos || Verificación en dos pasos
+On || Ativo || Activo
+Off || Desativado || Desactivado
+Ask for a 6-digit code from your phone every time you sign in. Strongly recommended for anyone who approves or pays bills. || Pede um código de 6 dígitos do seu celular a cada login. Muito recomendado para quem aprova ou paga contas. || Pide un código de 6 dígitos de su teléfono en cada inicio de sesión. Muy recomendado para quien aprueba o paga cuentas.
+Set up || Configurar || Configurar
+{0} recovery codes left. || Restam {0} códigos de recuperação. || Quedan {0} códigos de recuperación.
+New recovery codes || Novos códigos de recuperação || Nuevos códigos de recuperación
+Your company requires two-step verification, so it cannot be turned off. || Sua empresa exige a verificação em dois passos, então ela não pode ser desligada. || Su empresa exige la verificación en dos pasos, así que no se puede desactivar.
+Code from your app || Código do seu aplicativo || Código de su aplicación
+Two-step verification is off || A verificação em dois passos foi desligada || La verificación en dos pasos está desactivada
+Generate || Gerar || Generar
+Your old codes no longer work. Save these new ones. They will not be shown again. || Os códigos antigos não valem mais. Guarde estes novos. Eles não serão mostrados de novo. || Los códigos anteriores ya no sirven. Guarde estos nuevos. No se mostrarán de nuevo.
+Security rules || Regras de segurança || Reglas de seguridad
+Require two-step verification for everyone || Exigir verificação em dois passos de todos || Exigir verificación en dos pasos a todos
+People who have not set it up are asked to do it before they can use Fluxo. Single sign-on users follow your identity provider. || Quem ainda não configurou precisa fazer isso antes de usar o Fluxo. Quem entra por login único segue o seu provedor de identidade. || Quien aún no la configuró debe hacerlo antes de usar Fluxo. Quienes entran con inicio de sesión único siguen a su proveedor de identidad.
+Turn on two-step verification for your own account first (My account). || Ative primeiro a verificação em dois passos na sua própria conta (Minha conta). || Active primero la verificación en dos pasos en su propia cuenta (Mi cuenta).
+Ask for the password again before sensitive actions || Pedir a senha de novo antes de ações sensíveis || Pedir la contraseña de nuevo antes de acciones sensibles
+Paying or approving bills, creating API keys, and changing users or roles ask for the password (and the 2FA code) if you have not confirmed it in the last 5 minutes. || Pagar ou aprovar contas, criar chaves de API e mudar usuários ou funções pedem a senha (e o código do 2FA) se você não a confirmou nos últimos 5 minutos. || Pagar o aprobar cuentas, crear claves de API y cambiar usuarios o roles piden la contraseña (y el código 2FA) si no la confirmó en los últimos 5 minutos.
+People || Pessoas || Personas
+Two-step || Dois passos || Dos pasos
+Remove two-step verification for {0}? They will be signed out and can set it up again. || Remover a verificação em dois passos de {0}? A pessoa será desconectada e poderá configurar de novo. || ¿Quitar la verificación en dos pasos de {0}? Se cerrará su sesión y podrá configurarla de nuevo.
+Two-step verification removed || Verificação em dois passos removida || Verificación en dos pasos eliminada
+Lost phone: reset || Perdeu o celular: redefinir || Perdió el teléfono: restablecer
+Confirm your password || Confirme a sua senha || Confirme su contraseña
+For your security, confirm it is you before continuing. This lasts 5 minutes. || Por segurança, confirme que é você antes de continuar. Vale por 5 minutos. || Por seguridad, confirme que es usted antes de continuar. Vale por 5 minutos.
+Set up two-step verification || Configurar a verificação em dois passos || Configurar la verificación en dos pasos
+Your company requires it. It takes about a minute. || Sua empresa exige. Leva cerca de um minuto. || Su empresa lo exige. Toma cerca de un minuto.
+Security || Segurança || Seguridad
+Enter the verification code from your authenticator app || Digite o código de verificação do seu aplicativo autenticador || Escriba el código de verificación de su aplicación de autenticación
+Incorrect verification code || Código de verificação incorreto || Código de verificación incorrecto
+Two-step verification is required. Set it up to continue || A verificação em dois passos é obrigatória. Configure para continuar || La verificación en dos pasos es obligatoria. Configúrela para continuar
+Please confirm your password to continue || Confirme a sua senha para continuar || Confirme su contraseña para continuar
+Password is incorrect || A senha está incorreta || La contraseña es incorrecta
+Two-step verification is already on || A verificação em dois passos já está ativa || La verificación en dos pasos ya está activa
+Start the setup first || Comece pela configuração || Empiece por la configuración
+That code is not right. Check the time on your phone and try again || Esse código não confere. Confira a hora do seu celular e tente de novo || Ese código no es correcto. Revise la hora de su teléfono e inténtelo de nuevo
+Your company requires two-step verification, so it cannot be turned off || Sua empresa exige a verificação em dois passos, então ela não pode ser desligada || Su empresa exige la verificación en dos pasos, así que no se puede desactivar
+Turn on two-step verification for your own account first || Ative primeiro a verificação em dois passos na sua própria conta || Active primero la verificación en dos pasos en su propia cuenta

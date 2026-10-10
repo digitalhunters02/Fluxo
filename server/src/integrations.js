@@ -10,6 +10,7 @@ import * as tenants from './tenants.js';
 import { hasFeature, currentPlan, limitFor } from './plans.js';
 import { appUrl } from './mailer.js';
 import { assertSafeUrl, deliver, EVENTS, emit } from './events.js';
+import { requireFresh } from './twofa.js';
 
 const { HttpError, today, isDate } = acc;
 const bad = (m) => new HttpError(400, m);
@@ -20,7 +21,7 @@ const PREFIX = 'flx_live_';
 export function registerIntegrationAdmin(api, { wrap, ok, can, requireFeature, audit, id }) {
   const feat = requireFeature('api');
   api.get('/integrations/keys', can('settings'), feat, wrap((_req, res) => ok(res, { keys: all('SELECT id,name,prefix,scope,last_used_at,created_at FROM api_keys WHERE revoked=0 ORDER BY created_at DESC, rowid DESC') })));
-  api.post('/integrations/keys', can('settings', true), feat, wrap((req, res) => {
+  api.post('/integrations/keys', can('settings', true), requireFresh, feat, wrap((req, res) => {
     const name = String(req.body?.name || '').trim().slice(0, 80);
     const scope = req.body?.scope === 'read' ? 'read' : 'write';
     if (!name) throw bad('Give the key a name (for example: Website form)');
@@ -32,7 +33,7 @@ export function registerIntegrationAdmin(api, { wrap, ok, can, requireFeature, a
     audit(req, 'create', 'api_key', null, name);
     ok(res, { id: kid, key, prefix: key.slice(0, 18), scope, note: 'Save this key now: it will not be shown again.' });
   }));
-  api.delete('/integrations/keys/:id', can('settings', true), feat, wrap((req, res) => { run('UPDATE api_keys SET revoked=1 WHERE id=?', req.params.id); audit(req, 'revoke', 'api_key'); ok(res, {}); }));
+  api.delete('/integrations/keys/:id', can('settings', true), requireFresh, feat, wrap((req, res) => { run('UPDATE api_keys SET revoked=1 WHERE id=?', req.params.id); audit(req, 'revoke', 'api_key'); ok(res, {}); }));
 
   api.get('/integrations/webhooks', can('settings'), feat, wrap((_req, res) => ok(res, {
     webhooks: all('SELECT id,url,events,active,failures,last_status,last_at,created_at FROM webhooks ORDER BY created_at DESC, rowid DESC').map((w) => ({ ...w, events: JSON.parse(w.events || '[]'), active: w.active === 1 })), events: EVENTS })));

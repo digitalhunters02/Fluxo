@@ -2,7 +2,7 @@ import { t, tr, lang, LANGS, setLang } from './i18n.jsx';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { Link, NavLink, Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { getTheme, isDark, setTheme } from './theme.js';
-import { api, getToken, setToken, setUnauthorizedHandler } from './api.js';
+import { api, getToken, setToken, setUnauthorizedHandler, setReauthHandler } from './api.js';
 import { setFormat } from './format.js';
 import { ToastProvider, Loading, Button, Field, Input, Select, useAction } from './components/ui.jsx';
 import Dashboard from './pages/Dashboard.jsx';
@@ -29,6 +29,7 @@ import PublicDoc from './pages/PublicDoc.jsx';
 import { Gate, Lock } from './components/plan.jsx';
 import Connections from './pages/Connections.jsx';
 import { Pricing, Welcome } from './pages/Pricing.jsx';
+import { ReauthModal, ForceSetup } from './pages/SecurityUI.jsx';
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
@@ -54,7 +55,8 @@ function LangSwitch({ dark = false }) {
 
 function AuthScreen({ status, onAuth, ssoError }) {
   const [run, busy] = useAction();
-  const [f, setF] = useState({ company_name: '', name: '', email: '', password: '', demo: true, currency: 'USD', plan: 'advanced' });
+  const [f, setF] = useState({ company_name: '', name: '', email: '', password: '', demo: true, currency: 'USD', plan: 'advanced', code: '' });
+  const [need2fa, setNeed2fa] = useState(false); // a conta tem verificação em dois passos: pede o código depois da senha
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   if (status.needsSetup && status.requirePayment) {
     return (
@@ -71,7 +73,10 @@ function AuthScreen({ status, onAuth, ssoError }) {
   }
   const submit = async (e) => {
     e.preventDefault();
-    const r = await run(() => api.post(status.needsSetup ? '/setup' : '/login', { ...f, lang }));
+    const r = await run(async () => {
+      try { return await api.post(status.needsSetup ? '/setup' : '/login', { ...f, code: need2fa ? f.code : undefined, lang }); }
+      catch (err) { if (err.data?.needs_2fa && !need2fa) { setNeed2fa(true); return null; } throw err; } // 1ª vez: só abre o campo do código, sem aviso de erro
+    });
     if (r) { setToken(r.token); onAuth(); }
   };
   return (
@@ -88,6 +93,7 @@ function AuthScreen({ status, onAuth, ssoError }) {
           {status.needsSetup && <><Field label={t('Company name')}><Input value={f.company_name} onChange={set('company_name')} placeholder={t('My Company LLC')} /></Field><Field label={t('Currency')}><Select value={f.currency} onChange={set('currency')}>{['USD', 'EUR', 'GBP', 'CAD', 'MXN'].map((c) => <option key={c}>{c}</option>)}</Select></Field><Field label={t('Plan')} hint={t('You can change it later in Settings')}><Select value={f.plan} onChange={set('plan')}><option value="free">Free — $0</option><option value="starter">Starter — $29</option><option value="essentials">Essentials — $65</option><option value="plus">Plus — $109</option><option value="advanced">Advanced — $269</option></Select></Field><Field label={t('Your name')}><Input required value={f.name} onChange={set('name')} /></Field></>}
           <Field label={t('Email')}><Input type="email" required autoComplete="username" value={f.email} onChange={set('email')} /></Field>
           <Field label={t('Password')} hint={status.needsSetup ? t('At least 8 characters') : ''}><Input type="password" required minLength={status.needsSetup ? 8 : 1} autoComplete={status.needsSetup ? 'new-password' : 'current-password'} value={f.password} onChange={set('password')} /></Field>
+          {need2fa && !status.needsSetup && <Field label={t('Verification code')} hint={t('6-digit code from your authenticator app, or a recovery code')}><Input autoFocus inputMode="text" autoComplete="one-time-code" value={f.code} onChange={set('code')} /></Field>}
           {status.needsSetup && <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" checked={f.demo} onChange={set('demo')} />{' '}{t('Load sample data (6 months of activity)')}</label>}
         </div>
         <Button className="mt-5 w-full" disabled={busy}>{busy ? t('Please wait…') : status.needsSetup ? t('Get started') : t('Sign in')}</Button>
@@ -227,6 +233,8 @@ export default function App() {
   }, []);
   useEffect(() => { boot(); }, [boot]);
   useEffect(() => { setUnauthorizedHandler(() => { setToken(null); setUser(null); }); }, []);
+  const [reauth, setReauth] = useState(null); // pedido pendente de "confirme a senha"
+  useEffect(() => { setReauthHandler(() => new Promise((resolve) => setReauth({ resolve }))); return () => setReauthHandler(null); }, []);
 
   if (loc.pathname === '/forgot') return <ToastProvider><Forgot /></ToastProvider>;
   if (loc.pathname === '/reset') return <ToastProvider><Reset /></ToastProvider>;
@@ -242,7 +250,10 @@ export default function App() {
       {!user || !settings
         ? <AuthScreen status={status} onAuth={boot} ssoError={ssoError} />
         : <AuthCtx.Provider value={{ user, settings, planInfo: user.planInfo, has: (f) => !!user.planInfo.features[f], refresh: boot, can: (m, w) => user.permissions[w ? 'write' : 'read'].includes(m) }}>
-            <Shell user={user} settings={{ ...settings, reload: async () => { const s = await api.get('/settings'); setFormat(s); setSettings(s); } }} logout={logout} />
+            {user.twofa?.mustSetup
+              ? <ForceSetup onDone={boot} logout={logout} />
+              : <Shell user={user} settings={{ ...settings, reload: async () => { const s = await api.get('/settings'); setFormat(s); setSettings(s); } }} logout={logout} />}
+            {reauth && <ReauthModal onResult={(okay) => { reauth.resolve(okay); setReauth(null); }} />}
           </AuthCtx.Provider>}
     </ToastProvider>
   );

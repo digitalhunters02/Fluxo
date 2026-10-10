@@ -136,3 +136,12 @@ Environment: `STRIPE_CONNECT_WEBHOOK_SECRET` (webhook endpoint `POST /api/stripe
 SSO: register `<APP_URL>/api/sso/callback` as the redirect address at the identity provider; users must already exist in Fluxo.
 
 Deliberately not built yet (needs a partner, contract or a large change): Postgres/shared database, SOC 2, multi-currency, revenue recognition, payroll tax filing and direct deposit (payroll partner), paying bills by ACH or check, automatic sales tax rates, open-invoice import.
+
+## Security: two-step verification, password re-confirmation, hashed sessions
+
+- **Two-step verification (TOTP)** per user (Settings → My account): any authenticator app (Google Authenticator, Authy, 1Password…). RFC 6238, 6 digits, 30 s, one step of clock drift allowed, a code can only be used once. The secret is stored encrypted (`FLUXO_ENCRYPTION_KEY`). Eight single-use **recovery codes** are shown once and stored only as SHA-256 hashes. Disabling or regenerating them needs the password and a code. No new dependency.
+- **Login**: with 2FA on, `POST /api/login` answers `401 {needs_2fa:true}` until `code` (app code or recovery code) is sent. Single sign-on users follow their identity provider.
+- **Require 2FA for everyone** (owner, Settings → Security): people who have not set it up can only reach the setup screen (`403 code:2fa_setup_required` on everything else). The owner must have their own 2FA first. **Lost phone**: the owner resets that person (signs them out; they set it up again).
+- **Confirm the password again** (owner, Settings → Security, off by default): paying a bill, approving/rejecting a bill, creating or revoking API keys, and creating or changing users/roles require a confirmation in the last 5 minutes (`403 code:reauth_required`; the app opens a "Confirm your password" window and repeats the action). With 2FA on it also asks for the code. Use `requireFresh` / `assertFresh` (server/src/twofa.js) on any new sensitive endpoint, such as a future "Pay" button for a payment partner.
+- **Sessions are stored hashed** (SHA-256); the code the browser keeps is never in the database. Sessions from before this change keep working and are converted on first use.
+- Not included yet: password strength rules beyond 8 characters, per-user/daily payment limits, e-mail alerts on payments or vendor bank-detail changes.

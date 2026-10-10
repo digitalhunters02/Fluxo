@@ -207,6 +207,12 @@ export function openDb(file) {
   d.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   d.exec(SCHEMA);
   const addColumn = (table, col, ddl) => { if (!d.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === col)) d.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`); };
+  addColumn('users', 'totp_secret_enc', 'TEXT');                   // 2FA: segredo do aplicativo autenticador (cifrado)
+  addColumn('users', 'totp_enabled', 'INTEGER NOT NULL DEFAULT 0');
+  addColumn('users', 'totp_last_step', 'INTEGER NOT NULL DEFAULT 0'); // evita reaproveitar o mesmo código
+  addColumn('users', 'recovery_codes', 'TEXT');                     // resumos (SHA-256) dos códigos de recuperação ainda não usados
+  addColumn('sessions', 'verified_at', 'TEXT');                     // última vez que a pessoa confirmou a senha nesta sessão
+  d.exec("UPDATE sessions SET verified_at = created_at WHERE verified_at IS NULL");
   addColumn('users', 'custom_perms', 'TEXT');                       // acesso por aba definido por usuário
   addColumn('recurring', 'anchor_day', 'INTEGER');                  // dia do mês original: evita que "dia 31" derive para 28 depois de fevereiro
   addColumn('recurring', 'last_error', "TEXT NOT NULL DEFAULT ''");  // por que a última geração falhou (aparece na tela e vira lembrete)
