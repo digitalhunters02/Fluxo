@@ -323,8 +323,8 @@ export default function Settings({ reloadSettings }) {
   const { tab = 'company' } = useParams();
   const nav = useNavigate();
   const owner = user.role === 'owner';
-  const tabs = [['company', t('Company')], ['plan', t('Plan')], ['account', t('My account')], ['automations', t('Automations')],
-    ...(owner ? [['users', t('Users')], ['roles', <>{t('Roles')}{!has('custom_roles') && <Lock />}</>], ['audit', <>{t('Audit log')}{!has('audit_log') && <Lock />}</>],
+  const tabs = [['company', t('Company')], ...(owner ? [['users', t('Users')]] : []), ['plan', t('Plan')], ['account', t('My account')], ['automations', t('Automations')],
+    ...(owner ? [['roles', <>{t('Roles')}{!has('custom_roles') && <Lock />}</>], ['audit', <>{t('Audit log')}{!has('audit_log') && <Lock />}</>],
       ['import', t('Import')], ['integrations', <>{t('Integrations')}{!has('api') && <Lock />}</>], ['payments', <>{t('Online payments')}{!has('online_payments') && <Lock />}</>],
       ['approvals', <>{t('Approvals')}{!has('approvals') && <Lock />}</>], ['security', t('Security')], ...(user.tenant ? [['group', <>{t('Group')}{!has('multi_company') && <Lock />}</>]] : []), ['sso', <>{t('Single sign-on')}{!has('sso') && <Lock />}</>]] : [])];
   return (<><PageHeader title={t('Settings')} /><Tabs tabs={tabs} value={tab} onChange={(k) => nav(`/settings/${k}`)} />
