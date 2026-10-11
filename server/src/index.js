@@ -8,6 +8,8 @@ import * as tenants from './tenants.js';
 import * as auto from './automations.js';
 import * as admin from './admin.js';
 import * as mailer from './mailer.js';
+import { createPhotoImportRouter, startPhotoBilling } from './photoImportRouter.js';
+import { sqlitePoolFrom } from './sqlitePool.js';
 import * as acc from './accounting.js';
 import * as bank from './banking.js';
 import * as rep from './reports.js';
@@ -884,6 +886,26 @@ api.get('/automations', can('settings'), wrap((_req, res) => ok(res, auto.getAut
 api.put('/automations', can('settings', true), wrap((req, res) => { const r = auto.setAutomations(req.body || {}); audit(req, 'update', 'automations'); ok(res, r); }));
 
 
+
+/* ---------------------------- Importar de foto (IA) ---------------------------- */
+// A IA lê uma foto/print e devolve os campos do contato (cliente/fornecedor); a pessoa confere antes de salvar (nada é salvo aqui, a imagem nunca é gravada).
+// Plano Essentials 100/mês · Plus 250 · Advanced 500 · Business 1.500 · Enterprise 5.000 (Free e Starter não incluem); empresa nova +100 nos primeiros 30 dias.
+// Depois do limite o dono aprova um teto mensal e cada leitura extra (US$ 0,10) vira uma linha na próxima fatura do Stripe da empresa.
+const photoPool = sqlitePoolFrom({ all, run });
+const photoBilling = async () => ({ stripe_customer_id: getSetting('stripe_customer_id', ''), stripe_subscription_id: getSetting('stripe_subscription_id', '') });
+api.use('/photo-import', createPhotoImportRouter({
+  pool: photoPool, requireAuth,
+  requireAdmin: (req, _res, next) => (req.user?.role === 'owner' ? next() : next(new HttpError(403, 'Only the owner can change this'))),
+  requirePage: (page) => can(page, true),
+  effectivePlan: async () => currentPlan(), getSubscription: photoBilling, envBilling: false,
+  planLimits: { free: 0, starter: 0, essentials: 100, plus: 250, advanced: 500, business: 1500, enterprise: 5000 },
+  kindsOpts: { contactTypes: ['customer', 'vendor', 'both'], leadSources: ['other'], disableKinds: ['leads', 'expense'], clientsPage: 'sales' },
+  accountCreatedAt: async () => get('SELECT MIN(created_at) c FROM users')?.c,
+  adminSql: "SELECT email FROM users WHERE role = 'owner' AND active = 1 AND email IS NOT NULL",
+  isAdmin: (u) => u?.role === 'owner',
+  appName: 'Fluxo', sendNotice: async (to, subject, text) => { await mailer.sendMail({ to, subject, text }); },
+}));
+
 api.use((req, _res, next) => next(new HttpError(404, 'Route not found')));
 app.use('/api/v1', createV1Router());
 app.use('/api', api);
@@ -916,4 +938,5 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   tick(); setInterval(tick, 60 * 60 * 1000).unref();
   const bankTick = () => { const job = () => (get('SELECT 1 FROM plaid_items LIMIT 1') ? plaidSvc.syncAll().catch((e) => console.error('bank sync', e.message)) : undefined); return multi() ? tenants.eachTenant(job) : job(); };
   setInterval(bankTick, 60 * 60 * 1000).unref();
+  startPhotoBilling({ pool: photoPool, getSubscription: photoBilling, envBilling: false, eachTenant: multi() ? tenants.eachTenant : undefined });
 }

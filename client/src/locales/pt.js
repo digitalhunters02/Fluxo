@@ -1570,5 +1570,7 @@ export default {
  "Start the setup first": "Comece pela configuração",
  "That code is not right. Check the time on your phone and try again": "Esse código não confere. Confira a hora do seu celular e tente de novo",
  "Your company requires two-step verification, so it cannot be turned off": "Sua empresa exige a verificação em dois passos, então ela não pode ser desligada",
- "Turn on two-step verification for your own account first": "Ative primeiro a verificação em dois passos na sua própria conta"
+ "Turn on two-step verification for your own account first": "Ative primeiro a verificação em dois passos na sua própria conta",
+ "Import customers from a photo": "Importar clientes de uma foto",
+ "Import vendors from a photo": "Importar fornecedores de uma foto"
 };

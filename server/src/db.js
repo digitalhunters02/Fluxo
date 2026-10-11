@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { ensurePhotoSchema } from './photoSchema.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const dataDir = process.env.FLUXO_DB && process.env.FLUXO_DB !== ':memory:' ? path.dirname(process.env.FLUXO_DB) : path.join(here, '..', 'data');
@@ -226,6 +227,7 @@ export function openDb(file) {
   addColumn('docs', 'approved_total', 'INTEGER');
   d.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_docs_external ON docs(external_id) WHERE external_id IS NOT NULL');
   d.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_external ON contacts(external_id) WHERE external_id IS NOT NULL');
+  ensurePhotoSchema(d);
   als.run({ db: d }, ensureDefaults);
   return d;
 }

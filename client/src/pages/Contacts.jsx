@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { date, money } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, useAction, useLoad } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
+import PhotoImportButton from '../components/PhotoImportButton.jsx';
 
 function ContactModal({ c, kind, onClose, onSaved }) {
   const { has } = useAuth();
@@ -46,13 +47,22 @@ export default function Contacts({ kind }) {
   const [stmt, setStmt] = useState(null);
   const [q, setQ] = useState(() => { try { return new URLSearchParams(location.search).get('q') || ''; } catch { return ''; } });
   const [run] = useAction();
-  if (loading) return <Loading />;
+  if (loading && !data) return <Loading />; // recarregar a lista não pode desmontar a tela (e a janela de foto aberta)
   if (error) return <ErrorBox error={error} retry={reload} />;
   const isV = kind === 'vendor';
   const rows = data.filter((c) => !q || `${c.name} ${c.email} ${c.tax_id}`.toLowerCase().includes(q.toLowerCase()));
   return (
     <>
-      <PageHeader title={isV ? t('Vendors') : t('Customers')}>{can('sales', true) && <Button onClick={() => setEdit({ kind })}>+ {isV ? t('New vendor') : t('New customer')}</Button>}</PageHeader>
+      <PageHeader title={isV ? t('Vendors') : t('Customers')}>
+        {can('sales', true) && <PhotoImportButton
+          kind="clients" title={isV ? t('Import vendors from a photo') : t('Import customers from a photo')} onImported={reload}
+          fields={[{ key: 'name', label: 'photo.f.name' }, { key: 'phone', label: 'photo.f.phone' }, { key: 'email', label: 'photo.f.email' }, { key: 'address', label: 'photo.f.address', wide: true }, { key: 'notes', label: 'photo.f.notes', wide: true }]}
+          validate={(r) => (String(r.name || '').trim() ? '' : 'photo.missingName')}
+          toPayload={(r) => ({ name: r.name.trim(), phone: r.phone || '', email: r.email || '', address: r.address || '', notes: r.notes || '' })}
+          onSave={(b) => api.post('/contacts', { kind: isV ? 'vendor' : 'customer', name: b.name, phone: b.phone, email: b.email, address: b.address, notes: b.notes })}
+        />}
+        {can('sales', true) && <Button onClick={() => setEdit({ kind })}>+ {isV ? t('New vendor') : t('New customer')}</Button>}
+      </PageHeader>
       <Card pad={false}>
         <div className="border-b border-slate-100 p-3"><Input className="field max-w-xs" placeholder={t('Search…')} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t('Search')} /></div>
         <Table head={[t('Name'), t('Email'), t('Phone'), { label: isV ? t('To pay') : t('To receive'), right: true }, '']} empty={t('No contacts.')}>

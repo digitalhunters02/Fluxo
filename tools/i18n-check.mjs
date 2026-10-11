@@ -4,7 +4,7 @@ import { parse } from '@babel/parser'; import _traverse from '@babel/traverse';
 const traverse = _traverse.default || _traverse;
 const read = async (f) => (await import(path.resolve(f) + '?' + Date.now())).default;
 const pt = await read('client/src/locales/pt.js'), es = await read('client/src/locales/es.js');
-const files = []; const walk = (d) => { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) { if (f !== 'locales') walk(p); } else if (/\.jsx?$/.test(f)) files.push(p); } };
+const files = []; const walk = (d) => { for (const f of fs.readdirSync(d)) { const p = path.join(d, f); if (fs.statSync(p).isDirectory()) { if (f !== 'locales') walk(p); } else if (/\.jsx?$/.test(f) && !/PhotoImport/.test(f)) files.push(p); } }; // PhotoImport*: textos próprios (photoImportStrings.js)
 walk('client/src');
 const keys = new Set();
 for (const file of files) {
