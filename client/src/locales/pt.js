@@ -1300,5 +1300,12 @@ export default {
  "Ask for a new link": "Pedir um novo link",
  "Repeat the new password": "Repita a nova senha",
  "The passwords do not match": "As senhas não são iguais",
- "This link is invalid or has expired. Ask for a new one.": "Este link é inválido ou venceu. Peça um novo."
+ "This link is invalid or has expired. Ask for a new one.": "Este link é inválido ou venceu. Peça um novo.",
+ "Yearly (−10%)": "Anual (−10%)",
+ "Billing period": "Período de cobrança",
+ "equals {0}/month · 10% off": "equivale a {0}/mês · 10% de desconto",
+ "Yearly plan: you pay once for 12 months. You can cancel renewal at any time; unused months are not refunded, and access continues until the end of the year you paid for. We email you before it renews.": "Plano anual: você paga uma vez pelos 12 meses. Pode cancelar a renovação a qualquer momento; não há reembolso dos meses não usados, e o acesso continua até o fim do ano pago. Avisamos por e-mail antes de renovar.",
+ "Add U.S. payroll (${0}/yr + ${1} per employee/yr)": "Adicionar folha dos EUA (US${0}/ano + US${1} por funcionário/ano)",
+ "Include U.S. payroll (${0}/yr + ${1} per employee/yr)": "Incluir folha dos EUA (US${0}/ano + US${1} por funcionário/ano)",
+ "U.S. payroll: ${0}/year + ${1} per employee per year. Calculates and records payroll, pay stubs, W-2 and 941 summaries.": "Folha dos EUA: US${0}/ano + US${1} por funcionário por ano. Calcula e registra a folha, holerites e resumos de W-2 e 941."
 };

@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { t, lang, LANGS, setLang } from '../i18n.jsx';
 import { api, setToken } from '../api.js';
 import { Button, Card, ErrorBox, Field, Input, Loading, ToastProvider, useAction, useLoad } from '../components/ui.jsx';
+import { IntervalToggle, PlanPrice } from '../components/plan.jsx';
 
 const PLAN_INFO = {
   free: { name: t('Free'), blurb: t('Try Fluxo with no card'), features: [t('5 invoices per month & unlimited estimates'), t('Send by link, email button or PDF'), t('Expenses, receipts & sales receipts'), t('Bank CSV import & reconciliation'), t('Core financial reports'), t('1 user')] },
@@ -35,10 +36,11 @@ export function Pricing() {
   const [payroll, setPayroll] = useState(false);
   const [email, setEmail] = useState('');
   const [chosen, setChosen] = useState(params.get('plan') || '');
+  const [interval, setInterval] = useState('month');
   const [run, busy] = useAction();
   const nav = useNavigate();
   useEffect(() => { document.title = `${t('Pricing')} — Fluxo`; }, []);
-  const go = (plan) => plan === 'free' ? nav(`/welcome?plan=free${ref ? `&ref=${encodeURIComponent(ref)}` : ''}`) : run(async () => { const r = await api.post('/public/checkout', { plan, payroll, email: email || undefined, ref: ref || undefined }); window.location.href = r.url; });
+  const go = (plan) => plan === 'free' ? nav(`/welcome?plan=free${ref ? `&ref=${encodeURIComponent(ref)}` : ''}`) : run(async () => { const r = await api.post('/public/checkout', { plan, payroll, interval, email: email || undefined, ref: ref || undefined }); window.location.href = r.url; });
   return (
     <ToastProvider><Shell>
       <div className="mx-auto max-w-2xl py-8 text-center">
@@ -50,15 +52,16 @@ export function Pricing() {
         <>
           {!data.needsSetup && <p className="mx-auto mb-6 max-w-xl rounded-lg bg-slate-100 p-3 text-center text-sm text-slate-600">{t('This workspace already has an account.')} <Link to="/settings/plan" className="font-medium text-brand-700 hover:underline">{t('Sign in to change your plan')}</Link></p>}
           {!data.configured && <p className="mx-auto mb-6 max-w-xl rounded-lg bg-amber-50 p-3 text-center text-sm text-amber-800">{t('Online payments are not configured on this server yet.')}</p>}
+          {data.yearlyPrices && <div className="mb-6 text-center"><IntervalToggle interval={interval} onChange={setInterval} /></div>}
           <div className="mx-auto mb-6 flex max-w-xl flex-wrap items-end justify-center gap-4">
             <Field label={t('Your email (for the receipt)')} className="min-w-[16rem] flex-1"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" autoComplete="email" /></Field>
-            <label className="mb-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={payroll} onChange={(e) => setPayroll(e.target.checked)} /> {t('Add U.S. payroll (${0}/mo + ${1} per employee)', [data.payrollPrice.base, data.payrollPrice.perEmployee])}</label>
+            <label className="mb-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={payroll} onChange={(e) => setPayroll(e.target.checked)} /> {interval === 'year' && data.payrollYearlyPrice ? t('Add U.S. payroll (${0}/yr + ${1} per employee/yr)', [data.payrollYearlyPrice.base, data.payrollYearlyPrice.perEmployee]) : t('Add U.S. payroll (${0}/mo + ${1} per employee)', [data.payrollPrice.base, data.payrollPrice.perEmployee])}</label>
           </div>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             {data.order.map((p) => (
               <Card key={p} className={chosen === p ? 'ring-2 ring-brand-500' : ''}>
                 <h2 className="text-lg font-semibold">{PLAN_INFO[p].name}</h2><p className="text-sm text-slate-500">{PLAN_INFO[p].blurb}</p>
-                <div className="num my-3 text-4xl font-bold">${data.prices[p]}<span className="text-sm font-normal text-slate-500">{t('/month')}</span></div>
+                <PlanPrice plan={p} prices={data.prices} yearlyPrices={data.yearlyPrices} interval={interval} />
                 <ul className="mb-5 space-y-1.5 text-sm">{PLAN_INFO[p].features.map((f) => <li key={f}>✓ {f}</li>)}</ul>
                 <Button className="w-full" disabled={busy || !data.needsSetup || (p !== 'free' && !data.configured)} onClick={() => { setChosen(p); go(p); }}>{busy && chosen === p ? t('Please wait…') : p === 'free' ? t('Start free') : t('Choose {0}', [PLAN_INFO[p].name])}</Button>
               </Card>

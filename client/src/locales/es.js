@@ -1300,5 +1300,12 @@ export default {
  "Ask for a new link": "Pedir un enlace nuevo",
  "Repeat the new password": "Repita la contraseña nueva",
  "The passwords do not match": "Las contraseñas no coinciden",
- "This link is invalid or has expired. Ask for a new one.": "Este enlace no es válido o venció. Pida uno nuevo."
+ "This link is invalid or has expired. Ask for a new one.": "Este enlace no es válido o venció. Pida uno nuevo.",
+ "Yearly (−10%)": "Anual (−10 %)",
+ "Billing period": "Período de facturación",
+ "equals {0}/month · 10% off": "equivale a {0}/mes · 10 % de descuento",
+ "Yearly plan: you pay once for 12 months. You can cancel renewal at any time; unused months are not refunded, and access continues until the end of the year you paid for. We email you before it renews.": "Plan anual: pagas una vez por 12 meses. Puedes cancelar la renovación en cualquier momento; no se reembolsan los meses no usados y el acceso continúa hasta el final del año pagado. Te avisamos por correo antes de renovar.",
+ "Add U.S. payroll (${0}/yr + ${1} per employee/yr)": "Agregar nómina de EE. UU. (US${0}/año + US${1} por empleado/año)",
+ "Include U.S. payroll (${0}/yr + ${1} per employee/yr)": "Incluir nómina de EE. UU. (US${0}/año + US${1} por empleado/año)",
+ "U.S. payroll: ${0}/year + ${1} per employee per year. Calculates and records payroll, pay stubs, W-2 and 941 summaries.": "Nómina de EE. UU.: US${0}/año + US${1} por empleado por año. Calcula y registra la nómina, talones y resúmenes de W-2 y 941."
 };
