@@ -59,7 +59,17 @@ function CategorizeModal({ txn, accounts, contacts, onClose, onDone }) {
   const [run, busy] = useAction();
   const [f, setF] = useState({ account_id: txn.suggested_account_id || '', contact_id: '', memo: txn.description, remember: true });
   const cats = accounts.filter((a) => (txn.amount < 0 ? ['expense', 'asset', 'liability', 'equity'] : ['income', 'asset', 'liability', 'equity']).includes(a.type) && a.id !== txn.account_id);
-  const save = async () => { const r = await run(() => api.post(`/banking/txns/${txn.id}/categorize`, { ...f, account_id: Number(f.account_id), contact_id: f.contact_id ? Number(f.contact_id) : null }), t('Categorized§one')); if (r) onDone(); };
+  const save = async () => {
+    const body = { ...f, account_id: Number(f.account_id), contact_id: f.contact_id ? Number(f.contact_id) : null };
+    const r = await run(async () => {
+      try { return await api.post(`/banking/txns/${txn.id}/categorize`, body); } catch (e) {
+        // Já existe um lançamento igual: só categoriza de novo se a pessoa confirmar que é outro pagamento.
+        if (e.data?.code === 'possible_duplicate' && confirm(`${e.message}\n\n${t('Categorize anyway as a separate payment?')}`)) return api.post(`/banking/txns/${txn.id}/categorize`, { ...body, force: true });
+        throw e;
+      }
+    }, t('Categorized§one'));
+    if (r) onDone();
+  };
   return (
     <Modal title={t('Categorize transaction')} onClose={onClose} footer={<><Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button><Button disabled={busy || !f.account_id} onClick={save}>{t('Confirm')}</Button></>}>
       <p className="mb-3 text-sm"><b>{txn.description}</b><br /><span className="text-slate-500">{date(txn.date)} · </span><span className={txn.amount < 0 ? 'text-rose-600' : 'text-emerald-700'}>{money(txn.amount)}</span></p>

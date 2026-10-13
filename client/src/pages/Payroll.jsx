@@ -314,9 +314,11 @@ function Reports() {
             {d.rows.length > 0 && <tr className="border-t-2 bg-slate-50 font-semibold"><td className="td">{t('Totals')}</td>{['gross', 'employee_taxes', 'deductions', 'net', 'employer_taxes'].map((k) => <td key={k} className="td num text-right">{money(d.totals[k])}</td>)}</tr>}
           </Table>}
           {kind === '1099' && <>
-            <p className="border-b border-slate-100 p-3 text-sm text-slate-500">{t('Contractors flagged for 1099 who were paid at least the reporting threshold:')} <b>{money(d.threshold)}</b></p>
-            <Table head={[t('Contractor'), t('Tax ID'), { label: t('Paid in year'), right: true }, t('Status')]} empty={t('No contractors flagged. Mark a vendor as an independent contractor in Vendors.')}>
-              {d.rows.map((r) => <tr key={r.id}><td className="td font-medium">{r.name}</td><td className="td">{r.tax_id || <span className="text-rose-600">{t('Missing')}</span>}</td><td className="td num text-right">{money(r.paid)}</td>
+            <p className="border-b border-slate-100 p-3 text-sm text-slate-500">{t('Contractors flagged for 1099 who were paid at least the reporting threshold:')} <b>{money(d.threshold)}</b>. {t('Only payments by bank transfer, check, cash and similar count here. Card, PayPal, Stripe and payment apps are reported by the payment company on Form 1099-K and are shown apart.')}</p>
+            <Table head={[t('Contractor'), t('Tax ID'), { label: t('Paid in year (1099-NEC)'), right: true }, { label: t('Card / PayPal / Stripe (1099-K, not counted)'), right: true }, t('Status')]} empty={t('No contractors flagged. Mark a vendor as an independent contractor in Vendors.')}>
+              {d.rows.map((r) => <tr key={r.id}><td className="td font-medium">{r.name}</td><td className="td">{r.tax_id || <span className="text-rose-600">{t('Missing')}</span>}</td>
+                <td className="td num text-right">{money(r.paid)}{r.unknown > 0 && <div className="text-xs font-normal text-amber-600">{t('{0} without a recorded payment method (counted)', [money(r.unknown)])}</div>}</td>
+                <td className="td num text-right">{r.platform > 0 ? money(r.platform) : '—'}</td>
                 <td className="td">{r.reportable ? <Badge status="partial">{t('File 1099-NEC')}</Badge> : <Badge status="draft">{t('Below threshold')}</Badge>}</td></tr>)}
             </Table></>}
         </Card>

@@ -1,4 +1,5 @@
 import { t } from '../i18n.jsx';
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { api } from '../api.js';
 import { date, money } from '../format.js';
@@ -69,7 +70,7 @@ export default function Contacts({ kind }) {
           {rows.map((c) => (
             <tr key={c.id} className="hover:bg-slate-50"><td className="td font-medium">{c.name}{c.kind === 'both' && <span className="ml-2 text-xs text-slate-400">{t('customer and vendor')}</span>}</td><td className="td">{c.email}</td><td className="td">{c.phone}</td>
               <td className="td num text-right">{money(isV ? c.payable : c.receivable)}</td>
-              <td className="td whitespace-nowrap text-right"><button className="text-xs text-brand-700 hover:underline" onClick={() => setStmt(c)}>{t('Statement')}</button>
+              <td className="td whitespace-nowrap text-right"><button className="text-xs text-brand-700 hover:underline" onClick={() => setStmt(c)}>{t('Statement')}</button>{c.is_1099 && can('purchases', true) && <Link className="ml-3 text-xs text-brand-700 hover:underline" to={`/expenses?pay=${c.id}`}>{t('Pay contractor')}</Link>}
                 {can('sales', true) && <><button className="ml-3 text-xs text-brand-700 hover:underline" onClick={() => setEdit(c)}>{t('Edit')}</button>
                   <button className="ml-3 text-xs text-rose-600 hover:underline" onClick={() => confirm(t('Remove {0}?', [c.name])) && run(async () => { await api.del(`/contacts/${c.id}`); reload(); }, t('Contact removed'))}>{t('Remove')}</button></>}</td></tr>
           ))}

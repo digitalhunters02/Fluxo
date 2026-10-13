@@ -5,22 +5,28 @@ import { date, fromCents, money, toCents, today } from '../format.js';
 import { download } from '../csv.js';
 import { Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, useAction, useLoad } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
+import { METHOD_KEYS, PLATFORM_KEYS, methodLabel } from '../methods.js';
 
-function ExpenseModal({ exp, lookups, onClose, onSaved }) {
+function ExpenseModal({ exp, lookups, onClose, onSaved, presetContact }) {
   const { has } = useAuth();
   const [run, busy] = useAction();
   const { accounts, contacts, projects, classes } = lookups;
   const bank = accounts.filter((a) => a.subtype === 'bank' || a.subtype === 'credit_card');
   const cats = accounts.filter((a) => a.type === 'expense');
-  const [f, setF] = useState({ date: exp?.date || today(), contact_id: exp?.contact_id || '', account_id: exp?.account_id || cats[0]?.id || '', paid_from_id: exp?.paid_from_id || bank[0]?.id || '',
-    amount: exp ? fromCents(exp.amount) : '', description: exp?.description || '', ref: exp?.ref || '', project_id: exp?.project_id || '', class_id: exp?.class_id || '', receipt: undefined });
+  const [f, setF] = useState({ date: exp?.date || today(), contact_id: exp?.contact_id || presetContact || '', account_id: exp?.account_id || (presetContact && cats.find((a) => a.code === '6400')?.id) || cats[0]?.id || '', paid_from_id: exp?.paid_from_id || bank[0]?.id || '',
+    amount: exp ? fromCents(exp.amount) : '', description: exp?.description || '', ref: exp?.ref || '', project_id: exp?.project_id || '', class_id: exp?.class_id || '', method: exp?.method || '', receipt: undefined });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const onFile = (e) => {
     const file = e.target.files[0]; if (!file) return;
     if (file.size > 1_800_000) { alert(t('Receipt too large (max 1.8 MB)')); e.target.value = ''; return; }
     const r = new FileReader(); r.onload = () => setF((x) => ({ ...x, receipt: r.result })); r.readAsDataURL(file);
   };
+  const vendor = contacts.find((c) => c.id === Number(f.contact_id));
+  const paidFrom = accounts.find((a) => a.id === Number(f.paid_from_id));
+  const need1099Method = !!vendor?.is_1099 && !f.method && paidFrom?.subtype !== 'credit_card';
+  const platform = PLATFORM_KEYS.includes(f.method) || (vendor?.is_1099 && paidFrom?.subtype === 'credit_card');
   const save = async () => {
+    if (need1099Method) { alert(t('Choose how you paid this contractor (ACH, check, Zelle, card, PayPal…). It decides whether the payment counts toward Form 1099-NEC.')); return; }
     const body = { ...f, amount: toCents(f.amount), account_id: Number(f.account_id), paid_from_id: Number(f.paid_from_id), contact_id: f.contact_id ? Number(f.contact_id) : null, project_id: f.project_id ? Number(f.project_id) : null, class_id: f.class_id ? Number(f.class_id) : null };
     const r = await run(() => (exp ? api.put(`/expenses/${exp.id}`, body) : api.post('/expenses', body)), t('Expense saved'));
     if (r) onSaved();
@@ -34,6 +40,8 @@ function ExpenseModal({ exp, lookups, onClose, onSaved }) {
         <Field label={t('Category')}><Select value={f.account_id} onChange={set('account_id')}>{cats.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></Field>
         <Field label={t('Paid with')}><Select value={f.paid_from_id} onChange={set('paid_from_id')}>{bank.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></Field>
         <Field label={t('Vendor')}><Select value={f.contact_id} onChange={set('contact_id')}><option value="">—</option>{contacts.filter((c) => c.kind !== 'customer').map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></Field>
+        <Field label={t('How paid')} className={vendor?.is_1099 ? 'col-span-2' : ''} hint={vendor?.is_1099 ? (platform ? t('Card and payment-app payments are reported by the payment company on Form 1099-K, not 1099-NEC. Fluxo records the expense but leaves it out of the 1099-NEC total.') : t('Counts toward Form 1099-NEC.')) : ''}>
+          <Select value={f.method} onChange={set('method')}><option value="">—</option>{METHOD_KEYS.map((k) => <option key={k} value={k}>{methodLabel(k)}</option>)}</Select></Field>
         <Field label={t('Project')}><Select value={f.project_id} onChange={set('project_id')}><option value="">—</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field>
         {has('classes') && classes.length > 0 && <Field label={t('Class')}><Select value={f.class_id} onChange={set('class_id')}><option value="">—</option>{classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></Field>}
         <Field label={t('Receipt (image or PDF)')} className="col-span-2" hint={exp?.has_receipt ? t('A receipt already exists; uploading another replaces it.') : ''}><input type="file" accept="image/*,application/pdf" capture="environment" onChange={onFile} className="text-sm" aria-label={t('Receipt (image or PDF)')} /></Field>
@@ -57,7 +65,7 @@ export default function Expenses() {
     const [rows, accounts, contacts, projects, classes] = await Promise.all([api.get('/expenses'), api.get('/accounts/lookup'), api.get('/contacts'), api.get('/projects').catch(() => []), api.get('/classes').catch(() => [])]);
     return { rows, lookups: { accounts, contacts, projects, classes: classes.filter((c) => c.active) } };
   });
-  const [edit, setEdit] = useState(null);
+  const [edit, setEdit] = useState(() => { try { const c = Number(new URLSearchParams(location.search).get('pay')); return c ? { presetContact: c } : null; } catch { return null; } });
   const [run] = useAction();
   const [q, setQ] = useState(() => { try { return new URLSearchParams(location.search).get('q') || ''; } catch { return ''; } });
   if (loading) return <Loading />;
@@ -73,15 +81,15 @@ export default function Expenses() {
       </PageHeader>
       <Card pad={false}>
         <div className="flex items-center justify-between gap-3 border-b border-slate-100 p-3"><Input className="field max-w-xs" placeholder={t('Search…')} value={q} onChange={(e) => setQ(e.target.value)} aria-label={t('Search')} /><span className="text-sm text-slate-500">{t('Total:')}{' '}<b className="num text-slate-900">{money(total)}</b></span></div>
-        <Table head={[t('Date'), t('Description'), t('Category'), t('Vendor'), t('Paid with'), { label: t('Amount'), right: true }, '']} empty={t('No expenses recorded.')}>
+        <Table head={[t('Date'), t('Description'), t('Category'), t('Vendor'), t('Paid with'), t('How paid'), { label: t('Amount'), right: true }, '']} empty={t('No expenses recorded.')}>
           {rows.map((e) => (
             <tr key={e.id} className="hover:bg-slate-50"><td className="td">{date(e.date)}</td><td className="td">{e.description}{e.has_receipt ? <button onClick={() => viewReceipt(e)} className="ml-2 text-xs text-brand-600 hover:underline">{t('📎 receipt')}</button> : null}</td>
-              <td className="td">{e.category}</td><td className="td">{e.contact_name}</td><td className="td">{e.paid_from}</td><td className="td num text-right">{money(e.amount)}</td>
+              <td className="td">{e.category}</td><td className="td">{e.contact_name}</td><td className="td">{e.paid_from}</td><td className="td">{methodLabel(e.method)}</td><td className="td num text-right">{money(e.amount)}</td>
               <td className="td whitespace-nowrap text-right">{can('purchases', true) && <><button className="text-xs text-brand-700 hover:underline" onClick={() => setEdit(e)}>{t('Edit')}</button><button className="ml-3 text-xs text-rose-600 hover:underline" onClick={() => confirm(t('Delete this expense?')) && run(async () => { await api.del(`/expenses/${e.id}`); reload(); }, t('Expense deleted'))}>{t('Delete')}</button></>}</td></tr>
           ))}
         </Table>
       </Card>
-      {edit && <ExpenseModal exp={edit.id ? edit : null} lookups={data.lookups} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); reload(); }} />}
+      {edit && <ExpenseModal exp={edit.id ? edit : null} presetContact={edit.presetContact} lookups={data.lookups} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); reload(); }} />}
     </>
   );
 }

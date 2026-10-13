@@ -1,6 +1,7 @@
 // Folha de pagamento (EUA): cálculo, contabilização, passivos e relatórios 941 / W-2 / 1099.
 // Os parâmetros fiscais ficam em US_2026 e devem ser revisados todo ano (IRS Pub. 15-T e Pub. 15).
 import { all, get, run, insert, tx, getSetting } from './db.js';
+import { classifyMethod, isPlatformMethod } from './contractorPay.js';
 import { HttpError, postEntry, removeEntries, sysAccount, isDate, cents, today, memoText } from './accounting.js';
 
 const bad = (m) => new HttpError(400, m);
@@ -283,15 +284,39 @@ export function w2Summary(year) {
   return { year, rows: [...by.values()] };
 }
 
-/** Prestadores marcados como 1099: total pago no ano (contas pagas + despesas). */
+/**
+ * Prestadores marcados como 1099: total pago no ano, vindo de TODAS as saídas ligadas ao prestador e sem contar
+ * o mesmo dinheiro duas vezes (cada saída existe em um único lugar): contas pagas (pagamentos), despesas e
+ * transações do banco categorizadas com o prestador. A forma de pagamento separa o que vai no 1099-NEC (paid)
+ * do que a empresa de pagamento reporta no 1099-K (platform: cartão, PayPal, Stripe, apps) — esse fica fora do
+ * total e do limite. Forma não registrada conta como 1099-NEC e aparece em `unknown` para conferir.
+ */
 export function report1099(year) {
   const from = `${year}-01-01`, to = `${year}-12-31`;
-  const rows = all(`SELECT c.id, c.name, c.tax_id, c.email,
-      COALESCE((SELECT SUM(p.amount) FROM payments p JOIN docs d ON d.id=p.doc_id WHERE d.type='bill' AND d.contact_id=c.id AND p.date>=? AND p.date<=?),0)
-      + COALESCE((SELECT SUM(amount) FROM expenses WHERE contact_id=c.id AND date>=? AND date<=?),0) AS paid
-    FROM contacts c WHERE c.is_1099=1 AND c.active=1 ORDER BY paid DESC`, from, to, from, to);
+  const rows = all('SELECT c.id, c.name, c.tax_id, c.email FROM contacts c WHERE c.is_1099=1 AND c.active=1');
+  const outflows = [
+    ...all(`SELECT d.contact_id AS cid, p.amount, p.method, a.subtype AS sub FROM payments p JOIN docs d ON d.id=p.doc_id JOIN accounts a ON a.id=p.account_id
+      WHERE d.type='bill' AND d.contact_id IS NOT NULL AND p.date>=? AND p.date<=?`, from, to),
+    ...all(`SELECT e.contact_id AS cid, e.amount, e.method, a.subtype AS sub FROM expenses e JOIN accounts a ON a.id=e.paid_from_id
+      WHERE e.contact_id IS NOT NULL AND e.date>=? AND e.date<=?`, from, to),
+    // Transação do banco categorizada com o prestador: o lançamento é do tipo 'bank' (despesa/pagamento já ligados não geram outro).
+    ...all(`SELECT jl.contact_id AS cid, (jl.debit-jl.credit) AS amount, '' AS method,
+        (SELECT a2.subtype FROM journal_lines l2 JOIN accounts a2 ON a2.id=l2.account_id WHERE l2.entry_id=je.id AND l2.id<>jl.id AND a2.subtype IN ('bank','credit_card') LIMIT 1) AS sub
+      FROM journal_lines jl JOIN journal_entries je ON je.id=jl.entry_id JOIN accounts x ON x.id=jl.account_id
+      WHERE je.source_type='bank' AND x.type='expense' AND jl.contact_id IS NOT NULL AND je.date>=? AND je.date<=?`, from, to),
+  ];
   const threshold = year >= 2026 ? US_2026.form1099Threshold : 60_000;
-  return { year, threshold, rows: rows.map((r) => ({ ...r, reportable: r.paid >= threshold, missingTaxId: !r.tax_id })) };
+  const out = rows.map((r) => {
+    let paid = 0, platform = 0, unknown = 0;
+    for (const o of outflows) {
+      if (o.cid !== r.id) continue;
+      const key = classifyMethod(o.method);
+      if (isPlatformMethod(key) || o.sub === 'credit_card') platform += o.amount;
+      else { paid += o.amount; if (!key) unknown += o.amount; }
+    }
+    return { ...r, paid, platform, unknown, reportable: paid >= threshold, missingTaxId: !r.tax_id };
+  }).sort((a, b) => b.paid - a.paid || a.name.localeCompare(b.name));
+  return { year, threshold, rows: out };
 }
 
 export { today };

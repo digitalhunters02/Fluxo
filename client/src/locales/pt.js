@@ -1572,5 +1572,22 @@ export default {
  "Your company requires two-step verification, so it cannot be turned off": "Sua empresa exige a verificação em dois passos, então ela não pode ser desligada",
  "Turn on two-step verification for your own account first": "Ative primeiro a verificação em dois passos na sua própria conta",
  "Import customers from a photo": "Importar clientes de uma foto",
- "Import vendors from a photo": "Importar fornecedores de uma foto"
+ "Import vendors from a photo": "Importar fornecedores de uma foto",
+ "Zelle": "Zelle",
+ "PayPal": "PayPal",
+ "Stripe": "Stripe",
+ "Other (not a card or payment app)": "Outra (não é cartão nem app)",
+ "Venmo, Cash App or similar": "Venmo, Cash App ou parecido",
+ "How paid": "Forma de pagamento",
+ "Counts toward Form 1099-NEC.": "Conta para o formulário 1099-NEC.",
+ "Card and payment-app payments are reported by the payment company on Form 1099-K, not 1099-NEC. Fluxo records the expense but leaves it out of the 1099-NEC total.": "Pagamentos por cartão e apps de pagamento são reportados pela própria empresa de pagamento no formulário 1099-K, não no 1099-NEC. O Fluxo registra a despesa mas deixa de fora do total do 1099-NEC.",
+ "Choose how you paid this contractor (ACH, check, Zelle, card, PayPal…). It decides whether the payment counts toward Form 1099-NEC.": "Escolha como você pagou este prestador (ACH, cheque, Zelle, cartão, PayPal…). Isso decide se o pagamento conta para o formulário 1099-NEC.",
+ "Paid in year (1099-NEC)": "Pago no ano (1099-NEC)",
+ "Card / PayPal / Stripe (1099-K, not counted)": "Cartão / PayPal / Stripe (1099-K, não conta)",
+ "{0} without a recorded payment method (counted)": "{0} sem forma de pagamento registrada (conta)",
+ "Only payments by bank transfer, check, cash and similar count here. Card, PayPal, Stripe and payment apps are reported by the payment company on Form 1099-K and are shown apart.": "Aqui só contam pagamentos por transferência, cheque, dinheiro e parecidos. Cartão, PayPal, Stripe e apps de pagamento são reportados pela empresa de pagamento no formulário 1099-K e aparecem separados.",
+ "Categorize anyway as a separate payment?": "Categorizar mesmo assim como um pagamento separado?",
+ "Pay contractor": "Pagar prestador",
+ "Invalid payment method": "Forma de pagamento inválida",
+ "This looks like an entry you already recorded (same amount, close date). Use Match so it is not counted twice, or confirm that it is a different payment.": "Isto parece um lançamento que você já registrou (mesmo valor, data próxima). Use \"Parear\" para não contar em dobro, ou confirme que é outro pagamento."
 };

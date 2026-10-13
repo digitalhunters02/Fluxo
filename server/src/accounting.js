@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { all, get, run, insert, tx, getSetting, setSetting } from './db.js';
 import { emit } from './events.js';
 import { approvalBlocksPayment } from './guard.js';
+import { METHODS } from './contractorPay.js';
 
 export class HttpError extends Error {
   constructor(status, message, extra) { super(message); this.status = status; this.extra = extra; }
@@ -442,6 +443,8 @@ export function saveExpense(input, user) {
   const exp = getAccount(input.account_id), from = getAccount(input.paid_from_id);
   if (exp.type !== 'expense' && exp.type !== 'asset') throw bad('Invalid expense category');
   if (!['asset', 'liability'].includes(from.type)) throw bad('Invalid payment account');
+  const method = String(input.method ?? '').trim().toLowerCase();
+  if (method && !METHODS.includes(method)) throw bad('Invalid payment method');
   if (input.receipt) {
     const r = String(input.receipt);
     if (r.length > 2_500_000) throw bad('Receipt is too large (max ~1.8 MB)');
@@ -453,12 +456,12 @@ export function saveExpense(input, user) {
     if (id) {
       if (!get('SELECT 1 FROM expenses WHERE id=?', id)) throw new HttpError(404, 'Expense not found');
       removeEntries('expense', id);
-      run('UPDATE expenses SET date=?,contact_id=?,account_id=?,paid_from_id=?,amount=?,description=?,ref=?,project_id=?,receipt=COALESCE(?,receipt) WHERE id=?',
-        input.date, input.contact_id || null, input.account_id, input.paid_from_id, amount, input.description || '', input.ref || '', input.project_id || null, input.receipt ?? null, id);
+      run('UPDATE expenses SET date=?,contact_id=?,account_id=?,paid_from_id=?,amount=?,description=?,ref=?,project_id=?,receipt=COALESCE(?,receipt),method=? WHERE id=?',
+        input.date, input.contact_id || null, input.account_id, input.paid_from_id, amount, input.description || '', input.ref || '', input.project_id || null, input.receipt ?? null, method, id);
       run('UPDATE expenses SET class_id=? WHERE id=?', input.class_id || null, id);
     } else {
-      id = insert('INSERT INTO expenses(date,contact_id,account_id,paid_from_id,amount,description,ref,project_id,receipt,created_by) VALUES(?,?,?,?,?,?,?,?,?,?)',
-        input.date, input.contact_id || null, input.account_id, input.paid_from_id, amount, input.description || '', input.ref || '', input.project_id || null, input.receipt || null, user?.id ?? null);
+      id = insert('INSERT INTO expenses(date,contact_id,account_id,paid_from_id,amount,description,ref,project_id,receipt,created_by,method) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+        input.date, input.contact_id || null, input.account_id, input.paid_from_id, amount, input.description || '', input.ref || '', input.project_id || null, input.receipt || null, user?.id ?? null, method);
       run('UPDATE expenses SET class_id=? WHERE id=?', input.class_id || null, id);
     }
     postEntry({ date: input.date, memo: input.description || memoText('expense'), source_type: 'expense', source_id: id, user_id: user?.id,

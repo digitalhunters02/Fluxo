@@ -218,6 +218,7 @@ export function openDb(file) {
   addColumn('recurring', 'anchor_day', 'INTEGER');                  // dia do mês original: evita que "dia 31" derive para 28 depois de fevereiro
   addColumn('recurring', 'last_error', "TEXT NOT NULL DEFAULT ''");  // por que a última geração falhou (aparece na tela e vira lembrete)
   addColumn('recurring', 'last_run', 'TEXT');
+  addColumn('expenses', 'method', "TEXT NOT NULL DEFAULT ''");   // forma de pagamento (decide 1099-NEC × 1099-K; ver contractorPay.js)
   addColumn('docs', 'external_id', 'TEXT');                         // id do outro sistema (API): reenviar o mesmo id nunca duplica
   addColumn('contacts', 'external_id', 'TEXT');
   addColumn('docs', 'emailed_at', 'TEXT');                          // quando a fatura foi enviada por e-mail pelo sistema

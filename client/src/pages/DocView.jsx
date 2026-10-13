@@ -1,3 +1,4 @@
+import { METHOD_KEYS, PLATFORM_KEYS, methodLabel } from '../methods.js';
 import { t } from '../i18n.jsx';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -79,7 +80,7 @@ function PaymentModal({ doc, onClose, onDone }) {
         <Field label={t('Date')}><Input type="date" value={f.date} onChange={set('date')} /></Field>
         <Field label={t('Amount')} hint={t('Balance: {0}', [money(doc.balance)])}><Input inputMode="decimal" value={f.amount} onChange={set('amount')} /></Field>
         <Field label={doc.type === 'invoice' ? t('Deposit to') : t('Pay from')} className="col-span-2"><Select value={f.account_id || list[0]?.id || ''} onChange={set('account_id')}>{list.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></Field>
-        <Field label={t('Method')}><Select value={f.method} onChange={set('method')}><option value="">—</option>{[t('ACH'), t('Money order'), t('Card'), t('Wire transfer'), t('Cash'), t('Check')].map((m) => <option key={m}>{m}</option>)}</Select></Field>
+        <Field label={t('Method')} hint={doc.type === 'bill' && PLATFORM_KEYS.includes(f.method) ? t('Card and payment-app payments are reported by the payment company on Form 1099-K, not 1099-NEC. Fluxo records the expense but leaves it out of the 1099-NEC total.') : ''}><Select value={f.method} onChange={set('method')}><option value="">—</option>{METHOD_KEYS.map((k) => <option key={k} value={k}>{methodLabel(k)}</option>)}</Select></Field>
         <Field label={t('Reference')}><Input value={f.ref} onChange={set('ref')} /></Field>
       </div>
     </Modal>
@@ -156,7 +157,7 @@ export default function DocView() {
         <Card title={t('Payments')} className="no-print mx-auto mt-4 max-w-4xl" pad={false}>
           <Table head={[t('Date'), t('Account'), t('Method'), t('Ref.'), { label: t('Amount'), right: true }, '']}>
             {d.payments.map((p) => (
-              <tr key={p.id}><td className="td">{date(p.date)}</td><td className="td">{p.account_name}</td><td className="td">{p.method}</td><td className="td">{p.ref}</td><td className="td num text-right">{money(p.amount)}</td>
+              <tr key={p.id}><td className="td">{date(p.date)}</td><td className="td">{p.account_name}</td><td className="td">{methodLabel(p.method) || p.method}</td><td className="td">{p.ref}</td><td className="td num text-right">{money(p.amount)}</td>
                 <td className="td text-right">{can('accounting', true) && <button className="text-xs text-rose-600 hover:underline" onClick={() => confirm(t('Delete this payment?')) && run(async () => { await api.del(`/payments/${p.id}`); reload(); }, t('Payment deleted'))}>{t('Delete')}</button>}</td></tr>
             ))}
           </Table>

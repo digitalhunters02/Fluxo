@@ -75,11 +75,16 @@ export function importTxns(account_id, rows) {
   return { added, duplicates };
 }
 
-export function categorize(id, { account_id, contact_id, memo, remember }, user) {
+export function categorize(id, { account_id, contact_id, memo, remember, force }, user) {
   return tx(() => {
     const t = get('SELECT * FROM bank_txns WHERE id=?', id);
     if (!t) throw new HttpError(404, 'Transaction not found');
     if (t.status !== 'pending') throw bad('Transaction already handled');
+    // Pagamento a prestador/fornecedor: se já existe um lançamento igual (mesmo valor, data próxima, ainda sem banco),
+    // categorizar criaria um segundo e o total do 1099 e o lucro contariam o mesmo dinheiro duas vezes.
+    if (contact_id && !force && findMatch(t.account_id, t.date, t.amount)) {
+      throw new HttpError(409, 'This looks like an entry you already recorded (same amount, close date). Use Match so it is not counted twice, or confirm that it is a different payment.', { code: 'possible_duplicate' });
+    }
     const cat = getAccount(account_id);
     const bank = getAccount(t.account_id);
     const amt = Math.abs(t.amount);

@@ -593,7 +593,7 @@ api.post('/doc/:id/payments', wrap((req, res) => {
 api.delete('/payments/:id', can('accounting', true), wrap((req, res) => { const d = acc.deletePayment(id(req)); audit(req, 'delete', 'payment', id(req), d.number); ok(res, d); }));
 
 /* ---------------------------------- despesas ------------------------------ */
-api.get('/expenses', can('purchases'), wrap((_req, res) => ok(res, all(`SELECT e.id,e.date,e.amount,e.description,e.ref,e.account_id,e.paid_from_id,e.contact_id,e.project_id,
+api.get('/expenses', can('purchases'), wrap((_req, res) => ok(res, all(`SELECT e.id,e.date,e.amount,e.description,e.ref,e.method,e.account_id,e.paid_from_id,e.contact_id,e.project_id,
   a.name AS category, f.name AS paid_from, c.name AS contact_name, e.receipt IS NOT NULL AS has_receipt
   FROM expenses e JOIN accounts a ON a.id=e.account_id JOIN accounts f ON f.id=e.paid_from_id LEFT JOIN contacts c ON c.id=e.contact_id ORDER BY e.date DESC, e.id DESC LIMIT 1000`))));
 api.get('/expenses/:id/receipt', can('purchases'), wrap((req, res) => { const e = get('SELECT receipt FROM expenses WHERE id=?', id(req)); if (!e?.receipt) throw new HttpError(404, 'No receipt'); ok(res, { receipt: e.receipt }); }));
