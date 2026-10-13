@@ -5,6 +5,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { als, openDb, dataDir } from './db.js';
+import { sealLegacyTaxIds } from './taxid.js';
 
 export const multiEnabled = () => process.env.FLUXO_MULTI === '1';
 const inMemory = () => process.env.FLUXO_DB === ':memory:' || process.env.FLUXO_CONTROL_DB === ':memory:';
@@ -50,7 +51,11 @@ export const tenantByReferralCode = (code) => (code ? q('SELECT slug,name,owner_
 export const allSlugs = () => qa('SELECT slug FROM tenants ORDER BY created_at').map((r) => r.slug);
 
 function openTenant(slug) {
-  if (!cache.has(slug)) cache.set(slug, openDb(tenantFile(slug)));
+  if (!cache.has(slug)) {
+    const d = openDb(tenantFile(slug));
+    cache.set(slug, d);
+    try { als.run({ db: d }, sealLegacyTaxIds); } catch (e) { console.error('SSN/EIN (empresa ' + slug + '):', e.message); }
+  }
   return cache.get(slug);
 }
 /** Executa fn com o banco da empresa; todo get/run/insert dentro dele enxerga só essa empresa. */

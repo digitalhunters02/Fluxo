@@ -2,6 +2,7 @@
 // Os parâmetros fiscais ficam em US_2026 e devem ser revisados todo ano (IRS Pub. 15-T e Pub. 15).
 import { all, get, run, insert, tx, getSetting } from './db.js';
 import { classifyMethod, isPlatformMethod } from './contractorPay.js';
+import { mask as maskTaxId } from './taxid.js';
 import { HttpError, postEntry, removeEntries, sysAccount, isDate, cents, today, memoText } from './accounting.js';
 
 const bad = (m) => new HttpError(400, m);
@@ -314,7 +315,7 @@ export function report1099(year) {
       if (isPlatformMethod(key) || o.sub === 'credit_card') platform += o.amount;
       else { paid += o.amount; if (!key) unknown += o.amount; }
     }
-    return { ...r, paid, platform, unknown, reportable: paid >= threshold, missingTaxId: !r.tax_id };
+    return { ...r, tax_id: maskTaxId(r.tax_id), paid, platform, unknown, reportable: paid >= threshold, missingTaxId: !r.tax_id };
   }).sort((a, b) => b.paid - a.paid || a.name.localeCompare(b.name));
   return { year, threshold, rows: out };
 }

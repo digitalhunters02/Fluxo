@@ -1,5 +1,6 @@
 import { t } from '../i18n.jsx';
 import { Link } from 'react-router-dom';
+import RevealTaxId from '../components/RevealTaxId.jsx';
 import { useState } from 'react';
 import { api } from '../api.js';
 import { date, money } from '../format.js';
@@ -19,7 +20,8 @@ function ContactModal({ c, kind, onClose, onSaved }) {
         <Field label={t('Name / Business name')} className="col-span-2"><Input autoFocus value={f.name} onChange={set('name')} /></Field>
         <Field label={t('Email')}><Input type="email" value={f.email} onChange={set('email')} /></Field>
         <Field label={t('Phone')}><Input value={f.phone} onChange={set('phone')} /></Field>
-        <Field label={t('Tax ID (EIN / SSN)')}><Input value={f.tax_id} onChange={set('tax_id')} /></Field>
+        <Field label={t('Tax ID (EIN / SSN)')} hint={t('Saved encrypted. Only the last 4 digits are shown. Contractors and employees need 9 digits.')}><Input value={f.tax_id} onChange={set('tax_id')} /></Field>
+        {c?.id && c.has_tax_id && <RevealTaxId path={`/contacts/${c.id}/tax-id`} />}
         <Field label={t('Payment terms (days)')}><Input type="number" min="0" value={f.terms_days} onChange={set('terms_days')} /></Field>
         <Field label={t('Type')}><Select value={f.kind} onChange={set('kind')}><option value="customer">{t('Customer')}</option><option value="vendor">{t('Vendor')}</option><option value="both">{t('Customer and vendor')}</option></Select></Field>
         <Field label={t('Address')} className="col-span-2"><Input value={f.address} onChange={set('address')} /></Field>

@@ -1,6 +1,7 @@
 // Migração a partir do QuickBooks Online e do Xero (arquivos CSV exportados): plano de contas, clientes/fornecedores e saldos iniciais.
 // Nada é gravado em "preview"; "apply" grava. Reaplicar o mesmo arquivo não duplica (contas e contatos são reconhecidos pelo nome).
 // Faturas e contas em aberto ainda não são importadas: os saldos de contas a receber/pagar entram pelo balancete de abertura.
+import { seal as sealTaxId } from './taxid.js';
 import { all, get, run, insert, tx } from './db.js';
 import { HttpError, isDate, postEntry, sysAccount } from './accounting.js';
 
@@ -115,7 +116,7 @@ function importContacts(csv, apply, kindHint) {
         else { out.exists++; out.rows.push({ name, status: 'exists' }); }
         continue;
       }
-      if (apply) { const cid = insert('INSERT INTO contacts(kind,name,email,phone,address,tax_id) VALUES(?,?,?,?,?,?)', kind, name.slice(0, 160), email, phone, address, taxId); byName.set(name.toLowerCase(), { id: cid, name, kind }); }
+      if (apply) { const cid = insert('INSERT INTO contacts(kind,name,email,phone,address,tax_id) VALUES(?,?,?,?,?,?)', kind, name.slice(0, 160), email, phone, address, taxId ? sealTaxId(taxId) : ''); byName.set(name.toLowerCase(), { id: cid, name, kind }); }
       out.created++; out.rows.push({ name, status: 'create', kind });
     }
   });

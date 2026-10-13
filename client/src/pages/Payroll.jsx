@@ -1,3 +1,4 @@
+import RevealTaxId from '../components/RevealTaxId.jsx';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { t } from '../i18n.jsx';
@@ -37,7 +38,8 @@ function EmployeeModal({ emp, onClose, onSaved }) {
         <Field label={t('Name')} className="md:col-span-2"><Input autoFocus value={f.name} onChange={set('name')} /></Field>
         <Field label={t('Job title')}><Input value={f.position} onChange={set('position')} /></Field>
         <Field label={t('Email')}><Input type="email" value={f.email} onChange={set('email')} /></Field>
-        <Field label={t('SSN / Tax ID')} hint={t('Stored only in your own database')}><Input value={f.tax_id} onChange={set('tax_id')} /></Field>
+        <Field label={t('SSN / Tax ID')} hint={t('Saved encrypted. Only the last 4 digits are shown. Contractors and employees need 9 digits.')}><Input value={f.tax_id} onChange={set('tax_id')} /></Field>
+        {emp?.id && emp.has_tax_id && <RevealTaxId path={`/payroll/employees/${emp.id}/tax-id`} />}
         <Field label={t('Hire date')}><Input type="date" value={f.hire_date} onChange={set('hire_date')} /></Field>
         <Field label={t('Pay type')}><Select value={f.pay_basis} onChange={set('pay_basis')}><option value="year">{t('Annual salary')}</option><option value="hour">{t('Hourly')}</option></Select></Field>
         <Field label={f.pay_basis === 'year' ? t('Annual salary') : t('Hourly rate')}><Input inputMode="decimal" value={f.pay_rate} onChange={set('pay_rate')} /></Field>

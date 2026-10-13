@@ -14,6 +14,7 @@ import * as acc from './accounting.js';
 import * as bank from './banking.js';
 import * as rep from './reports.js';
 import * as pay from './payroll.js';
+import * as taxid from './taxid.js';
 import * as plaidSvc from './plaid.js';
 import * as billing from './billing.js';
 import { reportLead } from './harborLead.js';
@@ -242,7 +243,7 @@ api.get('/public/doc/:token', publicTenant, wrap((req, res) => {
   const row = get("SELECT id FROM docs WHERE share_token=? AND type IN ('invoice','estimate','credit')", req.params.token);
   if (!row) throw new HttpError(404, 'Document not found');
   const d = acc.loadDoc(row.id);
-  const c = get('SELECT name,email,phone,tax_id,address FROM contacts WHERE id=?', d.contact_id);
+  const c = taxid.publicTaxId(get('SELECT name,email,phone,tax_id,address FROM contacts WHERE id=?', d.contact_id));
   const company = Object.fromEntries(all('SELECT key,value FROM settings').filter((s) => ['company_name', 'currency', 'locale', 'invoice_footer', 'company_tax_id', 'company_address', 'company_email', 'company_phone', 'company_logo', 'brand_color'].includes(s.key)).map((s) => [s.key, s.value]));
   const { share_token, created_by, ...safe } = d;
   const payOnline = hasFeature('online_payments') && getSetting('connect_ready', '0') === '1' && d.type === 'invoice' && d.balance > 0 && ['sent', 'partial'].includes(d.status);
@@ -465,17 +466,29 @@ api.get('/contacts', can('sales'), wrap((req, res) => {
     COALESCE((SELECT SUM(total-paid) FROM docs WHERE contact_id=c.id AND type='invoice' AND status IN ('sent','partial')),0) AS receivable,
     COALESCE((SELECT SUM(total-paid) FROM docs WHERE contact_id=c.id AND type='bill' AND status IN ('open','partial')),0) AS payable
     FROM contacts c WHERE active=1 ORDER BY name`);
-  ok(res, kind ? rows.filter((c) => c.kind === kind || c.kind === 'both') : rows);
+  ok(res, (kind ? rows.filter((c) => c.kind === kind || c.kind === 'both') : rows).map(taxid.publicTaxId));
 }));
-const contactFields = (b) => { need(b.name, 'Enter the name'); if (!['customer', 'vendor', 'both'].includes(b.kind || 'customer')) throw bad('Invalid type'); return [b.kind || 'customer', b.name.trim(), b.email || '', b.phone || '', b.tax_id || '', b.address || '', b.notes || '', Number.isInteger(+b.terms_days) ? +b.terms_days : 15, b.is_1099 && hasFeature('contractors_1099') ? 1 : 0]; };
+const contactFields = (b, cur) => {
+  need(b.name, 'Enter the name'); if (!['customer', 'vendor', 'both'].includes(b.kind || 'customer')) throw bad('Invalid type');
+  const is1099 = b.is_1099 && hasFeature('contractors_1099') ? 1 : 0;
+  // SSN/EIN: gravado criptografado; prestador 1099 exige 9 números; mascarado vindo da tela mantém o que já existe
+  const tax = taxid.prepareTaxId(b.tax_id, cur?.tax_id, { strict: !!is1099 && (b.kind || 'customer') !== 'customer' });
+  return [b.kind || 'customer', b.name.trim(), b.email || '', b.phone || '', tax, b.address || '', b.notes || '', Number.isInteger(+b.terms_days) ? +b.terms_days : 15, is1099];
+};
 api.post('/contacts', can('sales', true), wrap((req, res) => {
   const nid = insert('INSERT INTO contacts(kind,name,email,phone,tax_id,address,notes,terms_days,is_1099) VALUES(?,?,?,?,?,?,?,?,?)', ...contactFields(req.body));
-  audit(req, 'create', 'contact', nid, req.body.name); ok(res, get('SELECT * FROM contacts WHERE id=?', nid));
+  audit(req, 'create', 'contact', nid, req.body.name); ok(res, taxid.publicTaxId(get('SELECT * FROM contacts WHERE id=?', nid)));
 }));
 api.put('/contacts/:id', can('sales', true), wrap((req, res) => {
-  const cid = id(req); if (!get('SELECT 1 FROM contacts WHERE id=?', cid)) throw new HttpError(404, 'Contact not found');
-  run('UPDATE contacts SET kind=?,name=?,email=?,phone=?,tax_id=?,address=?,notes=?,terms_days=?,is_1099=? WHERE id=?', ...contactFields(req.body), cid);
-  audit(req, 'update', 'contact', cid); ok(res, get('SELECT * FROM contacts WHERE id=?', cid));
+  const cid = id(req); const cur = get('SELECT * FROM contacts WHERE id=?', cid); if (!cur) throw new HttpError(404, 'Contact not found');
+  run('UPDATE contacts SET kind=?,name=?,email=?,phone=?,tax_id=?,address=?,notes=?,terms_days=?,is_1099=? WHERE id=?', ...contactFields(req.body, cur), cid);
+  audit(req, 'update', 'contact', cid); ok(res, taxid.publicTaxId(get('SELECT * FROM contacts WHERE id=?', cid)));
+}));
+// Mostrar o número completo: só o dono, e fica no registro de auditoria (sem o número).
+api.get('/contacts/:id/tax-id', can('sales'), wrap((req, res) => {
+  if (req.user?.role !== 'owner') throw new HttpError(403, 'Only the owner can view full SSN/EIN numbers');
+  const cid = id(req); const c = get('SELECT name, tax_id FROM contacts WHERE id=?', cid); if (!c) throw new HttpError(404, 'Contact not found');
+  audit(req, 'reveal', 'tax_id', cid, c.name); res.set('Cache-Control', 'no-store'); ok(res, { tax_id: taxid.open(c.tax_id) });
 }));
 api.delete('/contacts/:id', can('sales', true), wrap((req, res) => {
   const cid = id(req);
@@ -485,7 +498,7 @@ api.delete('/contacts/:id', can('sales', true), wrap((req, res) => {
 }));
 api.get('/contacts/:id/statement', can('sales'), wrap((req, res) => {
   const cid = id(req);
-  ok(res, { contact: get('SELECT * FROM contacts WHERE id=?', cid), docs: all('SELECT id,type,number,issue_date,due_date,status,total,paid FROM docs WHERE contact_id=? ORDER BY issue_date DESC', cid) });
+  ok(res, { contact: taxid.publicTaxId(get('SELECT * FROM contacts WHERE id=?', cid)), docs: all('SELECT id,type,number,issue_date,due_date,status,total,paid FROM docs WHERE contact_id=? ORDER BY issue_date DESC', cid) });
 }));
 
 /* ---------------------------------- itens --------------------------------- */
@@ -734,7 +747,7 @@ api.post('/recurring/run', can('sales', true), wrap((req, res) => { const c = ac
 
 /* ------------------------------ folha de pagamento ------------------------ */
 api.use('/payroll', requireFeature('payroll'));
-const empFields = (b) => {
+const empFields = (b, cur) => {
   need(b.name, 'Enter the name');
   if (!isDate(b.hire_date)) throw bad('Invalid hire date');
   if (!['hour', 'year'].includes(b.pay_basis)) throw bad('Pay basis must be hourly or annual salary');
@@ -742,18 +755,23 @@ const empFields = (b) => {
   if (!['single', 'married'].includes(b.filing_status)) throw bad('Invalid filing status');
   const rate = cents(b.pay_rate); if (rate <= 0) throw bad('Enter a pay rate');
   const pct = Number(b.state_pct || 0); if (!(pct >= 0 && pct <= 20)) throw bad('State withholding must be between 0% and 20%');
-  return [b.name.trim(), b.email || '', b.tax_id || '', b.position || '', b.hire_date, b.pay_basis, rate, b.frequency, b.filing_status, cents(b.credits || 0), cents(b.extra_withholding || 0), pct,
+  return [b.name.trim(), b.email || '', taxid.prepareTaxId(b.tax_id, cur?.tax_id, { strict: true }), b.position || '', b.hire_date, b.pay_basis, rate, b.frequency, b.filing_status, cents(b.credits || 0), cents(b.extra_withholding || 0), pct,
     cents(b.pretax_deduction || 0), cents(b.other_deduction || 0), b.other_deduction_label || ''];
 };
-api.get('/payroll/employees', can('payroll'), wrap((_req, res) => ok(res, all('SELECT * FROM employees ORDER BY active DESC, name'))));
+api.get('/payroll/employees', can('payroll'), wrap((_req, res) => ok(res, all('SELECT * FROM employees ORDER BY active DESC, name').map(taxid.publicTaxId))));
+api.get('/payroll/employees/:id/tax-id', can('payroll'), wrap((req, res) => {
+  if (req.user?.role !== 'owner') throw new HttpError(403, 'Only the owner can view full SSN/EIN numbers');
+  const eid = id(req); const e = get('SELECT name, tax_id FROM employees WHERE id=?', eid); if (!e) throw new HttpError(404, 'Employee not found');
+  audit(req, 'reveal', 'tax_id', eid, e.name); res.set('Cache-Control', 'no-store'); ok(res, { tax_id: taxid.open(e.tax_id) });
+}));
 api.post('/payroll/employees', can('payroll', true), wrap((req, res) => {
   const nid = insert('INSERT INTO employees(name,email,tax_id,position,hire_date,pay_basis,pay_rate,frequency,filing_status,credits,extra_withholding,state_pct,pretax_deduction,other_deduction,other_deduction_label) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', ...empFields(req.body));
-  audit(req, 'create', 'employee', nid, req.body.name); billing.syncPayrollSeats().catch((e) => console.error('billing seats', e.message)); ok(res, get('SELECT * FROM employees WHERE id=?', nid));
+  audit(req, 'create', 'employee', nid, req.body.name); billing.syncPayrollSeats().catch((e) => console.error('billing seats', e.message)); ok(res, taxid.publicTaxId(get('SELECT * FROM employees WHERE id=?', nid)));
 }));
 api.put('/payroll/employees/:id', can('payroll', true), wrap((req, res) => {
-  const eid = id(req); if (!get('SELECT 1 FROM employees WHERE id=?', eid)) throw new HttpError(404, 'Employee not found');
-  run('UPDATE employees SET name=?,email=?,tax_id=?,position=?,hire_date=?,pay_basis=?,pay_rate=?,frequency=?,filing_status=?,credits=?,extra_withholding=?,state_pct=?,pretax_deduction=?,other_deduction=?,other_deduction_label=?,active=? WHERE id=?', ...empFields(req.body), req.body.active === false ? 0 : 1, eid);
-  audit(req, 'update', 'employee', eid); billing.syncPayrollSeats().catch((e) => console.error('billing seats', e.message)); ok(res, get('SELECT * FROM employees WHERE id=?', eid));
+  const eid = id(req); const curEmp = get('SELECT * FROM employees WHERE id=?', eid); if (!curEmp) throw new HttpError(404, 'Employee not found');
+  run('UPDATE employees SET name=?,email=?,tax_id=?,position=?,hire_date=?,pay_basis=?,pay_rate=?,frequency=?,filing_status=?,credits=?,extra_withholding=?,state_pct=?,pretax_deduction=?,other_deduction=?,other_deduction_label=?,active=? WHERE id=?', ...empFields(req.body, curEmp), req.body.active === false ? 0 : 1, eid);
+  audit(req, 'update', 'employee', eid); billing.syncPayrollSeats().catch((e) => console.error('billing seats', e.message)); ok(res, taxid.publicTaxId(get('SELECT * FROM employees WHERE id=?', eid)));
 }));
 api.get('/payroll/runs', can('payroll'), wrap((_req, res) => ok(res, all('SELECT * FROM pay_runs ORDER BY pay_date DESC, id DESC LIMIT 200'))));
 api.get('/payroll/runs/:id', can('payroll'), wrap((req, res) => { const r = pay.loadRun(id(req)); if (!r) throw new HttpError(404, 'Pay run not found'); ok(res, r); }));
@@ -933,6 +951,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   process.on('uncaughtException', (e) => console.error('uncaughtException', e));
   const port = Number(process.env.PORT || 4000);
   try { bootstrapOwner(); } catch (e) { console.error('bootstrap owner failed:', e.message); } // banco já aberto; antes de aceitar conexões
+  try { const n = taxid.sealLegacyTaxIds(); if (n) console.log(`SSN/EIN: ${n} registro(s) antigo(s) em texto puro foram cifrados`); } catch (e) { console.error('SSN/EIN: não foi possível cifrar registros antigos:', e.message); }
   app.listen(port, () => console.log(`Fluxo rodando em http://localhost:${port}`));
   const tick = () => { const job = () => { try { const n = hasFeature('recurring') ? acc.runRecurring().length : 0; if (n) console.log(`${n} fatura(s) recorrente(s) geradas`); auto.generate(); auto.dailyBackup(); } catch (e) { console.error(e); } }; return multi() ? tenants.eachTenant(job) : job(); };
   tick(); setInterval(tick, 60 * 60 * 1000).unref();

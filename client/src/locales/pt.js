@@ -1589,5 +1589,11 @@ export default {
  "Categorize anyway as a separate payment?": "Categorizar mesmo assim como um pagamento separado?",
  "Pay contractor": "Pagar prestador",
  "Invalid payment method": "Forma de pagamento inválida",
- "This looks like an entry you already recorded (same amount, close date). Use Match so it is not counted twice, or confirm that it is a different payment.": "Isto parece um lançamento que você já registrou (mesmo valor, data próxima). Use \"Parear\" para não contar em dobro, ou confirme que é outro pagamento."
+ "This looks like an entry you already recorded (same amount, close date). Use Match so it is not counted twice, or confirm that it is a different payment.": "Isto parece um lançamento que você já registrou (mesmo valor, data próxima). Use \"Parear\" para não contar em dobro, ou confirme que é outro pagamento.",
+ "Show full number": "Mostrar número completo",
+ "Hide": "Ocultar",
+ "Each view is recorded in the audit log.": "Cada consulta fica registrada no histórico de auditoria.",
+ "Saved encrypted. Only the last 4 digits are shown. Contractors and employees need 9 digits.": "Guardado criptografado. Só os 4 últimos dígitos aparecem. Prestadores e funcionários precisam de 9 números.",
+ "SSN/EIN must have 9 digits": "SSN/EIN deve ter 9 números",
+ "Only the owner can view full SSN/EIN numbers": "Só o dono pode ver o SSN/EIN completo"
 };
