@@ -116,7 +116,7 @@ One instance serves many small companies. Scaling beyond a single machine means 
 
 ## Growth pack (Business and Enterprise plans, integrations, online payments)
 
-New plans: **Business** ($599/month, Stripe checkout) and **Enterprise** (from $900/month with 10 companies in the group included, +$100/month per extra company; annual contract; no Stripe price, set by the platform admin or the owner of a self-hosted install). `FLUXO_SALES_EMAIL` shows a "Contact us" button on the pricing page.
+New plans: **Business** ($599/month, Stripe checkout) and **Enterprise** (from $900/month with 10 companies in the group included, +$100/month per extra company; monthly Stripe subscription: base price plus a quantity item for extra companies, kept in sync when companies join or leave the group). `FLUXO_SALES_EMAIL` shows a "Contact us" button on the pricing page.
 
 | Feature | Minimum plan | Where |
 |---|---|---|

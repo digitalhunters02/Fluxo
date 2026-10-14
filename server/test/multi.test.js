@@ -7,7 +7,7 @@ const { server: mock, S } = createStripeMock();
 await new Promise((r) => mock.listen(0, r));
 process.env.FLUXO_DB = ':memory:'; process.env.FLUXO_MULTI = '1'; process.env.FLUXO_REQUIRE_PAYMENT = '1';
 process.env.STRIPE_SECRET_KEY = 'sk_test_123'; process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test'; process.env.STRIPE_API_BASE = `http://127.0.0.1:${mock.address().port}`;
-process.env.APP_URL = 'https://app.fluxo.test';
+process.env.APP_URL = 'https://app.fluxo.test'; process.env.FLUXO_ALLOW_MANUAL_PLAN = '1'; // estes testes trocam de plano à mão
 process.env.FLUXO_ADMIN_EMAIL = 'Root@Fluxo.com'; process.env.FLUXO_ADMIN_PASSWORD = 'uma-senha-bem-longa';
 
 const { get } = await import('../src/db.js');

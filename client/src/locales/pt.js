@@ -1603,5 +1603,8 @@ export default {
  "Owed on cards: {0}": "A pagar nos cartões: {0}",
  "{0} companies in a group included, then ${1}/month for each extra company": "{0} empresas no grupo incluídas, depois US${1}/mês por empresa extra",
  "Enterprise: {0} companies included + {1} extra at ${2} = ${3}/month (plus the base price).": "Enterprise: {0} empresas incluídas + {1} extras a US${2} = US${3}/mês (além do preço base).",
- "Enterprise: {0} companies included, no extra charge yet.": "Enterprise: {0} empresas incluídas, sem cobrança extra por enquanto."
+ "Enterprise: {0} companies included, no extra charge yet.": "Enterprise: {0} empresas incluídas, sem cobrança extra por enquanto.",
+ "Single sign-on and a group of many companies": "Login único e um grupo com muitas empresas",
+ "Priority support": "Suporte prioritário",
+ "Subscribe to this plan to use it.": "Assine este plano para usá-lo."
 };

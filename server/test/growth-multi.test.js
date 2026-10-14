@@ -11,7 +11,7 @@ await new Promise((r) => mock.listen(0, r));
 process.env.FLUXO_DB = ':memory:'; process.env.FLUXO_MULTI = '1';
 process.env.STRIPE_SECRET_KEY = 'sk_test_123'; process.env.STRIPE_API_BASE = `http://127.0.0.1:${mock.address().port}`;
 process.env.STRIPE_WEBHOOK_SECRET = 'whsec_plat'; process.env.STRIPE_CONNECT_WEBHOOK_SECRET = 'whsec_connect';
-process.env.APP_URL = 'https://app.fluxo.test'; process.env.WEBHOOK_ALLOW_INSECURE = '1';
+process.env.APP_URL = 'https://app.fluxo.test'; process.env.WEBHOOK_ALLOW_INSECURE = '1'; process.env.FLUXO_ALLOW_MANUAL_PLAN = '1'; // estes testes trocam de plano à mão
 
 const acc = await import('../src/accounting.js');
 const tenants = await import('../src/tenants.js');

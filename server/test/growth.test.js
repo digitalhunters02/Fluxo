@@ -47,7 +47,7 @@ test('setup e planos novos', async () => {
   assert.equal(s.status, 200); token = s.body.token;
   const plans = await call('/public/plans', 'GET', undefined, '');
   assert.equal(plans.body.prices.business, 599);
-  assert.equal(plans.body.prices.enterprise, null);
+  assert.equal(plans.body.prices.enterprise, 900);
   assert.deepEqual(plans.body.order.slice(-3), ['advanced', 'business', 'enterprise']);
   const me = await call('/me');
   assert.equal(me.body.planInfo.features.approvals, true);

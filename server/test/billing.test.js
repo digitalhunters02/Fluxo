@@ -29,7 +29,7 @@ let evId = 0; const ev = (type, object) => ({ id: `evt_${++evId}`, type, data: {
 test('a página de preços pública informa os valores e que a cobrança está configurada', async () => {
   const r = await call('/public/plans', 'GET', undefined, '');
   assert.equal(r.status, 200); assert.equal(r.body.configured, true); assert.equal(r.body.needsSetup, true);
-  assert.deepEqual(r.body.prices, { free: 0, starter: 29, essentials: 65, plus: 109, advanced: 269, business: 599, enterprise: null });
+  assert.deepEqual(r.body.prices, { free: 0, starter: 29, essentials: 65, plus: 109, advanced: 269, business: 599, enterprise: 900 });
 });
 
 test('checkout público cria os preços sob demanda e abre uma assinatura mensal', async () => {
@@ -47,7 +47,7 @@ test('checkout público cria os preços sob demanda e abre uma assinatura mensal
   // preço já existente é reaproveitado, não recriado
   const before = S.prices.length; await call('/public/checkout', 'POST', { plan: 'plus' }, ''); assert.equal(S.prices.length, before);
   assert.equal(S.calls.at(-1).auth, 'Bearer sk_test_123');
-  assert.equal((await call('/public/checkout', 'POST', { plan: 'enterprise' }, '')).status, 400);
+  assert.equal((await call('/public/checkout', 'POST', { plan: 'platinum' }, '')).status, 400);
   assert.equal((await call('/public/checkout', 'POST', { plan: 'plus', email: 'nao-e-email' }, '')).status, 400);
 });
 
@@ -125,7 +125,7 @@ test('upgrade e downgrade na própria tela: troca o preço com cobrança proporc
   const seat = S.subs.sub_1.items.data.find((i) => i.price.lookup_key === 'fluxo_payroll_seat_monthly'); assert.equal(seat.quantity, 2);
   const off = await call('/billing/change', 'POST', { payroll: false }); assert.equal(off.body.payroll, false);
   assert.equal(S.subs.sub_1.items.data.length, 1);                                                  // só sobrou o plano
-  assert.equal((await call('/billing/change', 'POST', { plan: 'enterprise' })).status, 400);
+  assert.equal((await call('/billing/change', 'POST', { plan: 'platinum' })).status, 400);
 });
 
 test('novo funcionário atualiza a quantidade cobrada da folha', async () => {

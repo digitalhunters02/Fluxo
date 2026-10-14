@@ -251,13 +251,12 @@ function PlanTab() {
           return (
             <Card key={p} className={current ? 'ring-2 ring-brand-500' : ''}>
               <div className="flex items-baseline justify-between"><h3 className="text-lg font-semibold">{PLAN_LABEL[p]}</h3>{current && <Badge status="paid">{t('Current plan')}</Badge>}</div>
-              <div className="num my-2 text-3xl font-bold">{planInfo.prices[p] === null ? t('From ${0}', [planInfo.enterpriseFrom]) : `$${planInfo.prices[p]}`}<span className="text-sm font-normal text-slate-500">{t('/month')}</span></div>
+              <div className="num my-2 text-3xl font-bold">{`$${planInfo.prices[p]}`}<span className="text-sm font-normal text-slate-500">{t('/month')}</span></div>
               <ul className="space-y-1.5 text-sm">
                 {PLAN_FEATURES.map(([f, min]) => <li key={f} className={rank(p) >= rank(min) ? '' : 'text-slate-300 line-through'}>{rank(p) >= rank(min) ? '✓' : '·'} {FEATURE_LABEL[f]}</li>)}
               </ul>
               {p === 'enterprise' && <p className="mt-4 text-sm text-slate-600">{t('{0} companies in a group included, then ${1}/month for each extra company', [planInfo.enterpriseIncluded, planInfo.enterpriseExtra])}</p>}
-              {p === 'enterprise' && !current && <p className="mt-2 text-sm text-slate-600">{t('Annual contract, quoted for your company. Ask your Fluxo contact to switch you to Enterprise.')}</p>}
-              {owner && !current && p !== 'enterprise' && (stripeOn
+              {owner && !current && (stripeOn
                 ? (bill.managed
                   ? <Button className="mt-4 w-full" variant={up ? 'primary' : 'ghost'} disabled={busy} onClick={() => confirm(p === 'free' ? t('Switch to Free? Your paid plan keeps running until the end of the period you already paid.') : t('Switch to the {0} plan? The difference is prorated on your next invoice.', [PLAN_LABEL[p]])) && change({ plan: p })}>{up ? t('Upgrade') : t('Downgrade')}</Button>
                   : <Button className="mt-4 w-full" disabled={busy} onClick={() => subscribe(p)}>{t('Subscribe')}</Button>)

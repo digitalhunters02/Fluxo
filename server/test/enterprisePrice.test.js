@@ -34,7 +34,7 @@ test('a conta do preço: US$ 900 com 10 empresas, +US$ 100 por empresa a mais', 
 test('a página de planos mostra o preço novo', async () => {
   const r = await call('/public/plans');
   assert.equal(r.status, 200); assert.equal(r.body.enterpriseFrom, 900); assert.equal(r.body.enterpriseIncluded, 10); assert.equal(r.body.enterpriseExtra, 100);
-  assert.equal(r.body.prices.business, 599); assert.equal(r.body.prices.enterprise, null);
+  assert.equal(r.body.prices.business, 599); assert.equal(r.body.prices.enterprise, 900);
 });
 
 test('Business: limite de 5 e sem cobrança por empresa extra', async () => {

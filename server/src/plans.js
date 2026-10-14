@@ -4,11 +4,10 @@ import { HttpError } from './accounting.js';
 
 export const PLAN_ORDER = ['free', 'starter', 'essentials', 'plus', 'advanced', 'business', 'enterprise'];
 /** Planos com assinatura no Stripe (o plano free não tem preço nem cobrança). */
-// Enterprise é contrato anual sob consulta: não tem preço nem assinatura no Stripe (o plano é definido pelo administrador).
-export const PAID_PLANS = PLAN_ORDER.filter((p) => p !== 'free' && p !== 'enterprise');
-export const PLAN_PRICES = { free: 0, starter: 29, essentials: 65, plus: 109, advanced: 269, business: 599, enterprise: null };
-/** Enterprise: valor de partida por mês (contrato anual sob consulta). Inclui 10 empresas no grupo; cada empresa a mais soma US$ 100 por mês. */
-export const ENTERPRISE_FROM = 900;
+export const PAID_PLANS = PLAN_ORDER.filter((p) => p !== 'free');
+export const PLAN_PRICES = { free: 0, starter: 29, essentials: 65, plus: 109, advanced: 269, business: 599, enterprise: 900 };
+/** Enterprise: US$ 900/mês, assinatura mensal no Stripe. Inclui 10 empresas no grupo; cada empresa a mais soma US$ 100 por mês (item de quantidade). */
+export const ENTERPRISE_FROM = PLAN_PRICES.enterprise;
 export const ENTERPRISE_INCLUDED_COMPANIES = 10;
 export const ENTERPRISE_EXTRA_COMPANY = 100;
 /** Quanto o Enterprise custa por mês para um grupo com este número de empresas. */

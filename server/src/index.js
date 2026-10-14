@@ -352,6 +352,8 @@ api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), tenant: mul
 api.get('/plan', wrap((_req, res) => ok(res, planInfo())));
 api.put('/plan', can('users', true), wrap((req, res) => {
   if (getSetting('billing_managed', '0') === '1' && process.env.FLUXO_ALLOW_MANUAL_PLAN !== '1') throw new HttpError(403, 'Your plan is managed by your subscription. Use Upgrade or Manage billing.');
+  // Hospedado com cobrança ligada: ninguém sobe de plano sozinho sem assinar (senão o plano pago sairia de graça). Descer para o Free pode.
+  if (multi() && billing.stripeConfigured() && process.env.FLUXO_ALLOW_MANUAL_PLAN !== '1' && req.body.plan !== undefined && req.body.plan !== 'free' && req.body.plan !== currentPlan()) throw new HttpError(402, 'Subscribe to this plan to use it.');
   setPlan({ plan: req.body.plan, payroll: req.body.payroll }); audit(req, 'update', 'settings', null, `plan ${currentPlan()}`); ok(res, planInfo()); }));
 api.post('/me/password', wrap((req, res) => {
   if (!verifyPassword(String(req.body.current || ''), req.user.password_hash)) throw bad('Current password is incorrect');

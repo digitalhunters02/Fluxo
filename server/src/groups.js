@@ -3,6 +3,7 @@
 // "Intercompany" (a receber/pagar entre as empresas, receita/despesa entre elas) saem da soma e o relatório mostra se fecham em zero.
 import * as tenants from './tenants.js';
 import * as rep from './reports.js';
+import * as billing from './billing.js';
 import { HttpError } from './accounting.js';
 import { limitFor, hasFeature, currentPlan, enterpriseMonthly, ENTERPRISE_INCLUDED_COMPANIES, ENTERPRISE_EXTRA_COMPANY } from './plans.js';
 
@@ -17,8 +18,8 @@ export function info() {
   const members = tenants.groupMembers(g.id).map((m) => ({ ...m, owner: m.slug === g.owner_slug }));
   // Enterprise: o preço acompanha o número de empresas do grupo (5 incluídas, depois US$ 100 por empresa).
   const enterprise = tenants.inTenant(g.owner_slug, () => currentPlan() === 'enterprise');
-  const billing = enterprise ? { included: ENTERPRISE_INCLUDED_COMPANIES, extra: Math.max(0, members.length - ENTERPRISE_INCLUDED_COMPANIES), perCompany: ENTERPRISE_EXTRA_COMPANY, monthly: enterpriseMonthly(members.length) } : null;
-  return { group: { id: g.id, name: g.name, isOwner: g.owner_slug === slug, members, limit: ownerLimit(g.owner_slug), billing } };
+  const cost = enterprise ? { included: ENTERPRISE_INCLUDED_COMPANIES, extra: Math.max(0, members.length - ENTERPRISE_INCLUDED_COMPANIES), perCompany: ENTERPRISE_EXTRA_COMPANY, monthly: enterpriseMonthly(members.length) } : null;
+  return { group: { id: g.id, name: g.name, isOwner: g.owner_slug === slug, members, limit: ownerLimit(g.owner_slug), billing: cost } };
 }
 export function create(name) {
   if (!String(name || '').trim()) throw bad('Name the group');
@@ -32,6 +33,10 @@ export function invite() {
   if (lim != null && tenants.groupMembers(g.id).length >= lim) throw new HttpError(402, 'Your plan allows up to ' + lim + ' companies in a group', { feature: 'multi_company', limit: lim });
   return { code: tenants.createInvite(g.id), expiresInDays: 7 };
 }
+/** Atualiza no Stripe as empresas extras cobradas do dono do grupo Enterprise. Falha do Stripe não impede entrar/sair; fica no registro. */
+const syncOwnerBilling = (ownerSlug) => {
+  try { Promise.resolve(tenants.inTenant(ownerSlug, () => billing.syncEnterpriseExtras())).catch((e) => console.error('enterprise extras sync:', e.message)); } catch (e) { console.error('enterprise extras sync:', e.message); }
+};
 export function join(code) {
   const slug = tenants.currentSlug();
   if (!String(code || '').trim()) throw bad('Enter the invitation code');
@@ -40,9 +45,15 @@ export function join(code) {
   const lim = ownerLimit(inv.owner_slug); // o limite é o do plano de quem criou o grupo
   const r = tenants.joinWithCode(code, slug, lim);
   if (r.error) throw new HttpError(/limit/.test(r.error) ? 402 : 400, r.error);
+  syncOwnerBilling(inv.owner_slug);
   return info();
 }
-export function leave() { tenants.leaveGroup(tenants.currentSlug()); return info(); }
+export function leave() {
+  const g = tenants.groupOf(tenants.currentSlug());
+  tenants.leaveGroup(tenants.currentSlug());
+  if (g) syncOwnerBilling(g.owner_slug); // se o dono saiu o grupo acabou: as extras voltam a zero
+  return info();
+}
 
 function members() {
   const g = tenants.groupOf(tenants.currentSlug());

@@ -3,8 +3,8 @@
 import crypto from 'node:crypto';
 import { get, run, tx, getSetting, setSetting } from './db.js';
 import { HttpError } from './accounting.js';
-import { link as linkTenant, currentSlug } from './tenants.js';
-import { PAID_PLANS, PLAN_PRICES, PAYROLL_ADDON_PRICE, setPlan } from './plans.js';
+import { link as linkTenant, currentSlug, groupOf, groupMembers } from './tenants.js';
+import { PAID_PLANS, PLAN_PRICES, PAYROLL_ADDON_PRICE, ENTERPRISE_INCLUDED_COMPANIES, ENTERPRISE_EXTRA_COMPANY, setPlan } from './plans.js';
 
 const bad = (m) => new HttpError(400, m);
 const env = () => process.env;
@@ -40,7 +40,7 @@ async function stripe(method, path, params = {}, headers = {}) {
 }
 
 /* ------------------------------------ preços ------------------------------------ */
-const KEY = { plan: (p) => `fluxo_plan_${p}_monthly`, base: 'fluxo_payroll_base_monthly', seat: 'fluxo_payroll_seat_monthly' };
+const KEY = { plan: (p) => `fluxo_plan_${p}_monthly`, base: 'fluxo_payroll_base_monthly', seat: 'fluxo_payroll_seat_monthly', extra: 'fluxo_enterprise_extra_company_monthly' };
 const NAME = { free: 'Free', starter: 'Starter', essentials: 'Essentials', plus: 'Plus', advanced: 'Advanced', business: 'Business', enterprise: 'Enterprise' };
 const priceCache = new Map();
 export const _resetPriceCache = () => priceCache.clear();
@@ -57,10 +57,18 @@ async function ensurePrice(lookupKey, cents, productName) {
 }
 export async function planPrice(plan) { return ensurePrice(KEY.plan(plan), PLAN_PRICES[plan] * 100, `Fluxo ${NAME[plan]}`); }
 const payrollPrices = async () => ({ base: await ensurePrice(KEY.base, PAYROLL_ADDON_PRICE.base * 100, 'Fluxo Payroll add-on'), seat: await ensurePrice(KEY.seat, PAYROLL_ADDON_PRICE.perEmployee * 100, 'Fluxo Payroll — per employee') });
+const extraPrice = () => ensurePrice(KEY.extra, ENTERPRISE_EXTRA_COMPANY * 100, 'Fluxo Enterprise — extra company');
+/** Empresas do grupo além das incluídas no Enterprise (só conta quando esta empresa é a dona do grupo). */
+export function extraCompanies() {
+  const slug = currentSlug();
+  const g = slug ? groupOf(slug) : null;
+  return g && g.owner_slug === slug ? Math.max(0, groupMembers(g.id).length - ENTERPRISE_INCLUDED_COMPANIES) : 0;
+}
 const activeEmployees = () => get('SELECT COUNT(*) AS n FROM employees WHERE active=1').n;
 
-async function lineItems(plan, payroll, seats) {
+async function lineItems(plan, payroll, seats, extras = 0) {
   const items = [{ price: (await planPrice(plan)).id, quantity: 1 }];
+  if (plan === 'enterprise' && extras > 0) items.push({ price: (await extraPrice()).id, quantity: extras });
   if (payroll) { const p = await payrollPrices(); items.push({ price: p.base.id, quantity: 1 }); if (seats > 0) items.push({ price: p.seat.id, quantity: seats }); }
   return items;
 }
@@ -102,7 +110,7 @@ export async function createCheckout({ plan, payroll, origin, email, signup = fa
   if (!PAID_PLANS.includes(plan)) throw bad('Invalid plan');
   const customer = getSetting('stripe_customer_id', '');
   const session = await stripe('POST', '/v1/checkout/sessions', {
-    mode: 'subscription', line_items: await lineItems(plan, !!payroll, signup ? 0 : activeEmployees()),
+    mode: 'subscription', line_items: await lineItems(plan, !!payroll, signup ? 0 : activeEmployees(), signup ? 0 : extraCompanies()),
     ...(customer && !signup ? { customer } : email ? { customer_email: email } : {}),
     success_url: signup ? `${origin}/welcome?session_id={CHECKOUT_SESSION_ID}` : `${origin}/settings/plan?checkout=success`,
     cancel_url: signup ? `${origin}/pricing?canceled=1` : `${origin}/settings/plan?checkout=canceled`,
@@ -136,6 +144,13 @@ export async function changeSubscription({ plan, payroll }) {
   if (plan && !PAID_PLANS.includes(plan)) throw bad('Invalid plan');
   const planItem = cur.find((i) => PAID_PLANS.some((p) => lookup(i) === KEY.plan(p)));
   if (planItem && wantPlan && lookup(planItem) !== KEY.plan(wantPlan)) items.push({ id: planItem.id, price: (await planPrice(wantPlan)).id });
+  // Enterprise: a empresa extra do grupo é um item de quantidade (US$ 100 cada, da 11ª em diante).
+  const extraItem = cur.find((i) => lookup(i) === KEY.extra);
+  if (wantPlan === 'enterprise') {
+    const n = extraCompanies();
+    if (extraItem && extraItem.quantity !== n) items.push(n > 0 ? { id: extraItem.id, quantity: n } : { id: extraItem.id, deleted: 'true' });
+    else if (!extraItem && n > 0) items.push({ price: (await extraPrice()).id, quantity: n });
+  } else if (extraItem) items.push({ id: extraItem.id, deleted: 'true' });
   const hasPayroll = cur.some((i) => lookup(i) === KEY.base);
   if (payroll !== undefined && payroll !== hasPayroll) {
     if (payroll) { const p = await payrollPrices(); items.push({ price: p.base.id, quantity: 1 }); if (activeEmployees() > 0) items.push({ price: p.seat.id, quantity: activeEmployees() }); }
@@ -158,6 +173,20 @@ export async function syncPayrollSeats() {
   if (seat && n === 0) await stripe('POST', `/v1/subscriptions/${subId}`, { items: [{ id: seat.id, deleted: 'true' }], proration_behavior: 'create_prorations' });
   else if (seat) await stripe('POST', `/v1/subscriptions/${subId}`, { items: [{ id: seat.id, quantity: n }], proration_behavior: 'create_prorations' });
   else if (n > 0) await stripe('POST', `/v1/subscriptions/${subId}`, { items: [{ price: (await payrollPrices()).seat.id, quantity: n }], proration_behavior: 'create_prorations' });
+}
+
+/** Mantém a cobrança das empresas extras do grupo Enterprise em dia (chamado quando uma empresa entra ou sai do grupo). */
+export async function syncEnterpriseExtras() {
+  if (!stripeConfigured()) return;
+  const subId = getSetting('stripe_subscription_id', '');
+  if (!subId || getSetting('plan', 'free') !== 'enterprise') return;
+  const sub = await stripe('GET', `/v1/subscriptions/${subId}`);
+  if (['canceled', 'incomplete_expired'].includes(sub.status)) return;
+  const item = sub.items.data.find((i) => i.price?.lookup_key === KEY.extra);
+  const n = extraCompanies();
+  if ((item?.quantity || 0) === n) return;
+  const items = item ? [n > 0 ? { id: item.id, quantity: n } : { id: item.id, deleted: 'true' }] : [{ price: (await extraPrice()).id, quantity: n }];
+  await stripe('POST', `/v1/subscriptions/${subId}`, { items, proration_behavior: 'create_prorations' });
 }
 
 /** Confirma no Stripe que a sessão de checkout foi paga e devolve os dados da assinatura. */
