@@ -7,6 +7,7 @@ import { download } from '../csv.js';
 import { Button, Card, ErrorBox, Field, Input, Loading, PageHeader, Select, Table, useLoad } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
 import { Lock, UpgradeNotice } from '../components/plan.jsx';
+import { AiExplain } from '../components/AiAssist.jsx';
 
 const year = today().slice(0, 4);
 const PRESETS = {
@@ -177,6 +178,7 @@ export default function Reports() {
               <Field label={t('From')}><Input type="date" value={from} onChange={(e) => setRange([e.target.value, to])} /></Field><Field label={t('To')}><Input type="date" value={to} onChange={(e) => setRange([from, e.target.value])} /></Field></>
               : <Field label={t('As of')}><Input type="date" value={asof} onChange={(e) => setAsof(e.target.value)} /></Field>}
           </div>}
+          {report === 'pnl' && !locked && <AiExplain from={from} to={to} />}
           {locked ? <UpgradeNotice feature={FEATURE_OF[report]} /> : loading ? <Loading /> : error ? <div className="p-4"><ErrorBox error={error} retry={reload} /></div> : <View d={data} />}
         </Card>
       </div>

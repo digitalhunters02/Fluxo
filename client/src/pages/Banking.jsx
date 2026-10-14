@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { api, qs } from '../api.js';
 import { date, fromCents, money, toCents, today } from '../format.js';
 import { parseCsv, parseDate } from '../csv.js';
-import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad } from '../components/ui.jsx';
+import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad, useToast } from '../components/ui.jsx';
 import { SearchBox, useSearch } from '../components/search.jsx';
 import { useAuth } from '../App.jsx';
 
@@ -83,10 +83,11 @@ function CategorizeModal({ txn, accounts, contacts, onClose, onDone }) {
   );
 }
 
-const SOURCES = { rule: 'regra', history: t('history'), existing: t('existing entry') };
+const SOURCES = { rule: 'regra', history: t('history'), existing: t('existing entry'), ai: t('AI') };
 
 function Feed({ accounts, accountId }) {
-  const { can, } = useAuth();
+  const { can, has } = useAuth();
+  const toast = useToast();
   const w = can('banking', true);
   const [status, setStatus] = useState('pending');
   const [q, setQ, search] = useSearch();
@@ -100,13 +101,16 @@ function Feed({ accounts, accountId }) {
   const account = accounts.find((a) => a.id === Number(accountId));
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} retry={reload} />;
-  const sugg = data.txns.filter((t) => t.status === 'pending' && (t.suggested_account_id || t.suggested_line_id)).length;
+  const sugg = data.txns.filter((t) => t.status === 'pending' && t.suggestion_source !== 'ai' && (t.suggested_account_id || t.suggested_line_id)).length;
+  const aiSugg = data.txns.filter((t) => t.status === 'pending' && t.suggestion_source === 'ai' && t.suggested_account_id).length;
   return (
     <>
       <SearchBox className="mb-3 max-w-sm" value={q} onChange={setQ} placeholder={t('Search transactions…')} />
       <div className="no-print mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2">{[['pending', t('To review')], ['categorized', t('Categorized')], ['matched', t('Matched')], ['ignored', t('Ignored')]].map(([k, l]) => <button key={k} onClick={() => setStatus(k)} className={`rounded-full px-3 py-1 text-sm ${status === k ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200'}`}>{l}</button>)}</div>
         {w && <div className="flex gap-2">
+          {status === 'pending' && has('ai_assistant') && <Button variant="ghost" disabled={busy} data-testid="ai-categorize" onClick={() => run(async () => { const r = await api.post('/ai/categorize', {}); reload(); toast(r.considered === 0 ? t('Nothing left to suggest.') : t('{0} suggestions added. Check them before you accept.', [r.suggested])); return r; })}>{t('Suggest with AI')}</Button>}
+          {status === 'pending' && aiSugg > 0 && <Button variant="ghost" disabled={busy} data-testid="ai-accept" onClick={() => run(async () => { const r = await api.post('/banking/accept-all', { account_id: accountId || undefined, ai: true }); reload(); return r; }, t('Suggestions accepted'))}>{t('✓ Accept')}{' '}{aiSugg}{' '}{t('AI suggestion(s)')}</Button>}
           {status === 'pending' && sugg > 0 && <Button variant="ghost" disabled={busy} onClick={() => run(async () => { const r = await api.post('/banking/accept-all', { account_id: accountId || undefined }); reload(); return r; }, t('Suggestions accepted'))}>{t('✓ Accept')}{' '}{sugg}{' '}{t('suggestion(s)')}</Button>}
           <Button onClick={() => setImporting(true)}>{t('Import CSV statement')}</Button>
         </div>}

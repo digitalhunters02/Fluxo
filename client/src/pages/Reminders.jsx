@@ -6,6 +6,7 @@ import { date, money, today } from '../format.js';
 import { Button, Card, ErrorBox, Field, Input, Loading, PageHeader, Select, useAction, useLoad } from '../components/ui.jsx';
 import { SearchBox, useSearch } from '../components/search.jsx';
 import { useAuth } from '../App.jsx';
+import { AiCollectionButton } from '../components/AiAssist.jsx';
 
 const REPEAT = () => ({ '': t('Does not repeat'), weekly: t('Weekly'), monthly: t('Monthly'), quarterly: t('Quarterly'), yearly: t('Yearly') });
 
@@ -70,6 +71,7 @@ export default function Reminders() {
               <div className="flex flex-wrap gap-2">
                 {r.link && <Link className="btn btn-ghost" to={r.link}>{t('Open§action')}</Link>}
                 {r.kind === 'overdue' && <Button variant="ghost" onClick={() => emailCustomer(r, user.tenant)}>{t('Email customer')}</Button>}
+                {r.kind === 'overdue' && <AiCollectionButton docId={r.data.id} email={r.data.email} tenant={user.tenant} />}
                 <Button variant="ghost" disabled={busy} onClick={() => act(() => api.post(`/reminders/${r.id}/snooze`, { days: 1 }), t('Snoozed until tomorrow'))}>{t('Snooze')}</Button>
                 <Button disabled={busy} onClick={() => act(() => api.post(`/reminders/${r.id}/done`), t('Done'))}>{t('Done')}</Button>
                 {r.manual && <Button variant="danger" disabled={busy} onClick={() => confirm(t('Delete this reminder?')) && act(() => api.del(`/reminders/${r.id}`))}>{t('Delete')}</Button>}

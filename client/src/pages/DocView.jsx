@@ -7,6 +7,7 @@ import { api } from '../api.js';
 import { date, fromCents, money, number, toCents, today } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, useAction, useLoad, useToast } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
+import { AiCollectionButton } from '../components/AiAssist.jsx';
 
 const NAMES = { invoice: t('Invoice'), estimate: t('Estimate'), bill: t('Bill'), credit: t('Credit memo'), po: t('Purchase order') };
 
@@ -118,6 +119,7 @@ export default function DocView() {
         {!purchase && <Button variant="ghost" onClick={() => window.print()}>{t('Print / PDF')}</Button>}
         {!purchase && <Button variant="ghost" onClick={async () => { try { await navigator.clipboard.writeText(link); toast(t('Link copied')); } catch { prompt(t('Copy the link:'), link); } }}>{t('Copy link')}</Button>}
         {!purchase && d.contact_email && <a className="btn btn-ghost" href={`mailto:${d.contact_email}?subject=${encodeURIComponent(`${NAMES[d.type]} ${d.number}`)}&body=${encodeURIComponent(t('Hi! Here is the link to view the document: {0}', [link]))}`}>{t('Send by email')}</a>}
+        {d.type === 'invoice' && d.overdue && w && <AiCollectionButton docId={d.id} email={d.contact_email} tenant={user.tenant} />}
         {!purchase && posted && has('email_invoices') && w && <Button variant="ghost" onClick={() => setEmailing(true)}>{t('Email to customer')}</Button>}
         {d.type === 'bill' && needsApproval && <span className="rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800" data-testid="needs-approval">{t('Needs approval')}</span>}
         {w && d.type === 'bill' && needsApproval && <><Button disabled={busy} onClick={() => act('approve', t('Approved'))}>{t('Approve')}</Button><Button variant="ghost" disabled={busy} onClick={() => act('reject', t('Rejected'))}>{t('Reject')}</Button></>}

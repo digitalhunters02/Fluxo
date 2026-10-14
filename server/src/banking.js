@@ -164,14 +164,15 @@ export function undoTxn(id) {
   });
 }
 
-export function acceptAllSuggestions(account_id, user) {
+/** `ai`: false (padrão) ignora as sugestões da IA; true aceita só as da IA. A pessoa escolhe de propósito. */
+export function acceptAllSuggestions(account_id, user, { ai = false } = {}) {
   let ok = 0, matched = 0;
   refreshMatches(account_id || null);
   const pend = all(`SELECT * FROM bank_txns WHERE status='pending' ${account_id ? 'AND account_id=?' : ''}`, ...(account_id ? [account_id] : []));
   for (const t of pend) {
     try {
-      if (t.suggested_line_id) { matchTxn(t.id, t.suggested_line_id); matched++; }
-      else if (t.suggested_account_id) { categorize(t.id, { account_id: t.suggested_account_id }, user); ok++; }
+      if (t.suggested_line_id && !ai) { matchTxn(t.id, t.suggested_line_id); matched++; }
+      else if (t.suggested_account_id && (t.suggestion_source === 'ai') === !!ai) { categorize(t.id, { account_id: t.suggested_account_id }, user); ok++; }
     } catch { /* skip invalid suggestions */ }
   }
   return { categorized: ok, matched };

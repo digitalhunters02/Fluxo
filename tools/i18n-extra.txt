@@ -1183,3 +1183,30 @@ The file is too large (4 MB maximum). Split it in two. || O arquivo é grande de
 Could not find the header row. Check that this is the right file for this step. || Não achei a linha de títulos. Confira se este é o arquivo certo para este passo. || No encontré la fila de títulos. Verifique que sea el archivo correcto para este paso.
 Nothing to import from this file. || Nada para importar neste arquivo. || Nada que importar de este archivo.
 Enter the conversion date (the date your balances are as of). || Informe a data de corte (a data dos seus saldos). || Ingrese la fecha de corte (la fecha de sus saldos).
+{0} of {1} AI requests left this month. || Restam {0} de {1} pedidos de IA neste mês. || Quedan {0} de {1} solicitudes de IA este mes.
+Write with AI || Escrever com IA || Escribir con IA
+Payment reminder || Lembrete de pagamento || Recordatorio de pago
+Copy the text: || Copie o texto: || Copie el texto:
+Open in my email || Abrir no meu e-mail || Abrir en mi correo
+Writing… || Escrevendo… || Escribiendo…
+Could not write it right now. || Não consegui escrever agora. || No pude escribirlo ahora.
+Subject || Assunto || Asunto
+Message || Mensagem || Mensaje
+Tone || Tom || Tono
+Friendly || Amigável || Amistoso
+Firm || Firme || Firme
+Written by AI. Read it before you send it. || Escrito por IA. Leia antes de enviar. || Escrito por IA. Léalo antes de enviar.
+Standard text (the AI answer did not match your invoice, so it was not used). || Texto padrão (a resposta da IA não bateu com a sua fatura, então não foi usada). || Texto estándar (la respuesta de la IA no coincidió con su factura, por eso no se usó).
+Explain in plain words || Explicar em palavras simples || Explicar en palabras sencillas
+Written by AI from the numbers in this report. Check it against the report. || Escrito por IA a partir dos números deste relatório. Confira com o relatório. || Escrito por IA a partir de las cifras de este informe. Compárelo con el informe.
+Summary generated from the numbers in this report. || Resumo gerado a partir dos números deste relatório. || Resumen generado a partir de las cifras de este informe.
+AI || IA || IA
+Nothing left to suggest. || Não há mais nada para sugerir. || No queda nada que sugerir.
+{0} suggestions added. Check them before you accept. || {0} sugestões adicionadas. Confira antes de aceitar. || {0} sugerencias agregadas. Revíselas antes de aceptar.
+Suggest with AI || Sugerir com IA || Sugerir con IA
+AI suggestion(s) || sugestão(ões) da IA || sugerencia(s) de la IA
+The AI assistant is not connected on this server yet. || O assistente de IA ainda não está conectado neste servidor. || El asistente de IA aún no está conectado en este servidor.
+The AI assistant is not included in your plan. || O assistente de IA não está incluído no seu plano. || El asistente de IA no está incluido en su plan.
+The AI assistant could not answer right now. Try again in a moment. || O assistente de IA não conseguiu responder agora. Tente de novo em instantes. || El asistente de IA no pudo responder ahora. Intente de nuevo en un momento.
+This invoice has nothing open to collect. || Esta fatura não tem nada em aberto para cobrar. || Esta factura no tiene nada abierto para cobrar.
+You used all your AI requests for this month. || Você usou todos os seus pedidos de IA deste mês. || Usó todas sus solicitudes de IA de este mes.

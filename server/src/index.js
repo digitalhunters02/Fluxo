@@ -17,6 +17,7 @@ import * as pay from './payroll.js';
 import * as taxid from './taxid.js';
 import * as importer from './importer.js';
 import * as stax from './salestax.js';
+import * as ai from './aiAssist.js';
 import * as plaidSvc from './plaid.js';
 import * as billing from './billing.js';
 import { reportLead } from './harborLead.js';
@@ -650,7 +651,7 @@ api.post('/banking/txns/:id/categorize', can('banking', true), wrap((req, res) =
 api.post('/banking/txns/:id/match', can('banking', true), wrap((req, res) => ok(res, bank.matchTxn(id(req), Number(req.body.line_id)))));
 api.post('/banking/txns/:id/undo', can('banking', true), wrap((req, res) => { bank.undoTxn(id(req)); ok(res, {}); }));
 api.post('/banking/txns/:id/ignore', can('banking', true), wrap((req, res) => { run('UPDATE bank_txns SET status=\'ignored\' WHERE id=? AND status=\'pending\'', id(req)); ok(res, {}); }));
-api.post('/banking/accept-all', can('banking', true), wrap((req, res) => { const r = bank.acceptAllSuggestions(req.body.account_id ? Number(req.body.account_id) : null, req.user); audit(req, 'accept-all', 'bank', null, JSON.stringify(r)); ok(res, r); }));
+api.post('/banking/accept-all', can('banking', true), wrap((req, res) => { const r = bank.acceptAllSuggestions(req.body.account_id ? Number(req.body.account_id) : null, req.user, { ai: !!req.body.ai }); audit(req, 'accept-all', 'bank', null, JSON.stringify(r)); ok(res, r); }));
 api.get('/banking/rules', can('banking'), wrap((_req, res) => ok(res, all('SELECT r.*, a.name AS account_name FROM bank_rules r JOIN accounts a ON a.id=r.account_id ORDER BY r.id'))));
 api.post('/banking/rules', can('banking', true), wrap((req, res) => {
   need(req.body.pattern, 'Enter the text to match'); acc.getAccount(req.body.account_id);
@@ -875,6 +876,11 @@ api.get('/reports/ap-aging', can('reports'), wrap((req, res) => ok(res, rep.agin
 api.get('/reports/sales-by-customer', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.salesByCustomer(f, t)); }));
 api.get('/reports/expenses-by-category', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.expensesByCategory(f, t)); }));
 api.get('/reports/expenses-by-vendor', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.expensesByVendor(f, t)); }));
+// Assistente de IA (Essentials em diante, com franquia mensal por plano): sugere categorias do banco, escreve cobranças e explica o período.
+api.get('/ai/status', wrap((_req, res) => ok(res, { ...ai.aiStatus(), enabled: hasFeature('ai_assistant') })));
+api.post('/ai/categorize', can('banking', true), requireFeature('ai_assistant'), wrap(async (req, res) => { const r = await ai.categorizePending(); audit(req, 'ai', 'bank', null, `categorize ${r.suggested}/${r.considered}`); ok(res, { ...r, status: ai.aiStatus() }); }));
+api.post('/ai/collection', can('sales', true), requireFeature('ai_assistant'), wrap(async (req, res) => { const r = await ai.draftCollection(Number(req.body?.doc_id), { tone: req.body?.tone, lang: req.body?.lang }); audit(req, 'ai', 'invoice', Number(req.body?.doc_id), `collection ${r.source}`); ok(res, { ...r, status: ai.aiStatus() }); }));
+api.post('/ai/explain', can('reports'), requireFeature('ai_assistant'), wrap(async (req, res) => { const r = await ai.explainPeriod(req.body?.from, req.body?.to, { lang: req.body?.lang }); ok(res, { ...r, status: ai.aiStatus() }); }));
 // Imposto sobre vendas: alíquotas com nome, estado de origem, limites de obrigação por estado e os dois relatórios.
 api.get('/tax/rates', can('sales'), wrap((_req, res) => ok(res, { rates: stax.listRates(), homeState: stax.homeState(), states: stax.STATES })));
 api.post('/tax/rates', can('settings', true), wrap((req, res) => { const r = stax.saveRate(req.body || {}); audit(req, 'create', 'tax_rate', r.id, `${r.name} ${r.rate}%`); ok(res, r); }));
