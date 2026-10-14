@@ -621,17 +621,7 @@ api.get('/banking/accounts', can('banking'), wrap((_req, res) => ok(res, all(`SE
   (SELECT MAX(statement_date) FROM reconciliations WHERE account_id=a.id) AS last_reconciled
   FROM accounts a WHERE a.active=1 AND ((a.type='asset' AND a.subtype='bank') OR a.subtype='credit_card') ORDER BY a.code`)
   .map((a) => ({ ...a, balance: a.type === 'asset' ? a.net : -a.net })))));
-api.get('/banking/txns', can('banking'), wrap((req, res) => {
-  const status = req.query.status || 'pending';
-  const params = [status]; let where = 'b.status=?';
-  if (req.query.account_id) { where += ' AND b.account_id=?'; params.push(Number(req.query.account_id)); }
-  const rows = all(`SELECT b.*, sa.name AS suggested_account_name, a.name AS account_name FROM bank_txns b JOIN accounts a ON a.id=b.account_id
-    LEFT JOIN accounts sa ON sa.id=b.suggested_account_id WHERE ${where} ORDER BY b.date DESC, b.id DESC LIMIT 1000`, ...params);
-  for (const r of rows) if (r.suggested_line_id) {
-    r.match = get('SELECT je.memo, je.date, je.source_type FROM journal_lines jl JOIN journal_entries je ON je.id=jl.entry_id WHERE jl.id=?', r.suggested_line_id) || null;
-  }
-  ok(res, rows);
-}));
+api.get('/banking/txns', can('banking'), wrap((req, res) => ok(res, bank.listTxns({ status: req.query.status || 'pending', account_id: req.query.account_id }))));
 api.post('/banking/import', can('banking', true), wrap((req, res) => { const r = bank.importTxns(Number(req.body.account_id), req.body.rows); audit(req, 'import', 'bank', null, `${r.added} novas`); ok(res, r); }));
 api.post('/banking/txns/:id/categorize', can('banking', true), wrap((req, res) => ok(res, bank.categorize(id(req), req.body, req.user))));
 api.post('/banking/txns/:id/match', can('banking', true), wrap((req, res) => ok(res, bank.matchTxn(id(req), Number(req.body.line_id)))));

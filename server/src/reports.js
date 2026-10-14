@@ -187,12 +187,15 @@ export function dashboard() {
   const arSoon = get(`SELECT COALESCE(SUM(total-paid),0) AS v FROM docs WHERE type='invoice' AND status IN ('sent','partial') AND due_date<=?`, horizon).v;
   const apSoon = get(`SELECT COALESCE(SUM(total-paid),0) AS v FROM docs WHERE type='bill' AND status IN ('open','partial') AND due_date<=?`, horizon).v;
   const pendingBank = get(`SELECT COUNT(*) AS n FROM bank_txns WHERE status='pending'`).n;
+  // Saldo real informado pelo banco (Plaid) nas contas ligadas: o "caixa" acima é o dos livros e só fecha com ele quando tudo foi revisado.
+  const linked = all(`SELECT type, balance_current FROM plaid_accounts WHERE linked_account_id IS NOT NULL AND balance_current IS NOT NULL`);
+  const bank = linked.length ? { cash: linked.filter((a) => !/credit/i.test(a.type)).reduce((s, a) => s + a.balance_current, 0), cardDebt: linked.filter((a) => /credit/i.test(a.type)).reduce((s, a) => s + a.balance_current, 0) } : null;
   const lowStock = get(`SELECT COUNT(*) AS n FROM items WHERE track_inventory=1 AND active=1 AND qty_on_hand<=reorder_point`).n;
   const upcoming = all(`SELECT d.id, d.type, d.number, d.due_date, d.total-d.paid AS balance, c.name AS contact_name FROM docs d JOIN contacts c ON c.id=d.contact_id
     WHERE d.status IN ('sent','open','partial') AND d.total-d.paid>0 ORDER BY d.due_date LIMIT 8`);
   return {
     cash, receivable: ar, receivableOverdue: arOver, payable: ap, payableOverdue: apOver, month: { income: month.totalIncome, expense: month.totalCogs + month.totalOpex, profit: month.netIncome },
-    forecast30: cash + arSoon - apSoon, series: monthlySeries(6), topExpenses: expensesByCategory(monthStart, t).slice(0, 5), pendingBank, lowStock, upcoming,
+    bank, forecast30: cash + arSoon - apSoon, series: monthlySeries(6), topExpenses: expensesByCategory(monthStart, t).slice(0, 5), pendingBank, lowStock, upcoming,
   };
 }
 

@@ -1595,5 +1595,10 @@ export default {
  "Each view is recorded in the audit log.": "Cada consulta queda registrada en el historial de auditoría.",
  "Saved encrypted. Only the last 4 digits are shown. Contractors and employees need 9 digits.": "Se guarda cifrado. Solo se ven los últimos 4 dígitos. Proveedores y empleados necesitan 9 números.",
  "SSN/EIN must have 9 digits": "SSN/EIN debe tener 9 números",
- "Only the owner can view full SSN/EIN numbers": "Solo el propietario puede ver el SSN/EIN completo"
+ "Only the owner can view full SSN/EIN numbers": "Solo el propietario puede ver el SSN/EIN completo",
+ "OK = it is the same one (link them). Cancel = it is a different one (save separately).": "OK = es el mismo (vincularlos). Cancelar = es otro (guardar por separado).",
+ "The bank already brought this one (same amount, close date). Link them so it is counted once, or confirm that it is a different one.": "El banco ya trajo este (mismo monto, fecha cercana). Vincúlelos para contarlo una sola vez, o confirme que es otro.",
+ "That bank transaction is no longer waiting for review": "Esa transacción del banco ya no espera revisión",
+ "Real bank balance: {0}": "Saldo real en el banco: {0}",
+ "Owed on cards: {0}": "Por pagar en tarjetas: {0}"
 };

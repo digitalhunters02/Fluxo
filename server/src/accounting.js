@@ -393,9 +393,33 @@ export function batchInvoices({ contact_ids, issue_date, terms_days, lines, note
   }));
 }
 
+/* -------------------------- banco x lançamento à mão ----------------------- */
+
+/**
+ * Quando o banco já trouxe a transação (ainda "para revisar") e a pessoa lança o mesmo gasto/recebimento à mão,
+ * o dinheiro entraria duas vezes. Aqui: acha a transação pendente (mesma conta, mesmo valor com sinal, até 5 dias de
+ * diferença) e recusa com 409 `possible_duplicate_bank`, a menos que a pessoa diga que é a mesma (`matchBankTxn`,
+ * que liga os dois) ou que é outra (`allowDuplicate`). Devolve o id a ligar depois de gravar, ou null.
+ */
+function bankDupCheck(account_id, date, signed, { allowDuplicate, matchBankTxn } = {}) {
+  const a = get('SELECT type, subtype FROM accounts WHERE id=?', account_id);
+  if (!a || !(a.type === 'asset' ? a.subtype === 'bank' : a.subtype === 'credit_card')) return null;
+  if (matchBankTxn) {
+    const t = get("SELECT id FROM bank_txns WHERE id=? AND account_id=? AND amount=? AND status='pending'", Number(matchBankTxn), account_id, signed);
+    if (!t) throw bad('That bank transaction is no longer waiting for review');
+    return t.id;
+  }
+  if (allowDuplicate === true) return null;
+  const from = new Date(Date.parse(date) - 5 * 864e5).toISOString().slice(0, 10), to = new Date(Date.parse(date) + 5 * 864e5).toISOString().slice(0, 10);
+  const t = get("SELECT id, date, description, amount FROM bank_txns WHERE account_id=? AND amount=? AND status='pending' AND date>=? AND date<=? ORDER BY ABS(julianday(date)-julianday(?)), id LIMIT 1", account_id, signed, from, to, date);
+  if (t) throw new HttpError(409, 'The bank already brought this one (same amount, close date). Link them so it is counted once, or confirm that it is a different one.', { code: 'possible_duplicate_bank', txn: t });
+  return null;
+}
+const linkBankTxn = (txnId, entryId) => { if (txnId) run("UPDATE bank_txns SET status='matched', entry_id=? WHERE id=? AND status='pending'", entryId, txnId); };
+
 /* -------------------------------- pagamentos ------------------------------ */
 
-export function addPayment(doc_id, { date, amount, account_id, method = '', ref = '' }, user) {
+export function addPayment(doc_id, { date, amount, account_id, method = '', ref = '', allowDuplicate, matchBankTxn }, user) {
   return tx(() => {
     const d = loadDoc(doc_id);
     if (!d || !isPosted(d) || !['invoice', 'bill'].includes(d.type)) throw bad('This document cannot take payments (issue it first)');
@@ -407,12 +431,13 @@ export function addPayment(doc_id, { date, amount, account_id, method = '', ref 
     if (blocked) throw new HttpError(409, blocked, { code: 'approval_required' });
     const acc = getAccount(account_id);
     if (!['asset', 'liability'].includes(acc.type) || ['ar', 'ap', 'tax'].includes(acc.subtype)) throw bad('Invalid payment account');
+    const linkTo = bankDupCheck(account_id, date, d.type === 'invoice' ? amt : -amt, { allowDuplicate, matchBankTxn });
     const pid = insert('INSERT INTO payments(doc_id,date,amount,account_id,method,ref) VALUES(?,?,?,?,?,?)', doc_id, date, amt, account_id, method, ref);
     const ctrl = sysAccount(d.type === 'invoice' ? 'ar' : 'ap').id;
     const lines = d.type === 'invoice'
       ? [{ account_id, debit: amt }, { account_id: ctrl, credit: amt, contact_id: d.contact_id }]
       : [{ account_id: ctrl, debit: amt, contact_id: d.contact_id }, { account_id, credit: amt }];
-    postEntry({ date, memo: `${memoText('payment')} ${d.number}`, source_type: 'payment', source_id: pid, lines, user_id: user?.id });
+    linkBankTxn(linkTo, postEntry({ date, memo: `${memoText('payment')} ${d.number}`, source_type: 'payment', source_id: pid, lines, user_id: user?.id }));
     run('UPDATE docs SET paid = paid + ? WHERE id=?', amt, doc_id);
     recomputeStatus(doc_id);
     const after = loadDoc(doc_id);
@@ -453,6 +478,7 @@ export function saveExpense(input, user) {
   }
   return tx(() => {
     let id = input.id;
+    const linkTo = id ? null : bankDupCheck(input.paid_from_id, input.date, -amount, input);
     if (id) {
       if (!get('SELECT 1 FROM expenses WHERE id=?', id)) throw new HttpError(404, 'Expense not found');
       removeEntries('expense', id);
@@ -464,8 +490,8 @@ export function saveExpense(input, user) {
         input.date, input.contact_id || null, input.account_id, input.paid_from_id, amount, input.description || '', input.ref || '', input.project_id || null, input.receipt || null, user?.id ?? null, method);
       run('UPDATE expenses SET class_id=? WHERE id=?', input.class_id || null, id);
     }
-    postEntry({ date: input.date, memo: input.description || memoText('expense'), source_type: 'expense', source_id: id, user_id: user?.id,
-      lines: [{ account_id: input.account_id, debit: amount, contact_id: input.contact_id || null, class_id: input.class_id || null }, { account_id: input.paid_from_id, credit: amount }] });
+    linkBankTxn(linkTo, postEntry({ date: input.date, memo: input.description || memoText('expense'), source_type: 'expense', source_id: id, user_id: user?.id,
+      lines: [{ account_id: input.account_id, debit: amount, contact_id: input.contact_id || null, class_id: input.class_id || null }, { account_id: input.paid_from_id, credit: amount }] }));
     return get('SELECT * FROM expenses WHERE id=?', id);
   });
 }

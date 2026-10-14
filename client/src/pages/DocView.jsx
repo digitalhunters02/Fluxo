@@ -1,4 +1,5 @@
 import { METHOD_KEYS, PLATFORM_KEYS, methodLabel } from '../methods.js';
+import { withBankDup } from '../bankDup.js';
 import { t } from '../i18n.jsx';
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -71,7 +72,7 @@ function PaymentModal({ doc, onClose, onDone }) {
   const list = (accounts || []).filter((a) => a.subtype === 'bank' || a.subtype === 'credit_card');
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   const save = async () => {
-    const r = await run(() => api.post(`/doc/${doc.id}/payments`, { ...f, amount: toCents(f.amount), account_id: Number(f.account_id || list[0]?.id) }), t('Payment recorded'));
+    const r = await run(() => withBankDup((x) => api.post(`/doc/${doc.id}/payments`, { ...f, amount: toCents(f.amount), account_id: Number(f.account_id || list[0]?.id), ...x })), t('Payment recorded'));
     if (r) onDone(r);
   };
   return (

@@ -5,6 +5,7 @@ import { date, fromCents, money, toCents, today } from '../format.js';
 import { download } from '../csv.js';
 import { Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, useAction, useLoad } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
+import { withBankDup } from '../bankDup.js';
 import { METHOD_KEYS, PLATFORM_KEYS, methodLabel } from '../methods.js';
 
 function ExpenseModal({ exp, lookups, onClose, onSaved, presetContact }) {
@@ -28,7 +29,7 @@ function ExpenseModal({ exp, lookups, onClose, onSaved, presetContact }) {
   const save = async () => {
     if (need1099Method) { alert(t('Choose how you paid this contractor (ACH, check, Zelle, card, PayPal…). It decides whether the payment counts toward Form 1099-NEC.')); return; }
     const body = { ...f, amount: toCents(f.amount), account_id: Number(f.account_id), paid_from_id: Number(f.paid_from_id), contact_id: f.contact_id ? Number(f.contact_id) : null, project_id: f.project_id ? Number(f.project_id) : null, class_id: f.class_id ? Number(f.class_id) : null };
-    const r = await run(() => (exp ? api.put(`/expenses/${exp.id}`, body) : api.post('/expenses', body)), t('Expense saved'));
+    const r = await run(() => (exp ? api.put(`/expenses/${exp.id}`, body) : withBankDup((x) => api.post('/expenses', { ...body, ...x }))), t('Expense saved'));
     if (r) onSaved();
   };
   return (

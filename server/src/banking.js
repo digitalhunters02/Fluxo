@@ -47,6 +47,44 @@ function findMatch(account_id, date, amount, exclude = []) {
   return cands[0]?.id ?? null;
 }
 
+/**
+ * Atualiza as ligações sugeridas das transações pendentes. A sugestão "já existe um lançamento igual" era calculada só
+ * na importação: um gasto digitado DEPOIS de o banco trazer a transação não aparecia, e categorizar criava o segundo.
+ * Também solta ligações que ficaram velhas (o lançamento foi apagado ou já foi ligado a outra transação).
+ */
+export function refreshMatches(account_id = null) {
+  const where = account_id ? 'AND account_id=?' : '';
+  const args = account_id ? [account_id] : [];
+  const pend = all(`SELECT * FROM bank_txns WHERE status='pending' ${where} ORDER BY date, id`, ...args);
+  const taken = new Set();
+  for (const t of pend) {
+    if (!t.suggested_line_id) continue;
+    const ok = get(`SELECT jl.id FROM journal_lines jl WHERE jl.id=? AND jl.account_id=? AND jl.debit-jl.credit=? AND jl.reconciliation_id IS NULL
+      AND NOT EXISTS (SELECT 1 FROM bank_txns b WHERE b.entry_id=jl.entry_id)`, t.suggested_line_id, t.account_id, t.amount);
+    if (ok) taken.add(t.suggested_line_id);
+    else { run("UPDATE bank_txns SET suggested_line_id=NULL, suggestion_source=CASE WHEN suggestion_source='existing' THEN '' ELSE suggestion_source END WHERE id=?", t.id); t.suggested_line_id = null; }
+  }
+  for (const t of pend) {
+    if (t.suggested_line_id) continue;
+    const m = findMatch(t.account_id, t.date, t.amount, [...taken]);
+    if (!m) continue;
+    taken.add(m);
+    run("UPDATE bank_txns SET suggested_line_id=?, suggestion_source='existing', suggested_account_id=NULL WHERE id=?", m, t.id);
+  }
+}
+
+export function listTxns({ status = 'pending', account_id = null } = {}) {
+  if (status === 'pending') refreshMatches(account_id);
+  const params = [status]; let where = 'b.status=?';
+  if (account_id) { where += ' AND b.account_id=?'; params.push(Number(account_id)); }
+  const rows = all(`SELECT b.*, sa.name AS suggested_account_name, a.name AS account_name FROM bank_txns b JOIN accounts a ON a.id=b.account_id
+    LEFT JOIN accounts sa ON sa.id=b.suggested_account_id WHERE ${where} ORDER BY b.date DESC, b.id DESC LIMIT 1000`, ...params);
+  for (const r of rows) if (r.suggested_line_id) {
+    r.match = get('SELECT je.memo, je.date, je.source_type FROM journal_lines jl JOIN journal_entries je ON je.id=jl.entry_id WHERE jl.id=?', r.suggested_line_id) || null;
+  }
+  return rows;
+}
+
 export function importTxns(account_id, rows) {
   requireBank(account_id);
   if (!Array.isArray(rows) || !rows.length) throw bad('No rows to import');
@@ -80,9 +118,9 @@ export function categorize(id, { account_id, contact_id, memo, remember, force }
     const t = get('SELECT * FROM bank_txns WHERE id=?', id);
     if (!t) throw new HttpError(404, 'Transaction not found');
     if (t.status !== 'pending') throw bad('Transaction already handled');
-    // Pagamento a prestador/fornecedor: se já existe um lançamento igual (mesmo valor, data próxima, ainda sem banco),
-    // categorizar criaria um segundo e o total do 1099 e o lucro contariam o mesmo dinheiro duas vezes.
-    if (contact_id && !force && findMatch(t.account_id, t.date, t.amount)) {
+    // Se já existe um lançamento igual (mesmo valor, data próxima, ainda sem banco), categorizar criaria um segundo e o lucro,
+    // o caixa e o 1099 contariam o mesmo dinheiro duas vezes: só segue se a pessoa confirmar que é outro.
+    if (!force && findMatch(t.account_id, t.date, t.amount)) {
       throw new HttpError(409, 'This looks like an entry you already recorded (same amount, close date). Use Match so it is not counted twice, or confirm that it is a different payment.', { code: 'possible_duplicate' });
     }
     const cat = getAccount(account_id);
@@ -128,6 +166,7 @@ export function undoTxn(id) {
 
 export function acceptAllSuggestions(account_id, user) {
   let ok = 0, matched = 0;
+  refreshMatches(account_id || null);
   const pend = all(`SELECT * FROM bank_txns WHERE status='pending' ${account_id ? 'AND account_id=?' : ''}`, ...(account_id ? [account_id] : []));
   for (const t of pend) {
     try {
