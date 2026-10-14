@@ -1600,5 +1600,8 @@ export default {
  "The bank already brought this one (same amount, close date). Link them so it is counted once, or confirm that it is a different one.": "El banco ya trajo este (mismo monto, fecha cercana). Vincúlelos para contarlo una sola vez, o confirme que es otro.",
  "That bank transaction is no longer waiting for review": "Esa transacción del banco ya no espera revisión",
  "Real bank balance: {0}": "Saldo real en el banco: {0}",
- "Owed on cards: {0}": "Por pagar en tarjetas: {0}"
+ "Owed on cards: {0}": "Por pagar en tarjetas: {0}",
+ "{0} companies in a group included, then ${1}/month for each extra company": "{0} empresas en el grupo incluidas, luego US${1}/mes por cada empresa extra",
+ "Enterprise: {0} companies included + {1} extra at ${2} = ${3}/month (plus the base price).": "Enterprise: {0} empresas incluidas + {1} extra a US${2} = US${3}/mes (además del precio base).",
+ "Enterprise: {0} companies included, no extra charge yet.": "Enterprise: {0} empresas incluidas, sin cargo extra por ahora."
 };

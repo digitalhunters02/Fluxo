@@ -20,7 +20,7 @@ import * as billing from './billing.js';
 import { reportLead } from './harborLead.js';
 import { registerGrowth, registerGrowthPublic } from './growth.js';
 import { createV1Router } from './integrations.js';
-import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, limitFor, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE, ENTERPRISE_FROM } from './plans.js';
+import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, limitFor, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE, ENTERPRISE_FROM, ENTERPRISE_INCLUDED_COMPANIES, ENTERPRISE_EXTRA_COMPANY } from './plans.js';
 import { cleanPerms, authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, endSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
 import * as twofa from './twofa.js';
 
@@ -280,7 +280,7 @@ api.post('/stripe/webhook', wrap(async (req, res) => {
   const slug = [o.client_reference_id && tenants.tenantExists(o.client_reference_id) ? o.client_reference_id : null, tenants.slugForLink('stripe_subscription', String(o.object === 'subscription' ? o.id : ref(o.subscription) || '')), tenants.slugForLink('stripe_customer', ref(o.customer))].find(Boolean);
   ok(res, slug ? await tenants.inTenant(slug, () => billing.handleStripeEvent(req.body)) : { ignored: true }); // compra de quem ainda não tem empresa: o cadastro aplica a assinatura depois
 }));
-api.get('/public/plans', wrap((_req, res) => ok(res, { configured: billing.stripeConfigured(), needsSetup: multi() || !get('SELECT 1 FROM users LIMIT 1'), order: PLAN_ORDER, prices: PLAN_PRICES, enterpriseFrom: ENTERPRISE_FROM, salesEmail: process.env.FLUXO_SALES_EMAIL || '', payrollPrice: PAYROLL_ADDON_PRICE })));
+api.get('/public/plans', wrap((_req, res) => ok(res, { configured: billing.stripeConfigured(), needsSetup: multi() || !get('SELECT 1 FROM users LIMIT 1'), order: PLAN_ORDER, prices: PLAN_PRICES, enterpriseFrom: ENTERPRISE_FROM, enterpriseIncluded: ENTERPRISE_INCLUDED_COMPANIES, enterpriseExtra: ENTERPRISE_EXTRA_COMPANY, salesEmail: process.env.FLUXO_SALES_EMAIL || '', payrollPrice: PAYROLL_ADDON_PRICE })));
 api.post('/public/checkout', wrap(async (req, res) => {
   rateLimitLogin(`checkout|${req.ip}`);
   if (!multi() && get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(403, 'This installation already has an account. Sign in to change your plan.');
@@ -347,7 +347,7 @@ api.use(twofa.setupGate); // com "2FA obrigatório", quem ainda não ativou só 
 twofa.registerTwoFactor(api, { wrap, ok, can, audit, listUsers });
 registerGrowth(api, { wrap, ok, can, requireFeature, audit, id, withSlug, multi });
 api.post('/logout', wrap((req, res) => { endSession(req.headers.authorization.slice(7)); ok(res, {}); }));
-const planInfo = () => ({ enterpriseFrom: ENTERPRISE_FROM, plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, lockDate: getSetting('lock_date', ''), billing: billing.billingState(), limits: { bank_connections: limitFor('bank_connections'), invoices_per_month: limitFor('invoices_per_month'), users: limitFor('users'), invoices_used: invoicesThisMonth() } });
+const planInfo = () => ({ enterpriseFrom: ENTERPRISE_FROM, enterpriseIncluded: ENTERPRISE_INCLUDED_COMPANIES, enterpriseExtra: ENTERPRISE_EXTRA_COMPANY, plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, lockDate: getSetting('lock_date', ''), billing: billing.billingState(), limits: { bank_connections: limitFor('bank_connections'), invoices_per_month: limitFor('invoices_per_month'), users: limitFor('users'), invoices_used: invoicesThisMonth() } });
 api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), tenant: multi() ? tenants.currentSlug() : '', planInfo: planInfo(), twofa: twofa.twofaState(req.user), reauthOn: twofa.reauthOn() })));
 api.get('/plan', wrap((_req, res) => ok(res, planInfo())));
 api.put('/plan', can('users', true), wrap((req, res) => {

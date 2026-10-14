@@ -221,6 +221,7 @@ export function GroupTab() {
           <>
             <h3 className="font-semibold">{g.name}</h3>
             <p className="mb-2 text-xs text-slate-500">{g.limit != null ? t('Up to {0} companies on this plan.', [g.limit]) : t('No limit on the number of companies.')}</p>
+            {g.billing && <p className="mb-2 text-xs text-slate-500" data-testid="group-billing">{g.billing.extra > 0 ? t('Enterprise: {0} companies included + {1} extra at ${2} = ${3}/month (plus the base price).', [g.billing.included, g.billing.extra, g.billing.perCompany, g.billing.extra * g.billing.perCompany]) : t('Enterprise: {0} companies included, no extra charge yet.', [g.billing.included])}</p>}
             <ul className="mb-3 space-y-1 text-sm">{g.members.map((m) => <li key={m.slug}>• {m.name}{m.owner ? ` (${t('owner')})` : ''}</li>)}</ul>
             {invite && <SecretBox label={t('Give this code to the owner of the other company. It works once, for 7 days:')} value={invite} />}
             <div className="flex gap-2">

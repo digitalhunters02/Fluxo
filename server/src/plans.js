@@ -7,8 +7,12 @@ export const PLAN_ORDER = ['free', 'starter', 'essentials', 'plus', 'advanced', 
 // Enterprise é contrato anual sob consulta: não tem preço nem assinatura no Stripe (o plano é definido pelo administrador).
 export const PAID_PLANS = PLAN_ORDER.filter((p) => p !== 'free' && p !== 'enterprise');
 export const PLAN_PRICES = { free: 0, starter: 29, essentials: 65, plus: 109, advanced: 269, business: 599, enterprise: null };
-/** Enterprise: valor de partida (contrato anual sob consulta). */
-export const ENTERPRISE_FROM = 1500;
+/** Enterprise: valor de partida por mês (contrato anual sob consulta). Inclui 10 empresas no grupo; cada empresa a mais soma US$ 100 por mês. */
+export const ENTERPRISE_FROM = 900;
+export const ENTERPRISE_INCLUDED_COMPANIES = 10;
+export const ENTERPRISE_EXTRA_COMPANY = 100;
+/** Quanto o Enterprise custa por mês para um grupo com este número de empresas. */
+export const enterpriseMonthly = (companies) => ENTERPRISE_FROM + Math.max(0, Number(companies || 0) - ENTERPRISE_INCLUDED_COMPANIES) * ENTERPRISE_EXTRA_COMPANY;
 export const PAYROLL_ADDON_PRICE = { base: 35, perEmployee: 5 };
 
 /** recurso -> plano mínimo. Recursos que não aparecem aqui valem para todos os planos. */

@@ -4,7 +4,7 @@
 import * as tenants from './tenants.js';
 import * as rep from './reports.js';
 import { HttpError } from './accounting.js';
-import { limitFor, hasFeature } from './plans.js';
+import { limitFor, hasFeature, currentPlan, enterpriseMonthly, ENTERPRISE_INCLUDED_COMPANIES, ENTERPRISE_EXTRA_COMPANY } from './plans.js';
 
 const bad = (m) => new HttpError(400, m);
 const isInter = (name) => /inter-?company/i.test(name || '');
@@ -15,7 +15,10 @@ export function info() {
   const g = tenants.groupOf(slug);
   if (!g) return { group: null };
   const members = tenants.groupMembers(g.id).map((m) => ({ ...m, owner: m.slug === g.owner_slug }));
-  return { group: { id: g.id, name: g.name, isOwner: g.owner_slug === slug, members, limit: ownerLimit(g.owner_slug) } };
+  // Enterprise: o preço acompanha o número de empresas do grupo (5 incluídas, depois US$ 100 por empresa).
+  const enterprise = tenants.inTenant(g.owner_slug, () => currentPlan() === 'enterprise');
+  const billing = enterprise ? { included: ENTERPRISE_INCLUDED_COMPANIES, extra: Math.max(0, members.length - ENTERPRISE_INCLUDED_COMPANIES), perCompany: ENTERPRISE_EXTRA_COMPANY, monthly: enterpriseMonthly(members.length) } : null;
+  return { group: { id: g.id, name: g.name, isOwner: g.owner_slug === slug, members, limit: ownerLimit(g.owner_slug), billing } };
 }
 export function create(name) {
   if (!String(name || '').trim()) throw bad('Name the group');
