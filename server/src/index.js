@@ -287,14 +287,17 @@ api.post('/stripe/webhook', wrap(async (req, res) => {
   const slug = [o.client_reference_id && tenants.tenantExists(o.client_reference_id) ? o.client_reference_id : null, tenants.slugForLink('stripe_subscription', String(o.object === 'subscription' ? o.id : ref(o.subscription) || '')), tenants.slugForLink('stripe_customer', ref(o.customer))].find(Boolean);
   ok(res, slug ? await tenants.inTenant(slug, () => billing.handleStripeEvent(req.body)) : { ignored: true }); // compra de quem ainda não tem empresa: o cadastro aplica a assinatura depois
 }));
-api.get('/public/plans', wrap((_req, res) => ok(res, { configured: billing.stripeConfigured(), needsSetup: multi() || !get('SELECT 1 FROM users LIMIT 1'), order: PLAN_ORDER, prices: PLAN_PRICES, enterpriseFrom: ENTERPRISE_FROM, enterpriseIncluded: ENTERPRISE_INCLUDED_COMPANIES, enterpriseExtra: ENTERPRISE_EXTRA_COMPANY, salesEmail: process.env.FLUXO_SALES_EMAIL || '', payrollPrice: PAYROLL_ADDON_PRICE })));
+// Plano anual: 12 mensalidades com 10% de desconto, ao centavo (mesma conta que o Stripe usa para criar o preço).
+const yearlyPrices = () => Object.fromEntries(Object.entries(PLAN_PRICES).map(([k, v]) => [k, billing.priceFor(v, 'year')]));
+const payrollYearly = () => ({ base: billing.priceFor(PAYROLL_ADDON_PRICE.base, 'year'), perEmployee: billing.priceFor(PAYROLL_ADDON_PRICE.perEmployee, 'year') });
+api.get('/public/plans', wrap((_req, res) => ok(res, { configured: billing.stripeConfigured(), needsSetup: multi() || !get('SELECT 1 FROM users LIMIT 1'), order: PLAN_ORDER, prices: PLAN_PRICES, enterpriseFrom: ENTERPRISE_FROM, enterpriseIncluded: ENTERPRISE_INCLUDED_COMPANIES, enterpriseExtra: ENTERPRISE_EXTRA_COMPANY, enterpriseExtraYearly: billing.priceFor(ENTERPRISE_EXTRA_COMPANY, 'year'), salesEmail: process.env.FLUXO_SALES_EMAIL || '', payrollPrice: PAYROLL_ADDON_PRICE, yearlyPrices: yearlyPrices(), payrollYearlyPrice: payrollYearly(), annualDiscount: billing.ANNUAL_DISCOUNT })));
 api.post('/public/checkout', wrap(async (req, res) => {
   rateLimitLogin(`checkout|${req.ip}`);
   if (!multi() && get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(403, 'This installation already has an account. Sign in to change your plan.');
   const email = String(req.body.email || '').trim().toLowerCase();
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw bad('Enter a valid email');
   const ref = String(req.body.ref || '').trim().slice(0, 64) || undefined;
-  ok(res, await billing.createCheckout({ plan: req.body.plan, payroll: !!req.body.payroll, origin: billing.originOf(req), email: email || undefined, signup: true, ref }));
+  ok(res, await billing.createCheckout({ plan: req.body.plan, payroll: !!req.body.payroll, origin: billing.originOf(req), email: email || undefined, signup: true, ref, interval: req.body.interval }));
 }));
 api.get('/public/signup', wrap(async (req, res) => {
   if (!multi() && get('SELECT 1 FROM users LIMIT 1')) return ok(res, { alreadySetup: true });
@@ -333,8 +336,8 @@ api.get('/admin-summary', wrap((req, res) => {
     return {
       email, company, plan,
       status: suspended ? 'suspended' : (b.status || (plan === 'free' ? 'free' : 'manual')),
-      interval: plan === 'free' ? null : 'month',
-      amount: PLAN_PRICES[plan] ?? null,
+      interval: plan === 'free' ? null : (b.interval || 'month'),
+      amount: b.interval === 'year' ? billing.annualPrice(plan) : (PLAN_PRICES[plan] ?? null),
       payroll: hasAddon('payroll'),
       currentPeriodEnd: b.periodEnd || null,
       cancelAtPeriodEnd: !!b.cancelAtPeriodEnd,
@@ -365,7 +368,7 @@ twofa.registerTwoFactor(api, { wrap, ok, can, audit, listUsers });
 registerGrowth(api, { wrap, ok, can, requireFeature, audit, id, withSlug, multi });
 registerAccountants(api, { wrap, ok, twofa, id, multi });
 api.post('/logout', wrap((req, res) => { endSession(req.headers.authorization.slice(7)); ok(res, {}); }));
-const planInfo = () => ({ enterpriseFrom: ENTERPRISE_FROM, enterpriseIncluded: ENTERPRISE_INCLUDED_COMPANIES, enterpriseExtra: ENTERPRISE_EXTRA_COMPANY, plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, lockDate: getSetting('lock_date', ''), billing: billing.billingState(), limits: { bank_connections: limitFor('bank_connections'), invoices_per_month: limitFor('invoices_per_month'), users: limitFor('users'), invoices_used: invoicesThisMonth() } });
+const planInfo = () => ({ enterpriseFrom: ENTERPRISE_FROM, enterpriseIncluded: ENTERPRISE_INCLUDED_COMPANIES, enterpriseExtra: ENTERPRISE_EXTRA_COMPANY, plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, yearlyPrices: yearlyPrices(), payrollYearlyPrice: payrollYearly(), annualDiscount: billing.ANNUAL_DISCOUNT, enterpriseExtraYearly: billing.priceFor(ENTERPRISE_EXTRA_COMPANY, 'year'), lockDate: getSetting('lock_date', ''), billing: billing.billingState(), limits: { bank_connections: limitFor('bank_connections'), invoices_per_month: limitFor('invoices_per_month'), users: limitFor('users'), invoices_used: invoicesThisMonth() } });
 api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), tenant: multi() ? tenants.currentSlug() : '', planInfo: planInfo(), twofa: twofa.twofaState(req.user), reauthOn: twofa.reauthOn() })));
 api.get('/plan', wrap((_req, res) => ok(res, planInfo())));
 api.put('/plan', can('users', true), wrap((req, res) => {
@@ -686,7 +689,7 @@ api.post('/transfers', can('banking', true), wrap((req, res) => {
 
 /* ------------------------------- cobrança (Stripe) ------------------------------- */
 api.get('/billing', can('users'), wrap((_req, res) => ok(res, planInfo())));
-api.post('/billing/checkout', can('users', true), wrap(async (req, res) => ok(res, await billing.createCheckout({ plan: req.body.plan, payroll: req.body.payroll === undefined ? hasAddon('payroll') : !!req.body.payroll, origin: billing.originOf(req) }))));
+api.post('/billing/checkout', can('users', true), wrap(async (req, res) => ok(res, await billing.createCheckout({ plan: req.body.plan, payroll: req.body.payroll === undefined ? hasAddon('payroll') : !!req.body.payroll, origin: billing.originOf(req), interval: req.body.interval }))));
 api.post('/billing/change', can('users', true), wrap(async (req, res) => { await billing.changeSubscription({ plan: req.body.plan, payroll: req.body.payroll }); audit(req, 'update', 'settings', null, `plan ${currentPlan()}`); ok(res, planInfo()); }));
 api.post('/billing/portal', can('users', true), wrap(async (req, res) => ok(res, await billing.createPortal(billing.originOf(req)))));
 

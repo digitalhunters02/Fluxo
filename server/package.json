@@ -10,7 +10,8 @@
     "dev": "node --watch --no-warnings src/index.js",
     "start": "node --no-warnings src/index.js",
     "seed": "node --no-warnings src/seed.js",
-    "test": "node --no-warnings --test test/*.test.js"
+    "test": "node --no-warnings --test test/*.test.js",
+    "test:e2e:annual": "node e2e/billingUi.e2e.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",

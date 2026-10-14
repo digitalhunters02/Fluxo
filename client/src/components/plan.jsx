@@ -29,3 +29,31 @@ export function Gate({ feature, children }) {
 
 /** Pequeno cadeado ao lado de itens bloqueados. */
 export const Lock = () => <span className="ml-1 text-xs opacity-70" aria-label={t('Locked')} role="img">🔒</span>;
+
+// ----- Plano anual (−10%): chave Mensal/Anual e preço do período, usados na página de preços e em Configurações -----
+const usd = (n) => `$${Number(n).toLocaleString('en-US', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}`;
+
+/** Chave Mensal / Anual (−10%). `onChange` recebe 'month' ou 'year'. */
+export function IntervalToggle({ interval, onChange }) {
+  return (
+    <div>
+      <div className="inline-flex rounded-lg border border-slate-300 bg-white p-0.5" role="group" aria-label={t('Billing period')}>
+        {[['month', t('Monthly')], ['year', t('Yearly (−10%)')]].map(([id, label]) => (
+          <button key={id} type="button" data-testid={`billing-interval-${id}`} aria-pressed={interval === id} onClick={() => onChange(id)}
+            className={`h-8 rounded-md px-3 text-sm font-semibold ${interval === id ? 'bg-brand-600 text-white' : 'text-slate-700'}`}>{label}</button>))}
+      </div>
+      {interval === 'year' && <p className="mx-auto mt-2 max-w-xl text-xs text-slate-600" data-testid="yearly-note">{t('Yearly plan: you pay once for 12 months. You can cancel renewal at any time; unused months are not refunded, and access continues until the end of the year you paid for. We email you before it renews.')}</p>}
+    </div>
+  );
+}
+
+/** Preço do plano no período escolhido, com o equivalente por mês no anual. */
+export function PlanPrice({ plan, prices, yearlyPrices, interval }) {
+  const yearly = interval === 'year' && plan !== 'free' && yearlyPrices;
+  return (
+    <>
+      <div className="num my-3 text-4xl font-bold" data-testid={`plan-price-${plan}`}>{yearly ? usd(yearlyPrices[plan]) : `$${prices[plan]}`}<span className="text-sm font-normal text-slate-500">{yearly ? t('/year') : t('/month')}</span></div>
+      {yearly && <p className="-mt-2 mb-3 text-xs text-slate-500">{t('equals {0}/month · 10% off', [usd(Math.round(yearlyPrices[plan] / 12 * 100) / 100)])}</p>}
+    </>
+  );
+}

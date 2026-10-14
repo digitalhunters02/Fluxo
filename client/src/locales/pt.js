@@ -1804,5 +1804,13 @@ export default {
  "Invite up to 3 accountants": "Convide até 3 contadores",
  "Unlimited accountants": "Contadores sem limite",
  "Up to 3 accountants": "Até 3 contadores",
- "AI assistant (categorize, collect, explain)": "Assistente de IA (categorizar, cobrar, explicar)"
+ "AI assistant (categorize, collect, explain)": "Assistente de IA (categorizar, cobrar, explicar)",
+ "Yearly (−10%)": "Anual (−10%)",
+ "Billing period": "Período de cobrança",
+ "equals {0}/month · 10% off": "equivale a {0}/mês · 10% de desconto",
+ "Yearly plan: you pay once for 12 months. You can cancel renewal at any time; unused months are not refunded, and access continues until the end of the year you paid for. We email you before it renews.": "Plano anual: você paga uma vez pelos 12 meses. Pode cancelar a renovação a qualquer momento; não há reembolso dos meses não usados, e o acesso continua até o fim do ano pago. Avisamos por e-mail antes de renovar.",
+ "Add U.S. payroll (${0}/yr + ${1} per employee/yr)": "Adicionar folha dos EUA (US${0}/ano + US${1} por funcionário/ano)",
+ "Include U.S. payroll (${0}/yr + ${1} per employee/yr)": "Incluir folha dos EUA (US${0}/ano + US${1} por funcionário/ano)",
+ "U.S. payroll: ${0}/year + ${1} per employee per year. Calculates and records payroll, pay stubs, W-2 and 941 summaries.": "Folha dos EUA: US${0}/ano + US${1} por funcionário por ano. Calcula e registra a folha, holerites e resumos de W-2 e 941.",
+ "{0} companies in a group included, then ${1}/year for each extra company": "{0} empresas no grupo incluídas, depois US$ {1}/ano por empresa extra"
 };

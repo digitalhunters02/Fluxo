@@ -6,7 +6,7 @@ import { date } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad, useToast } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
 import { SearchBox, useSearch } from '../components/search.jsx';
-import { Gate, Lock, PLAN_LABEL } from '../components/plan.jsx';
+import { Gate, IntervalToggle, Lock, PLAN_LABEL, PlanPrice } from '../components/plan.jsx';
 import { IntegrationsTab, PaymentsTab, ApprovalsTab, SsoTab, ImportTab, GroupTab, AuditExport } from './GrowthSettings.jsx';
 import { TwoFactorCard, SecurityTab } from './SecurityUI.jsx';
 import SalesTaxSettings from './SalesTaxSettings.jsx';
@@ -222,10 +222,14 @@ function PlanTab() {
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const [withPayroll, setWithPayroll] = useState(planInfo.payroll);
+  const [interval, setInterval] = useState('month');
   const owner = user.role === 'owner';
   const bill = planInfo.billing;
   const rank = (p) => planInfo.order.indexOf(p);
   const stripeOn = bill.configured;
+  // Nova assinatura escolhe Mensal ou Anual (−10%); quem já paga mantém o período ao trocar de plano.
+  const showToggle = stripeOn && !bill.managed && owner && !!planInfo.yearlyPrices;
+  const shownInterval = bill.managed ? (bill.interval || 'month') : (showToggle ? interval : 'month');
   // voltou do Stripe: o webhook pode demorar alguns segundos, então atualiza algumas vezes
   useEffect(() => {
     if (params.get('checkout') === 'success') {
@@ -238,7 +242,7 @@ function PlanTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const manual = (patch) => run(async () => { await api.put('/plan', patch); await refresh(); }, t('Plan updated'));
-  const subscribe = (plan) => run(async () => { const r = await api.post('/billing/checkout', { plan, payroll: withPayroll }); window.location.href = r.url; });
+  const subscribe = (plan) => run(async () => { const r = await api.post('/billing/checkout', { plan, payroll: withPayroll, interval }); window.location.href = r.url; });
   const change = (patch) => run(async () => { await api.post('/billing/change', patch); await refresh(); }, t('Plan updated'));
   const portal = () => run(async () => { const r = await api.post('/billing/portal', {}); window.location.href = r.url; });
   const statusBadge = { active: ['paid', t('Active')], trialing: ['sent', t('Trial')], past_due: ['declined', t('Payment failed')], canceled: ['void', t('Canceled')] }[bill.status];
@@ -256,7 +260,8 @@ function PlanTab() {
           <p className="mt-3 text-xs text-slate-400">{t('Upgrades and downgrades are prorated. Update your card, download invoices or cancel in Manage billing.')}</p>
         </Card>
       )}
-      {stripeOn && !bill.managed && owner && <label className="mb-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={withPayroll} onChange={(e) => setWithPayroll(e.target.checked)} /> {t('Include U.S. payroll (${0}/mo + ${1} per employee)', [planInfo.payrollPrice.base, planInfo.payrollPrice.perEmployee])}</label>}
+      {showToggle && <div className="mb-3"><IntervalToggle interval={interval} onChange={setInterval} /></div>}
+      {stripeOn && !bill.managed && owner && <label className="mb-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={withPayroll} onChange={(e) => setWithPayroll(e.target.checked)} /> {interval === 'year' && planInfo.payrollYearlyPrice ? t('Include U.S. payroll (${0}/yr + ${1} per employee/yr)', [planInfo.payrollYearlyPrice.base, planInfo.payrollYearlyPrice.perEmployee]) : t('Include U.S. payroll (${0}/mo + ${1} per employee)', [planInfo.payrollPrice.base, planInfo.payrollPrice.perEmployee])}</label>}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" data-testid="plan-grid">
         {planInfo.order.map((p) => {
           const current = p === planInfo.plan && (!stripeOn || bill.managed || p === 'free');
@@ -264,11 +269,11 @@ function PlanTab() {
           return (
             <Card key={p} className={current ? 'ring-2 ring-brand-500' : ''}>
               <div className="flex items-baseline justify-between"><h3 className="text-lg font-semibold">{PLAN_LABEL[p]}</h3>{current && <Badge status="paid">{t('Current plan')}</Badge>}</div>
-              <div className="num my-2 text-3xl font-bold">{`$${planInfo.prices[p]}`}<span className="text-sm font-normal text-slate-500">{t('/month')}</span></div>
+              <PlanPrice plan={p} prices={planInfo.prices} yearlyPrices={planInfo.yearlyPrices} interval={shownInterval} />
               <ul className="space-y-1.5 text-sm">
                 {PLAN_FEATURES.map(([f, min]) => <li key={f} className={rank(p) >= rank(min) ? '' : 'text-slate-300 line-through'}>{rank(p) >= rank(min) ? '✓' : '·'} {FEATURE_LABEL[f]}</li>)}
               </ul>
-              {p === 'enterprise' && <p className="mt-4 text-sm text-slate-600">{t('{0} companies in a group included, then ${1}/month for each extra company', [planInfo.enterpriseIncluded, planInfo.enterpriseExtra])}</p>}
+              {p === 'enterprise' && <p className="mt-4 text-sm text-slate-600">{shownInterval === 'year' && planInfo.enterpriseExtraYearly ? t('{0} companies in a group included, then ${1}/year for each extra company', [planInfo.enterpriseIncluded, planInfo.enterpriseExtraYearly]) : t('{0} companies in a group included, then ${1}/month for each extra company', [planInfo.enterpriseIncluded, planInfo.enterpriseExtra])}</p>}
               {owner && !current && (stripeOn
                 ? (bill.managed
                   ? <Button className="mt-4 w-full" variant={up ? 'primary' : 'ghost'} disabled={busy} onClick={() => confirm(p === 'free' ? t('Switch to Free? Your paid plan keeps running until the end of the period you already paid.') : t('Switch to the {0} plan? The difference is prorated on your next invoice.', [PLAN_LABEL[p]])) && change({ plan: p })}>{up ? t('Upgrade') : t('Downgrade')}</Button>
@@ -279,7 +284,7 @@ function PlanTab() {
         })}
       </div>
       <Card title={t('Payroll add-on')} className="mt-4">
-        <p className="text-sm text-slate-600">{t('U.S. payroll: ${0}/month + ${1} per employee. Calculates and records payroll, pay stubs, W-2 and 941 summaries.', [planInfo.payrollPrice.base, planInfo.payrollPrice.perEmployee])}</p>
+        <p className="text-sm text-slate-600">{shownInterval === 'year' && planInfo.payrollYearlyPrice ? t('U.S. payroll: ${0}/year + ${1} per employee per year. Calculates and records payroll, pay stubs, W-2 and 941 summaries.', [planInfo.payrollYearlyPrice.base, planInfo.payrollYearlyPrice.perEmployee]) : t('U.S. payroll: ${0}/month + ${1} per employee. Calculates and records payroll, pay stubs, W-2 and 941 summaries.', [planInfo.payrollPrice.base, planInfo.payrollPrice.perEmployee])}</p>
         <div className="mt-3 flex items-center gap-3"><Badge status={planInfo.payroll ? 'paid' : 'void'}>{planInfo.payroll ? t('Active') : t('Inactive')}</Badge>
           {owner && (!stripeOn || bill.managed) && <Button variant="ghost" disabled={busy} onClick={() => (stripeOn ? change({ payroll: !planInfo.payroll }) : manual({ payroll: !planInfo.payroll }))}>{planInfo.payroll ? t('Turn off') : t('Turn on')}</Button>}</div>
       </Card>
