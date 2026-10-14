@@ -18,6 +18,7 @@ import * as taxid from './taxid.js';
 import * as importer from './importer.js';
 import * as stax from './salestax.js';
 import * as ai from './aiAssist.js';
+import { buildExport } from './exportAll.js';
 import * as plaidSvc from './plaid.js';
 import * as billing from './billing.js';
 import { reportLead } from './harborLead.js';
@@ -876,6 +877,13 @@ api.get('/reports/ap-aging', can('reports'), wrap((req, res) => ok(res, rep.agin
 api.get('/reports/sales-by-customer', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.salesByCustomer(f, t)); }));
 api.get('/reports/expenses-by-category', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.expensesByCategory(f, t)); }));
 api.get('/reports/expenses-by-vendor', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.expensesByVendor(f, t)); }));
+// Levar tudo: ZIP com os dados em CSV, só o dono, sempre (qualquer plano), com confirmação recente de senha e registro na auditoria.
+api.get('/export/all.zip', can('users'), twofa.requireFresh, wrap((req, res) => {
+  const out = buildExport();
+  audit(req, 'export', 'company', null, `${Object.values(out.counts).reduce((s, n) => s + n, 0)} rows`);
+  res.setHeader('Content-Type', 'application/zip'); res.setHeader('Content-Disposition', `attachment; filename="${out.filename}"`); res.setHeader('Cache-Control', 'no-store');
+  res.end(out.buffer);
+}));
 // Assistente de IA (Essentials em diante, com franquia mensal por plano): sugere categorias do banco, escreve cobranças e explica o período.
 api.get('/ai/status', wrap((_req, res) => ok(res, { ...ai.aiStatus(), enabled: hasFeature('ai_assistant') })));
 api.post('/ai/categorize', can('banking', true), requireFeature('ai_assistant'), wrap(async (req, res) => { const r = await ai.categorizePending(); audit(req, 'ai', 'bank', null, `categorize ${r.suggested}/${r.considered}`); ok(res, { ...r, status: ai.aiStatus() }); }));

@@ -24,5 +24,18 @@ async function req(method, path, body, retried = false) {
   }
   return data;
 }
+/** Baixa um arquivo da API (com o mesmo tratamento de sessão vencida e de "confirme a senha" das outras chamadas). */
+export async function downloadFile(path, fallbackName, retried = false) {
+  const res = await fetch('/api' + path, { headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {} });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401 && getToken()) onUnauthorized();
+    if (res.status === 403 && data.code === 'reauth_required' && askReauth && !retried && (await askReauth())) return downloadFile(path, fallbackName, true);
+    throw new Error(data.error ? tr(data.error) : t('Error {0}', [res.status]));
+  }
+  const name = /filename="?([^";]+)"?/.exec(res.headers.get('content-disposition') || '')?.[1] || fallbackName;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
 export const api = { get: (p) => req('GET', p), post: (p, b = {}) => req('POST', p, b), put: (p, b = {}) => req('PUT', p, b), del: (p) => req('DELETE', p) };
 export const qs = (o) => { const p = new URLSearchParams(Object.entries(o).filter(([, v]) => v !== undefined && v !== '' && v !== null)); const s = p.toString(); return s ? `?${s}` : ''; };

@@ -1735,5 +1735,10 @@ export default {
  "The AI assistant is not included in your plan.": "O assistente de IA não está incluído no seu plano.",
  "The AI assistant could not answer right now. Try again in a moment.": "O assistente de IA não conseguiu responder agora. Tente de novo em instantes.",
  "This invoice has nothing open to collect.": "Esta fatura não tem nada em aberto para cobrar.",
- "You used all your AI requests for this month.": "Você usou todos os seus pedidos de IA deste mês."
+ "You used all your AI requests for this month.": "Você usou todos os seus pedidos de IA deste mês.",
+ "Take all your data with you": "Leve todos os seus dados com você",
+ "Download everything in one ZIP of spreadsheets (CSV): the general ledger, customers and vendors, invoices and bills with their lines, payments, expenses, bank transactions, products, projects and payroll totals. Your data is yours, on any plan, at any time. Social Security/EIN numbers leave only with their last 4 digits; passwords and keys never leave.": "Baixe tudo em um ZIP de planilhas (CSV): livro razão, clientes e fornecedores, faturas e contas a pagar com suas linhas, pagamentos, despesas, transações do banco, produtos, projetos e totais da folha. Seus dados são seus, em qualquer plano e a qualquer momento. Números de Social Security/EIN saem só com os 4 últimos dígitos; senhas e chaves nunca saem.",
+ "Export downloaded": "Exportação baixada",
+ "Preparing…": "Preparando…",
+ "Download all my data (ZIP)": "Baixar todos os meus dados (ZIP)"
 };
