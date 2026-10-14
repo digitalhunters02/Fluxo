@@ -195,8 +195,8 @@ function AutomationsTab() {
 }
 
 const PLAN_FEATURES = [
-  ['5 invoices per month & unlimited estimates', 'free'], ['Send by link, email button or PDF', 'free'], ['Expenses, receipts & sales receipts', 'free'], ['Bank CSV import & reconciliation', 'free'], ['Core financial reports', 'free'],
-  ['Unlimited invoices', 'starter'], ['Credit memos', 'starter'], ['Logo & brand color on invoices', 'starter'], ['Unlimited users', 'starter'], ['Invite your accountant (read-only)', 'starter'],
+  ['5 invoices per month & unlimited estimates', 'free'], ['Import from QuickBooks & Xero', 'free'], ['Sales tax by state', 'free'], ['Download all your data', 'free'], ['Send by link, email button or PDF', 'free'], ['Expenses, receipts & sales receipts', 'free'], ['Bank CSV import & reconciliation', 'free'], ['Core financial reports', 'free'],
+  ['Unlimited invoices', 'starter'], ['Credit memos', 'starter'], ['Logo & brand color on invoices', 'starter'], ['Unlimited users', 'starter'], ['Invite your accountant (read-only)', 'starter'], ['AI assistant (categorize, collect, explain)', 'essentials'], ['Up to 3 accountants', 'plus'], ['Unlimited accountants', 'advanced'],
   ['Bills & vendor payments', 'essentials'], ['Automatic bank connection (Plaid)', 'essentials'], ['Recurring invoices', 'essentials'], ['Time tracking', 'essentials'], ['Full report set & audit log', 'essentials'],
   ['Inventory (average cost)', 'plus'], ['Project profitability', 'plus'], ['Purchase orders', 'plus'], ['Budgets & budget vs actual', 'plus'], ['Classes & P&L by class', 'plus'], ['1099 contractor report', 'plus'], ['Close the books (period lock)', 'plus'],
   ['Email invoices from Fluxo', 'essentials'], ['Cash forecast', 'plus'],
@@ -205,7 +205,7 @@ const PLAN_FEATURES = [
   ['Single sign-on (SSO)', 'enterprise'],
 ];
 const FEATURE_LABEL = {
-  '5 invoices per month & unlimited estimates': t('5 invoices per month & unlimited estimates'), 'Send by link, email button or PDF': t('Send by link, email button or PDF'), 'Unlimited invoices': t('Unlimited invoices'), 'Credit memos': t('Credit memos'), 'Unlimited users': t('Unlimited users'), 'Invite your accountant (read-only)': t('Invite your accountant (read-only)'),
+  '5 invoices per month & unlimited estimates': t('5 invoices per month & unlimited estimates'), 'Send by link, email button or PDF': t('Send by link, email button or PDF'), 'Unlimited invoices': t('Unlimited invoices'), 'Credit memos': t('Credit memos'), 'Unlimited users': t('Unlimited users'), 'Invite your accountant (read-only)': t('Invite your accountant (read-only)'), 'AI assistant (categorize, collect, explain)': t('AI assistant (categorize, collect, explain)'), 'Up to 3 accountants': t('Up to 3 accountants'), 'Unlimited accountants': t('Unlimited accountants'), 'Import from QuickBooks & Xero': t('Import from QuickBooks & Xero'), 'Sales tax by state': t('Sales tax by state'), 'Download all your data': t('Download all your data'),
   'Invoices, estimates & credit memos': t('Invoices, estimates & credit memos'), 'Expenses, receipts & sales receipts': t('Expenses, receipts & sales receipts'), 'Bank CSV import & reconciliation': t('Bank CSV import & reconciliation'),
   'Core financial reports': t('Core financial reports'), 'Logo & brand color on invoices': t('Logo & brand color on invoices'), 'Bills & vendor payments': t('Bills & vendor payments'), 'Automatic bank connection (Plaid)': t('Automatic bank connection (Plaid)'), 'Recurring invoices': t('Recurring invoices'),
   'Time tracking': t('Time tracking'), 'Full report set & audit log': t('Full report set & audit log'), 'Inventory (average cost)': t('Inventory (average cost)'), 'Project profitability': t('Project profitability'),

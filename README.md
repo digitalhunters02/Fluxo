@@ -45,11 +45,11 @@ Every feature has a minimum plan, enforced on the server (HTTP 402) and in the U
 
 | Plan | Price | Adds |
 |---|---|---|
-| Free | $0 | 5 new invoices per month, unlimited estimates, expenses, bank CSV import and reconciliation, core reports, share by link / email button / PDF, 1 user. No card needed; it has no variable cost (no bank feeds, no server-sent email) |
-| Starter | $29 | Everything in Free plus unlimited invoices, credit memos, branding, unlimited users |
-| Essentials | $65 | Bills, recurring invoices, time tracking, full report set, audit log, connected banks (2) |
-| Plus | $109 | Inventory, project profitability, purchase orders, budgets, classes, 1099 report, period lock, connected banks (5) |
-| Advanced | $269 | Custom roles and permissions, batch invoicing, connected banks (15) |
+| Free | $0 | 5 new invoices per month, unlimited estimates, expenses, bank CSV import and reconciliation, core reports, import from QuickBooks/Xero, sales tax by state, download all your data, share by link / email button / PDF, 1 user. No card needed; it has no variable cost (no bank feeds, no server-sent email) |
+| Starter | $29 | Everything in Free plus unlimited invoices, credit memos, branding, unlimited users, 1 accountant (read-only) |
+| Essentials | $65 | Bills, recurring invoices, time tracking, full report set, audit log, connected banks (2), AI assistant (30 uses/month) |
+| Plus | $109 | Inventory, project profitability, purchase orders, budgets, classes, 1099 report, period lock, connected banks (5), AI assistant (100/month), up to 3 accountants |
+| Advanced | $269 | Custom roles and permissions, batch invoicing, online payments with card and bank (ACH), unlimited accountants, AI assistant (300/month), connected banks (15) |
 | Payroll add-on | $35 + $5/employee | U.S. payroll (calculation and records) |
 
 QuickBooks Online list prices for comparison: $38 / $85 / $140 / $340; payroll Core $50 + $6.50. Feature map: `server/src/plans.js`.

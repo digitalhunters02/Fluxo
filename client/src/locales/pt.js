@@ -1791,5 +1791,18 @@ export default {
  "This email already belongs to a user of this company.": "Este e-mail já pertence a um usuário desta empresa.",
  "This accountant already has access.": "Este contador já tem acesso.",
  "Accountant not found": "Contador não encontrado",
- "This email already has a Fluxo login for another company. Ask the owner to invite a different email address.": "Este e-mail já tem um login do Fluxo em outra empresa. Peça ao dono para convidar outro endereço de e-mail."
+ "This email already has a Fluxo login for another company. Ask the owner to invite a different email address.": "Este e-mail já tem um login do Fluxo em outra empresa. Peça ao dono para convidar outro endereço de e-mail.",
+ "Import from QuickBooks & Xero": "Importar do QuickBooks e do Xero",
+ "Sales tax by state": "Imposto sobre vendas por estado",
+ "Download all your data": "Baixar todos os seus dados",
+ "Invite your accountant (1, read-only)": "Convidar o seu contador (1, só leitura)",
+ "AI assistant (30 uses per month)": "Assistente de IA (30 usos por mês)",
+ "AI assistant (100 uses per month)": "Assistente de IA (100 usos por mês)",
+ "AI assistant (300 uses per month)": "Assistente de IA (300 usos por mês)",
+ "AI assistant (1,000 uses per month)": "Assistente de IA (1.000 usos por mês)",
+ "AI assistant (3,000 uses per month)": "Assistente de IA (3.000 usos por mês)",
+ "Invite up to 3 accountants": "Convide até 3 contadores",
+ "Unlimited accountants": "Contadores sem limite",
+ "Up to 3 accountants": "Até 3 contadores",
+ "AI assistant (categorize, collect, explain)": "Assistente de IA (categorizar, cobrar, explicar)"
 };

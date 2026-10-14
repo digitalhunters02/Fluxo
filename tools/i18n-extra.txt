@@ -1266,3 +1266,16 @@ This email already belongs to a user of this company. || Este e-mail já pertenc
 This accountant already has access. || Este contador já tem acesso. || Este contador ya tiene acceso.
 Accountant not found || Contador não encontrado || Contador no encontrado
 This email already has a Fluxo login for another company. Ask the owner to invite a different email address. || Este e-mail já tem um login do Fluxo em outra empresa. Peça ao dono para convidar outro endereço de e-mail. || Este correo ya tiene un acceso de Fluxo en otra empresa. Pida al dueño que invite otra dirección de correo.
+Import from QuickBooks & Xero || Importar do QuickBooks e do Xero || Importar desde QuickBooks y Xero
+Sales tax by state || Imposto sobre vendas por estado || Impuesto sobre ventas por estado
+Download all your data || Baixar todos os seus dados || Descargar todos sus datos
+Invite your accountant (1, read-only) || Convidar o seu contador (1, só leitura) || Invitar a su contador (1, solo lectura)
+AI assistant (30 uses per month) || Assistente de IA (30 usos por mês) || Asistente de IA (30 usos al mes)
+AI assistant (100 uses per month) || Assistente de IA (100 usos por mês) || Asistente de IA (100 usos al mes)
+AI assistant (300 uses per month) || Assistente de IA (300 usos por mês) || Asistente de IA (300 usos al mes)
+AI assistant (1,000 uses per month) || Assistente de IA (1.000 usos por mês) || Asistente de IA (1.000 usos al mes)
+AI assistant (3,000 uses per month) || Assistente de IA (3.000 usos por mês) || Asistente de IA (3.000 usos al mes)
+Invite up to 3 accountants || Convide até 3 contadores || Invite hasta 3 contadores
+Unlimited accountants || Contadores sem limite || Contadores sin límite
+Up to 3 accountants || Até 3 contadores || Hasta 3 contadores
+AI assistant (categorize, collect, explain) || Assistente de IA (categorizar, cobrar, explicar) || Asistente de IA (categorizar, cobrar, explicar)

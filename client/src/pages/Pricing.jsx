@@ -5,13 +5,13 @@ import { api, setToken } from '../api.js';
 import { Button, Card, ErrorBox, Field, Input, Loading, ToastProvider, useAction, useLoad } from '../components/ui.jsx';
 
 const PLAN_INFO = {
-  free: { name: t('Free'), blurb: t('Try Fluxo with no card'), features: [t('5 invoices per month & unlimited estimates'), t('Send by link, email button or PDF'), t('Expenses, receipts & sales receipts'), t('Bank CSV import & reconciliation'), t('Core financial reports'), t('1 user')] },
-  starter: { name: t('Starter'), blurb: t('Invoicing and bookkeeping basics'), features: [t('Everything in Free'), t('Unlimited invoices'), t('Credit memos'), t('Logo & brand color on invoices'), t('Unlimited users')] },
-  essentials: { name: t('Essentials'), blurb: t('Bills, time and automatic banks'), features: [t('Everything in Starter'), t('Bills & vendor payments'), t('Recurring invoices'), t('Time tracking'), t('Connect banks automatically (2)')] },
-  plus: { name: t('Plus'), blurb: t('Inventory, projects and budgets'), features: [t('Everything in Essentials'), t('Inventory (average cost)'), t('Purchase orders'), t('Budgets, classes & 1099 report'), t('Connect up to 5 banks')] },
-  advanced: { name: t('Advanced'), blurb: t('Teams, permissions and scale'), features: [t('Everything in Plus'), t('Custom roles & permissions'), t('Batch invoicing'), t('Connect up to 15 banks'), t('Online payments (card and bank) with Stripe'), t('API keys & webhooks')] },
-  business: { name: t('Business'), blurb: t('Controls and several companies'), features: [t('Everything in Advanced'), t('Bill approvals & separation of duties'), t('Group of companies & consolidated reports'), t('Fixed assets & depreciation'), t('Month-end close checklist'), t('Audit log export')] },
-  enterprise: { name: t('Enterprise'), blurb: t('Single sign-on and a group of many companies'), features: [t('Everything in Business'), t('Single sign-on (SSO)'), t('Priority support')] },
+  free: { name: t('Free'), blurb: t('Try Fluxo with no card'), features: [t('5 invoices per month & unlimited estimates'), t('Send by link, email button or PDF'), t('Expenses, receipts & sales receipts'), t('Bank CSV import & reconciliation'), t('Core financial reports'), t('Import from QuickBooks & Xero'), t('Sales tax by state'), t('Download all your data'), t('1 user')] },
+  starter: { name: t('Starter'), blurb: t('Invoicing and bookkeeping basics'), features: [t('Everything in Free'), t('Unlimited invoices'), t('Credit memos'), t('Logo & brand color on invoices'), t('Unlimited users'), t('Invite your accountant (1, read-only)')] },
+  essentials: { name: t('Essentials'), blurb: t('Bills, time and automatic banks'), features: [t('Everything in Starter'), t('Bills & vendor payments'), t('Recurring invoices'), t('Time tracking'), t('Connect banks automatically (2)'), t('AI assistant (30 uses per month)')] },
+  plus: { name: t('Plus'), blurb: t('Inventory, projects and budgets'), features: [t('Everything in Essentials'), t('Inventory (average cost)'), t('Purchase orders'), t('Budgets, classes & 1099 report'), t('Connect up to 5 banks'), t('AI assistant (100 uses per month)'), t('Invite up to 3 accountants')] },
+  advanced: { name: t('Advanced'), blurb: t('Teams, permissions and scale'), features: [t('Everything in Plus'), t('Custom roles & permissions'), t('Batch invoicing'), t('Connect up to 15 banks'), t('Online payments (card and bank) with Stripe'), t('API keys & webhooks'), t('AI assistant (300 uses per month)'), t('Unlimited accountants')] },
+  business: { name: t('Business'), blurb: t('Controls and several companies'), features: [t('Everything in Advanced'), t('Bill approvals & separation of duties'), t('Group of companies & consolidated reports'), t('Fixed assets & depreciation'), t('Month-end close checklist'), t('Audit log export'), t('AI assistant (1,000 uses per month)')] },
+  enterprise: { name: t('Enterprise'), blurb: t('Single sign-on and a group of many companies'), features: [t('Everything in Business'), t('Single sign-on (SSO)'), t('AI assistant (3,000 uses per month)'), t('Priority support')] },
 };
 
 function Shell({ children }) {
