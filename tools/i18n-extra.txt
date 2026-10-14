@@ -1080,3 +1080,44 @@ Enterprise: {0} companies included, no extra charge yet. || Enterprise: {0} empr
 Single sign-on and a group of many companies || Login único e um grupo com muitas empresas || Inicio de sesión único y un grupo con muchas empresas
 Priority support || Suporte prioritário || Soporte prioritario
 Subscribe to this plan to use it. || Assine este plano para usá-lo. || Suscríbase a este plan para usarlo.
+QuickBooks: Sales > Products and services > Export (or the Product/Service List report). Xero: Business > Products and services > Export. || QuickBooks: Vendas > Produtos e serviços > Exportar (ou o relatório Lista de produtos/serviços). Xero: Negócios > Produtos e serviços > Exportar. || QuickBooks: Ventas > Productos y servicios > Exportar (o el informe Lista de productos/servicios). Xero: Negocio > Productos y servicios > Exportar.
+Open invoices (who owes you) || Faturas em aberto (quem deve a você) || Facturas abiertas (quién le debe)
+QuickBooks: Reports > A/R Aging Detail, export as CSV. Xero: Accounting > Invoices > Export (or the Aged Receivables Detail report). || QuickBooks: Relatórios > A/R Aging Detail (contas a receber por vencimento), exportar em CSV. Xero: Contabilidade > Faturas > Exportar (ou o relatório Aged Receivables Detail). || QuickBooks: Informes > A/R Aging Detail (cuentas por cobrar por vencimiento), exportar en CSV. Xero: Contabilidad > Facturas > Exportar (o el informe Aged Receivables Detail).
+Open bills (what you owe) || Contas a pagar em aberto (o que você deve) || Cuentas por pagar abiertas (lo que usted debe)
+QuickBooks: Reports > A/P Aging Detail, export as CSV. Xero: Accounting > Bills > Export (or the Aged Payables Detail report). || QuickBooks: Relatórios > A/P Aging Detail (contas a pagar por vencimento), exportar em CSV. Xero: Contabilidade > Contas a pagar > Exportar (ou o relatório Aged Payables Detail). || QuickBooks: Informes > A/P Aging Detail (cuentas por pagar por vencimiento), exportar en CSV. Xero: Contabilidad > Facturas de compra > Exportar (o el informe Aged Payables Detail).
+Due date || Vencimento || Vencimiento
+Open balance || Saldo em aberto || Saldo abierto
+Unit price || Preço unitário || Precio unitario
+open items {0} · ledger {1} || faturas em aberto {0} · livro {1} || abiertas {0} · libro {1}
+Bring your data from another system in these steps: chart of accounts, then customers and vendors, then opening balances, then products, open invoices and open bills. Check the preview first; nothing is saved until you press Import. || Traga seus dados de outro sistema nestes passos: plano de contas, depois clientes e fornecedores, depois saldos de abertura, depois produtos, faturas em aberto e contas a pagar em aberto. Confira a prévia primeiro; nada é salvo até você apertar Importar. || Traiga sus datos de otro sistema en estos pasos: plan de cuentas, luego clientes y proveedores, luego saldos de apertura, luego productos, facturas abiertas y cuentas por pagar abiertas. Revise primero la vista previa; no se guarda nada hasta que pulse Importar.
+Where the file comes from || De onde vem o arquivo || De dónde viene el archivo
+Another system or spreadsheet || Outro sistema ou planilha || Otro sistema u hoja de cálculo
+Date format in the file || Formato de data no arquivo || Formato de fecha en el archivo
+Automatic (QuickBooks: month/day, Xero: day/month) || Automático (QuickBooks: mês/dia, Xero: dia/mês) || Automático (QuickBooks: mes/día, Xero: día/mes)
+Month/day/year || Mês/dia/ano || Mes/día/año
+Day/month/year || Dia/mês/ano || Día/mes/año
+The date you start in Fluxo (the day before, in the old system). || A data em que você começa no Fluxo (o dia anterior, no sistema antigo). || La fecha en que empieza en Fluxo (el día anterior, en el sistema anterior).
+Pick the column for each missing field: || Escolha a coluna de cada campo que faltou: || Elija la columna de cada campo que falta:
+Choose… || Escolher… || Elegir…
+Preview again || Ver a prévia de novo || Ver la vista previa otra vez
+{0} imported · {1} skipped || {0} importados · {1} ignorados || {0} importados · {1} omitidos
+{0} new contacts || {0} contatos novos || {0} contactos nuevos
+Your opening balances already include these amounts, so nothing new was posted to the books: these invoices are the detail behind them. || Seus saldos de abertura já incluem esses valores, então nada novo foi lançado nos livros: essas faturas são o detalhe por trás deles. || Sus saldos de apertura ya incluyen estos importes, por lo que no se registró nada nuevo en los libros: estas facturas son el detalle detrás de ellos.
+{0} to import · {1} skipped || {0} para importar · {1} ignorados || {0} para importar · {1} omitidos
+Open total {0} || Total em aberto {0} || Total abierto {0}
+Your opening balances are already in the books: these invoices will be added as detail only, with no new posting. || Seus saldos de abertura já estão nos livros: essas faturas entram só como detalhe, sem novo lançamento. || Sus saldos de apertura ya están en los libros: estas facturas se agregan solo como detalle, sin nuevo asiento.
+No opening balances yet: each open item will be posted on the date above against "Opening Balance Equity" (never as new revenue or expense). || Ainda não há saldos de abertura: cada item em aberto será lançado na data acima contra "Opening Balance Equity" (nunca como receita ou despesa nova). || Aún no hay saldos de apertura: cada partida abierta se registrará en la fecha indicada contra "Opening Balance Equity" (nunca como ingreso o gasto nuevo).
+Showing the first {0} || Mostrando os primeiros {0} || Mostrando los primeros {0}
+{0} rows will be skipped || {0} linhas serão ignoradas || {0} filas se omitirán
+Line {0} || Linha {0} || Línea {0}
+Repeated in the file || Repetido no arquivo || Repetido en el archivo
+An item with this name already exists || Já existe um item com esse nome || Ya existe un artículo con ese nombre
+No customer/vendor name || Sem nome de cliente/fornecedor || Sin nombre de cliente/proveedor
+No amount || Sem valor || Sin importe
+Already paid in full (nothing open) || Já paga por completo (nada em aberto) || Ya pagada por completo (nada abierto)
+Invoice number already exists || O número da fatura já existe || El número de factura ya existe
+Bill number already exists || O número da conta a pagar já existe || El número de la cuenta por pagar ya existe
+Unreadable date "{0}" (try the other date format) || Data ilegível "{0}" (tente o outro formato de data) || Fecha ilegible "{0}" (pruebe el otro formato de fecha)
+Transaction type "{0}" is not imported || O tipo de lançamento "{0}" não é importado || El tipo de transacción "{0}" no se importa
+Products and services || Produtos e serviços || Productos y servicios
+Some columns were not recognized. Pick them if the file has them (optional): || Algumas colunas não foram reconhecidas. Escolha-as se o arquivo tiver (opcional): || Algunas columnas no se reconocieron. Elíjalas si el archivo las tiene (opcional):

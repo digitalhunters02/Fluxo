@@ -152,30 +152,79 @@ const KINDS = () => ({
   accounts: [t('Chart of accounts'), t('QuickBooks: Reports > Account List, export as CSV. Xero: Accounting > Chart of accounts > Export.')],
   contacts: [t('Customers and vendors'), t('QuickBooks: Reports > Customer Contact List (or Vendor), export as CSV. Xero: Contacts > Export.')],
   opening: [t('Opening balances'), t('QuickBooks or Xero: Trial Balance report as of the day before you start in Fluxo, export as CSV. Import the chart of accounts first.')],
+  items: [t('Products and services'), t('QuickBooks: Sales > Products and services > Export (or the Product/Service List report). Xero: Business > Products and services > Export.')],
+  invoices: [t('Open invoices (who owes you)'), t('QuickBooks: Reports > A/R Aging Detail, export as CSV. Xero: Accounting > Invoices > Export (or the Aged Receivables Detail report).')],
+  bills: [t('Open bills (what you owe)'), t('QuickBooks: Reports > A/P Aging Detail, export as CSV. Xero: Accounting > Bills > Export (or the Aged Payables Detail report).')],
 });
+const DETAIL = ['items', 'invoices', 'bills']; // estes três passam pelo importador novo (/import); os outros, pelo /migrate
+const FIELD_LABEL = () => ({ name: t('Name'), number: t('Number'), contact: t('Customer / vendor'), date: t('Date'), due: t('Due date'), amount: t('Amount'), open: t('Open balance'), price: t('Price'), cost: t('Cost'), sku: 'SKU', type: t('Type'), description: t('Description'), qty: t('Quantity'), unit: t('Unit price') });
+function Check({ c }) {
+  const row = (label, o) => <li>{label}: {t('open items {0} · ledger {1}', [money(o.documents), money(o.ledger)])} {o.difference === 0 ? '✓' : <b className="text-amber-700">· {t('Difference {0}', [money(o.difference)])}</b>}</li>;
+  return <ul className="mt-2 space-y-1 text-sm" data-testid="import-check">{row(t('Receivable'), c.receivable)}{row(t('Payable'), c.payable)}</ul>;
+}
 export function ImportTab() {
   const [run, busy] = useAction();
   const [kind, setKind] = useState('accounts'); const [csv, setCsv] = useState(''); const [fileName, setFileName] = useState('');
   const [asof, setAsof] = useState(''); const [ck, setCk] = useState('auto');
+  const [source, setSource] = useState('quickbooks'); const [dateFormat, setDateFormat] = useState(''); const [mapping, setMapping] = useState({});
   const [res, setRes] = useState(null); const [done, setDone] = useState(false);
-  const K = KINDS();
-  const send = (apply) => run(async () => { const r = await api.post(`/migrate/${kind}`, { csv, apply, asof, contact_kind: ck }); setRes(r); if (apply) setDone(true); }, apply ? t('Import finished') : undefined);
-  const pick = async (e) => { const f = e.target.files?.[0]; setRes(null); setDone(false); if (!f) { setCsv(''); setFileName(''); return; } setCsv(await f.text()); setFileName(f.name); };
+  const K = KINDS(); const detail = DETAIL.includes(kind);
+  const reset = () => { setRes(null); setDone(false); };
+  const body = { kind, text: csv, source, dateFormat: dateFormat || undefined, mapping, asOf: asof || undefined };
+  const send = (apply) => run(async () => {
+    const r = detail ? await api.post(apply ? '/import/run' : '/import/preview', body) : await api.post(`/migrate/${kind}`, { csv, apply, asof, contact_kind: ck });
+    setRes(r); if (apply) setDone(true);
+  }, apply ? t('Import finished') : undefined);
+  const pick = async (e) => { reset(); setMapping({}); const f = e.target.files?.[0]; if (!f) { setCsv(''); setFileName(''); return; } setCsv(await f.text()); setFileName(f.name); };
+  const needAsOf = detail && kind !== 'items' && (res?.summary?.mode ?? 'post') === 'post';
+  const FL = FIELD_LABEL();
   return (
     <div className="max-w-4xl space-y-4" data-testid="import">
       <Card title={t('Import from QuickBooks or Xero')}>
-        <p className="mb-3 text-sm text-slate-600">{t('Bring your data from another system in three steps: chart of accounts, then customers and vendors, then opening balances. Check the preview first; nothing is saved until you press Import.')}</p>
+        <p className="mb-3 text-sm text-slate-600">{t('Bring your data from another system in these steps: chart of accounts, then customers and vendors, then opening balances, then products, open invoices and open bills. Check the preview first; nothing is saved until you press Import.')}</p>
         <div className="grid gap-3 sm:grid-cols-3">
-          <Field label={t('What to import')}><Select value={kind} onChange={(e) => { setKind(e.target.value); setRes(null); setDone(false); }}>{Object.entries(K).map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}</Select></Field>
+          <Field label={t('What to import')}><Select value={kind} onChange={(e) => { setKind(e.target.value); reset(); setMapping({}); }} data-testid="import-kind">{Object.entries(K).map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}</Select></Field>
           {kind === 'contacts' && <Field label={t('These are')}><Select value={ck} onChange={(e) => setCk(e.target.value)}><option value="auto">{t('Detect from the file')}</option><option value="customer">{t('Customers')}</option><option value="vendor">{t('Vendors')}</option></Select></Field>}
           {kind === 'opening' && <Field label={t('Balances as of')}><Input type="date" value={asof} onChange={(e) => setAsof(e.target.value)} /></Field>}
+          {detail && <Field label={t('Where the file comes from')}><Select value={source} onChange={(e) => { setSource(e.target.value); reset(); }} data-testid="import-source"><option value="quickbooks">QuickBooks</option><option value="xero">Xero</option><option value="other">{t('Another system or spreadsheet')}</option></Select></Field>}
+          {detail && kind !== 'items' && <Field label={t('Date format in the file')}><Select value={dateFormat} onChange={(e) => { setDateFormat(e.target.value); reset(); }}><option value="">{t('Automatic (QuickBooks: month/day, Xero: day/month)')}</option><option value="us">{t('Month/day/year')}</option><option value="dmy">{t('Day/month/year')}</option></Select></Field>}
+          {needAsOf && <Field label={t('Balances as of')} hint={t('The date you start in Fluxo (the day before, in the old system).')}><Input type="date" value={asof} onChange={(e) => setAsof(e.target.value)} data-testid="import-asof" /></Field>}
           <Field label={t('CSV file')}><input type="file" accept=".csv,text/csv" onChange={pick} data-testid="import-file" className="text-sm" /></Field>
         </div>
         <p className="mt-2 text-xs text-slate-500">{K[kind][1]}</p>
-        <div className="mt-4 flex gap-2"><Button variant="ghost" disabled={busy || !csv} onClick={() => send(false)}>{t('Preview')}</Button><Button disabled={busy || !csv || !res || done} onClick={() => send(true)}>{t('Import')}</Button></div>
+        <div className="mt-4 flex gap-2"><Button variant="ghost" disabled={busy || !csv} onClick={() => send(false)} data-testid="import-preview">{t('Preview')}</Button><Button disabled={busy || !csv || !res || done || (detail && (!res.ready || (needAsOf && !asof)))} onClick={() => send(true)} data-testid="import-run">{t('Import')}</Button></div>
         {fileName && <p className="mt-2 text-xs text-slate-400">{fileName}</p>}
       </Card>
-      {res && (
+      {res && detail && (
+        <Card title={done ? t('Imported') : t('Preview')} className="import-result">
+          {!done && (res.missing?.length > 0 || res.unmapped?.length > 0) && (
+            <div className="mb-3 rounded bg-amber-50 p-3 text-sm text-amber-900" data-testid="import-mapping">
+              <p className="mb-2">{res.missing?.length ? t('Pick the column for each missing field:') : t('Some columns were not recognized. Pick them if the file has them (optional):')}</p>
+              <div className="grid gap-2 sm:grid-cols-3">{[...(res.missing || []), ...(res.unmapped || [])].map((f) => <Field key={f} label={FL[f] || f}><Select value={mapping[f] || ''} onChange={(e) => setMapping({ ...mapping, [f]: e.target.value })}><option value="">{t('Choose…')}</option>{res.headers.filter(Boolean).map((h) => <option key={h}>{h}</option>)}</Select></Field>)}</div>
+              <Button className="mt-2" variant="ghost" disabled={busy} onClick={() => send(false)}>{t('Preview again')}</Button>
+            </div>)}
+          {done ? (
+            <>
+              <p className="text-sm">{t('{0} imported · {1} skipped', [res.created, res.skipped])}{res.newContacts ? ` · ${t('{0} new contacts', [res.newContacts])}` : ''}</p>
+              {res.mode === 'detail' && <p className="mt-1 text-xs text-slate-500">{t('Your opening balances already include these amounts, so nothing new was posted to the books: these invoices are the detail behind them.')}</p>}
+              {res.check && kind !== 'items' && <Check c={res.check} />}
+            </>
+          ) : res.rowCount > 0 && (
+            <>
+              <p className="mb-2 text-sm">{t('{0} to import · {1} skipped', [res.rowCount, res.skippedCount])}{res.summary?.openTotal !== undefined ? ` · ${t('Open total {0}', [money(res.summary.openTotal)])}` : ''}</p>
+              {kind !== 'items' && <p className="mb-2 text-xs text-slate-500">{res.summary.mode === 'detail' ? t('Your opening balances are already in the books: these invoices will be added as detail only, with no new posting.') : t('No opening balances yet: each open item will be posted on the date above against "Opening Balance Equity" (never as new revenue or expense).')}</p>}
+              <Table head={detail && kind !== 'items' ? [t('Number'), t('Customer / vendor'), t('Date'), { label: t('Total'), right: true }, { label: t('Open balance'), right: true }] : [t('Name'), t('Type'), { label: t('Price'), right: true }]}>
+                {res.rows.map((r, i) => kind === 'items'
+                  ? <tr key={i}><td className="td">{r.name}</td><td className="td text-sm text-slate-600">{r.kind === 'product' ? t('Product') : t('Service')}</td><td className="td num text-right">{money(r.price)}</td></tr>
+                  : <tr key={i}><td className="td">{r.number}</td><td className="td">{r.contact}</td><td className="td">{date(r.date)}</td><td className="td num text-right">{money(r.total)}</td><td className="td num text-right">{money(r.open)}</td></tr>)}
+              </Table>
+              {res.rowCount > res.rows.length && <p className="mt-1 text-xs text-slate-400">{t('Showing the first {0}', [res.rows.length])}</p>}
+            </>)}
+          {!done && res.skippedCount > 0 && (
+            <details className="mt-3 text-sm"><summary className="cursor-pointer text-slate-700">{t('{0} rows will be skipped', [res.skippedCount])}</summary>
+              <ul className="mt-2 max-h-48 list-disc space-y-1 overflow-auto pl-5 text-slate-600">{res.skipped.map((s, i) => <li key={i}>{t('Line {0}', [s.line])}{s.name ? ` · ${s.name}` : ''} — {t(s.reason.replace(/"[^"]*"/g, '"{0}"'), [(s.reason.match(/"([^"]*)"/) || [])[1] ?? ''])}</li>)}</ul></details>)}
+        </Card>)}
+      {res && !detail && (
         <Card title={done ? t('Imported') : t('Preview')} className="import-result">
           {kind === 'opening' ? (
             <>

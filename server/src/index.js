@@ -15,6 +15,7 @@ import * as bank from './banking.js';
 import * as rep from './reports.js';
 import * as pay from './payroll.js';
 import * as taxid from './taxid.js';
+import * as importer from './importer.js';
 import * as plaidSvc from './plaid.js';
 import * as billing from './billing.js';
 import { reportLead } from './harborLead.js';
@@ -547,6 +548,19 @@ function assertInvoiceQuota(adding) {
 }
 const typeParam = (req) => { const t = req.params.type; if (!['invoice', 'estimate', 'bill', 'credit', 'po'].includes(t)) throw new HttpError(404, 'Invalid type'); return t; };
 
+// Importar produtos, faturas e contas a pagar em aberto do QuickBooks / Xero / planilha (só o dono): prévia sem gravar e depois a gravação, tudo ou nada.
+// (Plano de contas, clientes/fornecedores e saldos de abertura: /migrate/:kind.)
+const importOpts = (b) => ({ mapping: b.mapping && typeof b.mapping === 'object' ? b.mapping : {}, source: ['quickbooks', 'xero', 'other'].includes(b.source) ? b.source : 'other', dateFormat: b.dateFormat, asOf: b.asOf, ledgerMode: ['detail', 'post'].includes(b.ledgerMode) ? b.ledgerMode : 'auto' });
+api.get('/import/status', can('settings'), wrap((_req, res) => ok(res, importer.importStatus())));
+api.post('/import/preview', can('settings', true), wrap((req, res) => {
+  const a = importer.analyze(req.body?.kind, req.body?.text, importOpts(req.body || {}));
+  ok(res, { ...a, rowCount: a.rows.length, rows: a.rows.slice(0, 8), skippedCount: a.skipped.length, skipped: a.skipped.slice(0, 50), });
+}));
+api.post('/import/run', can('settings', true), wrap((req, res) => {
+  const r = importer.runImport(req.body?.kind, req.body?.text, importOpts(req.body || {}), req.user);
+  audit(req, 'import', String(req.body?.kind), null, JSON.stringify({ source: req.body?.source || 'other', created: r.created, updated: r.updated, skipped: r.skipped }));
+  ok(res, r);
+}));
 api.get('/docs/:type', (req, res, next) => can(docModule(req.params.type))(req, res, next), wrap((req, res) => {
   const t = typeParam(req);
   const rows = all(`SELECT d.id,d.type,d.number,d.contact_id,c.name AS contact_name,d.issue_date,d.due_date,d.status,d.total,d.paid,d.total-d.paid AS balance,d.project_id
