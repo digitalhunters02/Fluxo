@@ -192,6 +192,9 @@ CREATE TABLE IF NOT EXISTS asset_depr (
   id INTEGER PRIMARY KEY, asset_id INTEGER NOT NULL REFERENCES fixed_assets(id) ON DELETE CASCADE, period TEXT NOT NULL, amount INTEGER NOT NULL, entry_id INTEGER,
   UNIQUE (asset_id, period)
 );
+CREATE TABLE IF NOT EXISTS tax_rates (
+  id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, state TEXT NOT NULL DEFAULT '', rate REAL NOT NULL DEFAULT 0, notes TEXT NOT NULL DEFAULT '', active INTEGER NOT NULL DEFAULT 1
+);
 CREATE TABLE IF NOT EXISTS close_tasks (
   period TEXT NOT NULL, key TEXT NOT NULL, done_by TEXT, done_at TEXT, PRIMARY KEY (period, key)
 );
@@ -221,6 +224,11 @@ export function openDb(file) {
   addColumn('expenses', 'method', "TEXT NOT NULL DEFAULT ''");   // forma de pagamento (decide 1099-NEC × 1099-K; ver contractorPay.js)
   addColumn('docs', 'external_id', 'TEXT');                         // id do outro sistema (API): reenviar o mesmo id nunca duplica
   addColumn('contacts', 'external_id', 'TEXT');
+  addColumn('contacts', 'tax_exempt', 'INTEGER NOT NULL DEFAULT 0');   // cliente isento de imposto sobre vendas (revenda, ONG...)
+  addColumn('contacts', 'tax_exempt_note', "TEXT NOT NULL DEFAULT ''"); // nº do certificado de isenção
+  addColumn('contacts', 'tax_state', "TEXT NOT NULL DEFAULT ''");       // estado do cliente (para o alerta de obrigação)
+  addColumn('contacts', 'tax_rate_id', 'INTEGER');                      // alíquota padrão deste cliente
+  addColumn('doc_lines', 'tax_name', "TEXT NOT NULL DEFAULT ''");       // nome da alíquota usada na linha (relatório por jurisdição)
   addColumn('docs', 'emailed_at', 'TEXT');                          // quando a fatura foi enviada por e-mail pelo sistema
   addColumn('docs', 'approval_status', "TEXT NOT NULL DEFAULT ''"); // '', approved, rejected (aprovação de contas a pagar)
   addColumn('docs', 'approved_by', 'TEXT');

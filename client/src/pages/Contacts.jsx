@@ -10,6 +10,7 @@ import PhotoImportButton from '../components/PhotoImportButton.jsx';
 
 function ContactModal({ c, kind, onClose, onSaved }) {
   const { has } = useAuth();
+  const taxInfo = useLoad(() => api.get('/tax/rates').catch(() => ({ rates: [], states: {} })));
   const [run, busy] = useAction();
   const [f, setF] = useState({ kind, name: '', email: '', phone: '', tax_id: '', address: '', notes: '', terms_days: 15, ...c });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
@@ -25,6 +26,14 @@ function ContactModal({ c, kind, onClose, onSaved }) {
         <Field label={t('Payment terms (days)')}><Input type="number" min="0" value={f.terms_days} onChange={set('terms_days')} /></Field>
         <Field label={t('Type')}><Select value={f.kind} onChange={set('kind')}><option value="customer">{t('Customer')}</option><option value="vendor">{t('Vendor')}</option><option value="both">{t('Customer and vendor')}</option></Select></Field>
         <Field label={t('Address')} className="col-span-2"><Input value={f.address} onChange={set('address')} /></Field>
+        {f.kind !== 'vendor' && (
+          <div className="col-span-2 grid grid-cols-2 gap-3 rounded-lg border border-slate-200 p-3" data-testid="contact-sales-tax">
+            <div className="col-span-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{t('Sales tax')}</div>
+            <Field label={t('State')} hint={t('Where this customer is. Used to watch your sales per state.')}><Select value={f.tax_state || ''} onChange={set('tax_state')}><option value="">—</option>{Object.entries(taxInfo.data?.states || {}).map(([k, n]) => <option key={k} value={k}>{k} — {n}</option>)}</Select></Field>
+            <Field label={t('Default tax rate')}><Select value={f.tax_rate_id || ''} onChange={set('tax_rate_id')} disabled={!!f.tax_exempt}><option value="">{t('Company default')}</option>{(taxInfo.data?.rates || []).filter((r) => r.active).map((r) => <option key={r.id} value={r.id}>{r.name} ({r.rate}%)</option>)}</Select></Field>
+            <label className="col-span-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={!!f.tax_exempt} onChange={(e) => setF({ ...f, tax_exempt: e.target.checked ? 1 : 0 })} data-testid="contact-tax-exempt" />{' '}{t('Tax-exempt customer (no sales tax on invoices)')}</label>
+            {!!f.tax_exempt && <Field label={t('Exemption certificate / reason')} className="col-span-2"><Input value={f.tax_exempt_note || ''} onChange={set('tax_exempt_note')} placeholder={t('Resale certificate number')} /></Field>}
+          </div>)}
         {f.kind !== 'customer' && has('contractors_1099') && <label className="col-span-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={!!f.is_1099} onChange={(e) => setF({ ...f, is_1099: e.target.checked ? 1 : 0 })} />{' '}{t('Independent contractor (will receive Form 1099)')}</label>}
         <Field label={t('Notes')} className="col-span-2"><textarea className="field h-20" value={f.notes} onChange={set('notes')} /></Field>
       </div>

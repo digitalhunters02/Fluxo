@@ -1,5 +1,6 @@
 // Automações e lembretes: tarefas repetitivas que o Fluxo faz sozinho ou lembra de fazer.
 // Tudo é local (sem custo): gera avisos dentro do app e, se ligado, um backup diário em arquivo.
+import * as stax from './salestax.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -74,6 +75,10 @@ export function generate() {
       want('recurring', { ref_key: `recurring:${r.id}`, title: 'Recurring “{0}” could not be created', detail: r.last_error, link: '/recurring', due_date: t, data: { name: r.name } });
     }
   }
+  // alerta de obrigação de imposto sobre vendas: vendas a clientes de um estado perto (80%) ou acima do limite; sempre ligado, só aparece com dados
+  for (const a of stax.nexusStatus(t).alerts) {
+    want('nexus', { ref_key: `nexus:${a.state}:${a.status}:${t.slice(0, 4)}`, title: a.status === 'over' ? 'Sales tax: you may need to register in {0}' : 'Sales tax: you are close to the limit in {0}', detail: `${a.pct}%`, link: '/settings/sales-tax', due_date: t, data: { name: a.name } });
+  }
   if (cfg.auto_tax_calendar) {
     const payroll = hasFeature('payroll') && get('SELECT 1 FROM employees LIMIT 1');
     const y = Number(t.slice(0, 4));
@@ -83,9 +88,9 @@ export function generate() {
     }
   }
   tx(() => {
-    for (const kind of ['overdue', 'bill', 'estimate', 'stock', 'bank', 'tax', 'recurring']) {
+    for (const kind of ['overdue', 'bill', 'estimate', 'stock', 'bank', 'tax', 'recurring', 'nexus']) {
       const keys = (wanted[kind] || []).map((r) => r.ref_key);
-      const enabled = { overdue: cfg.auto_overdue, bill: cfg.auto_bills, estimate: cfg.auto_estimates, stock: cfg.auto_lowstock, bank: cfg.auto_bank, tax: cfg.auto_tax_calendar, recurring: true }[kind];
+      const enabled = { overdue: cfg.auto_overdue, bill: cfg.auto_bills, estimate: cfg.auto_estimates, stock: cfg.auto_lowstock, bank: cfg.auto_bank, tax: cfg.auto_tax_calendar, recurring: true, nexus: true }[kind];
       // abertos que não valem mais (ou automação desligada) somem; os dispensados ficam como marcador
       for (const r of all('SELECT id, ref_key FROM reminders WHERE manual=0 AND kind=? AND done_at IS NULL', kind)) if (!enabled || !keys.includes(r.ref_key)) run('DELETE FROM reminders WHERE id=?', r.id);
       for (const r of wanted[kind] || []) run('INSERT OR IGNORE INTO reminders(kind,ref_key,title,detail,link,data,due_date) VALUES(?,?,?,?,?,?,?)', r.kind, r.ref_key, r.title, r.detail, r.link, JSON.stringify(r.data), r.due_date);

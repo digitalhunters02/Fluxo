@@ -220,7 +220,9 @@ export function saveDoc(input, user) {
   const due = input.due_date || input.issue_date;
   if (!isDate(due) || due < input.issue_date) throw bad('Invalid due date');
   if (!Array.isArray(input.lines) || input.lines.length === 0) throw bad('Add at least one line');
-  const calc = computeLines(type, input.lines);
+  // cliente isento: a taxa é zerada no servidor (a tela também faz, mas ninguém passa por fora, nem pela API)
+  const exempt = !['bill', 'po'].includes(type) && !!get('SELECT tax_exempt FROM contacts WHERE id=?', input.contact_id)?.tax_exempt;
+  const calc = computeLines(type, exempt ? input.lines.map((l) => ({ ...l, tax_rate: 0, tax_name: '' })) : input.lines);
   if (calc.lines.some((l) => !l.description && !l.item_id)) throw bad('Every line needs a description or an item');
   if (calc.total <= 0) throw bad('The total must be greater than zero');
 
@@ -253,8 +255,8 @@ export function saveDoc(input, user) {
         VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)`, ...fields, type, nextNumber(type), crypto.randomBytes(12).toString('hex'), user?.id ?? null, input.recurring_id ?? null);
     }
     for (const l of calc.lines) {
-      run('INSERT INTO doc_lines(doc_id,position,item_id,description,qty,unit_price,tax_rate,account_id,amount,tax_amount,time_entry_id,class_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
-        id, l.position, l.item_id || null, l.description || '', l.qty, l.unit_price, l.tax_rate, l.account_id || null, l.amount, l.tax_amount, l.time_entry_id || null, l.class_id || null);
+      run('INSERT INTO doc_lines(doc_id,position,item_id,description,qty,unit_price,tax_rate,account_id,amount,tax_amount,time_entry_id,class_id,tax_name) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',
+        id, l.position, l.item_id || null, l.description || '', l.qty, l.unit_price, l.tax_rate, l.account_id || null, l.amount, l.tax_amount, l.time_entry_id || null, l.class_id || null, l.tax_rate > 0 ? String(l.tax_name || '').slice(0, 80) : '');
       if (l.time_entry_id) run('UPDATE time_entries SET invoice_id=? WHERE id=?', id, l.time_entry_id);
     }
     const doc = loadDoc(id);

@@ -6,7 +6,7 @@ import { addDays, fromCents, money, toCents, today } from '../format.js';
 import { Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, useAction, useLoad } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
 
-const blank = (taxRate) => ({ item_id: '', description: '', qty: '1', price: '', tax_rate: String(taxRate ?? 0), account_id: '', class_id: '' });
+const blank = (taxRate, taxName = '') => ({ item_id: '', description: '', qty: '1', price: '', tax_rate: String(taxRate ?? 0), tax_name: taxName, account_id: '', class_id: '' });
 
 const TITLES = { invoice: [t('New invoice'), t('Edit invoice')], estimate: [t('New estimate'), t('Edit estimate')], bill: [t('New bill'), t('Edit bill')], credit: [t('New credit memo'), t('Edit credit memo')], po: [t('New purchase order'), t('Edit purchase order')] };
 
@@ -29,10 +29,10 @@ export default function DocEditor() {
   const [run, busy] = useAction();
   const [payNow, setPayNow] = useState('');
   const meta = useLoad(async () => {
-    const [contacts, items, accounts, projects, classes, banks, existing] = await Promise.all([
+    const [contacts, items, accounts, projects, classes, banks, existing, taxRates] = await Promise.all([
       api.get('/contacts'), api.get('/items/lookup'), api.get('/accounts/lookup'), api.get('/projects').catch(() => []), api.get('/classes').catch(() => []),
-      api.get('/banking/accounts').catch(() => []), id ? api.get(`/doc/${id}`) : null]);
-    return { contacts, items, accounts, projects, classes: classes.filter((c) => c.active), banks: banks.filter((a) => a.subtype === 'bank'), existing };
+      api.get('/banking/accounts').catch(() => []), id ? api.get(`/doc/${id}`) : null, api.get('/tax/rates').catch(() => ({ rates: [] }))]);
+    return { contacts, items, accounts, projects, classes: classes.filter((c) => c.active), banks: banks.filter((a) => a.subtype === 'bank'), existing, rates: (taxRates.rates || []).filter((r) => r.active) };
   }, [id]);
   const [doc, setDoc] = useState(null);
   const [quick, setQuick] = useState(false);
@@ -45,7 +45,7 @@ export default function DocEditor() {
     const e = meta.data.existing;
     const rate = Number(settings.default_tax_rate || 0);
     if (e) setDoc({ contact_id: String(e.contact_id), project_id: e.project_id ? String(e.project_id) : '', issue_date: e.issue_date, due_date: e.due_date, notes: e.notes,
-      lines: e.lines.map((l) => ({ item_id: l.item_id ? String(l.item_id) : '', description: l.description, qty: String(l.qty), price: fromCents(l.unit_price), tax_rate: String(l.tax_rate), account_id: l.account_id ? String(l.account_id) : '', class_id: l.class_id ? String(l.class_id) : '', time_entry_id: l.time_entry_id })), status: e.status });
+      lines: e.lines.map((l) => ({ item_id: l.item_id ? String(l.item_id) : '', description: l.description, qty: String(l.qty), price: fromCents(l.unit_price), tax_rate: String(l.tax_rate), tax_name: l.tax_name || '', account_id: l.account_id ? String(l.account_id) : '', class_id: l.class_id ? String(l.class_id) : '', time_entry_id: l.time_entry_id })), status: e.status });
     else setDoc({ contact_id: '', project_id: '', issue_date: today(), due_date: addDays(today(), Number(settings.default_terms_days || 15)), notes: '', lines: [blank(isBill ? 0 : rate)], status: 'draft' });
   }, [meta.data, doc, settings, isBill]);
 
@@ -57,25 +57,32 @@ export default function DocEditor() {
   }, [doc, isBill]);
 
   if (meta.loading || !doc) return meta.error ? <ErrorBox error={meta.error} retry={meta.reload} /> : <Loading />;
-  const { contacts, items, accounts, projects, classes, banks } = meta.data;
+  const { contacts, items, accounts, projects, classes, banks, rates } = meta.data;
+  const cust = contacts.find((x) => String(x.id) === String(doc.contact_id));
+  const exempt = !isBill && !!cust?.tax_exempt; // cliente isento: nada de imposto (o servidor também zera)
+  // alíquota padrão de uma linha nova: isento = 0; senão a do cliente; senão a da empresa
+  const defaultRate = () => { if (isBill || exempt) return { rate: 0, name: '' }; const r = rates.find((x) => x.id === cust?.tax_rate_id); return r ? { rate: r.rate, name: r.name } : { rate: Number(settings.default_tax_rate || 0), name: '' }; };
   const people = contacts.filter((c) => (isBill ? ['vendor', 'both'] : ['customer', 'both']).includes(c.kind));
   const expenseAccounts = accounts.filter((a) => a.type === 'expense' && a.subtype !== 'cogs');
   const set = (k, v) => setDoc((d) => ({ ...d, [k]: v }));
   const setLine = (i, patch) => setDoc((d) => ({ ...d, lines: d.lines.map((l, j) => (j === i ? { ...l, ...patch } : l)) }));
   const pickContact = (cid) => {
     const c = contacts.find((x) => String(x.id) === cid);
-    setDoc((d) => ({ ...d, contact_id: cid, due_date: c && !id ? addDays(d.issue_date, c.terms_days) : d.due_date }));
+    const r = !isBill && !c?.tax_exempt ? rates.find((x) => x.id === c?.tax_rate_id) : null;
+    setDoc((d) => ({ ...d, contact_id: cid, due_date: c && !id ? addDays(d.issue_date, c.terms_days) : d.due_date,
+      // ao escolher o cliente, as linhas sem produto próprio ganham a alíquota dele (isento: zero)
+      lines: isBill ? d.lines : d.lines.map((l) => { const it = items.find((x) => String(x.id) === l.item_id); if (c?.tax_exempt) return { ...l, tax_rate: '0', tax_name: '' }; if (it?.tax_rate > 0) return l; return r ? { ...l, tax_rate: String(r.rate), tax_name: r.name } : l; }) }));
   };
   const pickItem = (i, itemId) => {
     const it = items.find((x) => String(x.id) === itemId);
     if (!it) return setLine(i, { item_id: '' });
-    setLine(i, { item_id: itemId, description: it.name, price: fromCents(isBill && it.cost ? it.cost : it.price), tax_rate: isBill ? '0' : String(it.tax_rate || 0) });
+    setLine(i, { item_id: itemId, description: it.name, price: fromCents(isBill && it.cost ? it.cost : it.price), ...(isBill ? { tax_rate: '0', tax_name: '' } : exempt ? { tax_rate: '0', tax_name: '' } : it.tax_rate > 0 ? { tax_rate: String(it.tax_rate), tax_name: '' } : { tax_rate: String(defaultRate().rate), tax_name: defaultRate().name }) });
   };
 
   const save = async (post) => {
     const body = { contact_id: Number(doc.contact_id), project_id: doc.project_id ? Number(doc.project_id) : null, issue_date: doc.issue_date, due_date: doc.due_date, notes: doc.notes, post,
       lines: doc.lines.filter((l) => l.description || l.item_id || toCents(l.price)).map((l) => ({ item_id: l.item_id ? Number(l.item_id) : null, description: l.description, qty: Number(String(l.qty).replace(',', '.')),
-        unit_price: toCents(l.price), tax_rate: Number(l.tax_rate) || 0, account_id: l.account_id ? Number(l.account_id) : null, class_id: l.class_id ? Number(l.class_id) : null, time_entry_id: l.time_entry_id || null })) };
+        unit_price: toCents(l.price), tax_rate: exempt ? 0 : Number(l.tax_rate) || 0, tax_name: exempt ? '' : l.tax_name || '', account_id: l.account_id ? Number(l.account_id) : null, class_id: l.class_id ? Number(l.class_id) : null, time_entry_id: l.time_entry_id || null })) };
     if (!id && type === 'invoice' && payNow) { body.post = true; body.pay_now = { account_id: Number(payNow) }; }
     if (!body.contact_id) return run(async () => { throw new Error(isBill ? t('Select the vendor') : t('Select the customer')); });
     const r = await run(() => (id ? api.put(`/doc/${id}`, body) : api.post(`/docs/${type}`, body)), t('Saved'));
@@ -102,6 +109,7 @@ export default function DocEditor() {
           <Field label={isQuote ? t('Valid until') : t('Due')}><Input type="date" value={doc.due_date} min={doc.issue_date} onChange={(e) => set('due_date', e.target.value)} /></Field>
           <Field label={t('Project (optional)')} className="md:col-span-2"><Select value={doc.project_id} onChange={(e) => set('project_id', e.target.value)}><option value="">—</option>{projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field>
         </div>
+        {exempt && <p className="mt-4 rounded-lg bg-sky-50 p-3 text-sm text-sky-900" data-testid="exempt-note">{t('{0} is tax-exempt: no sales tax is charged on this document.', [cust.name])}{cust.tax_exempt_note ? ` (${cust.tax_exempt_note})` : ''}</p>}
         <div className="mt-6 overflow-x-auto">
           <table className="w-full min-w-[720px] text-sm">
             <thead><tr className="text-left text-xs uppercase tracking-wide text-slate-500"><th className="pb-2 pr-2">{t('Item')}</th><th className="pb-2 pr-2">{t('Description')}</th><th className="w-20 pb-2 pr-2">{t('Qty')}</th><th className="w-28 pb-2 pr-2">{t('Price')}</th>
@@ -117,15 +125,17 @@ export default function DocEditor() {
                   <td className="pb-2 pr-2"><Input inputMode="decimal" placeholder="0.00" value={l.price} onChange={(e) => setLine(i, { price: e.target.value })} aria-label={t('Price')} /></td>
                   {isBill
                     ? <td className="pb-2 pr-2">{it?.track_inventory ? <span className="text-xs text-slate-500">{t('Inventory')}</span> : <Select value={l.account_id} onChange={(e) => setLine(i, { account_id: e.target.value })} aria-label={t('Category')}><option value="">{t('Miscellaneous expenses')}</option>{expenseAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select>}</td>
-                    : <td className="pb-2 pr-2"><Input inputMode="decimal" value={l.tax_rate} onChange={(e) => setLine(i, { tax_rate: e.target.value })} aria-label={t('Tax')} /></td>}
+                    : <td className="pb-2 pr-2">
+                      {rates.length > 0 && !exempt && <Select className="field mb-1 !py-1 text-xs" value={rates.find((r) => r.name === l.tax_name)?.id || ''} onChange={(e) => { const r = rates.find((x) => String(x.id) === e.target.value); setLine(i, r ? { tax_rate: String(r.rate), tax_name: r.name } : { tax_name: '' }); }} aria-label={t('Tax rate')} data-testid="line-rate"><option value="">{t('Custom')}</option>{rates.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</Select>}
+                      <Input inputMode="decimal" value={exempt ? '0' : l.tax_rate} disabled={exempt} onChange={(e) => setLine(i, { tax_rate: e.target.value, tax_name: '' })} aria-label={t('Tax')} /></td>}
                   {has('classes') && classes.length > 0 && <td className="pb-2 pr-2"><Select value={l.class_id} onChange={(e) => setLine(i, { class_id: e.target.value })} aria-label={t('Class')}><option value="">—</option>{classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</Select></td>}
                   <td className="num pb-2 pt-2 text-right font-medium">{money(amt)}</td>
-                  <td className="pb-2 pt-1.5 text-right"><button type="button" aria-label={t('Remove line')} className="text-slate-400 hover:text-rose-600" onClick={() => set('lines', doc.lines.length > 1 ? doc.lines.filter((_, j) => j !== i) : [blank(doc.lines[0].tax_rate)])}>✕</button></td>
+                  <td className="pb-2 pt-1.5 text-right"><button type="button" aria-label={t('Remove line')} className="text-slate-400 hover:text-rose-600" onClick={() => set('lines', doc.lines.length > 1 ? doc.lines.filter((_, j) => j !== i) : [blank(doc.lines[0].tax_rate, doc.lines[0].tax_name)])}>✕</button></td>
                 </tr>
               );
             })}</tbody>
           </table>
-          <Button variant="ghost" type="button" className="mt-1" onClick={() => set('lines', [...doc.lines, blank(isBill ? 0 : Number(settings.default_tax_rate || 0))])}>{t('+ Add line')}</Button>
+          <Button variant="ghost" type="button" className="mt-1" onClick={() => set('lines', [...doc.lines, blank(defaultRate().rate, defaultRate().name)])}>{t('+ Add line')}</Button>
         </div>
         <div className="mt-6 grid gap-6 md:grid-cols-2">
           <div className="space-y-4">

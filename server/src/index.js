@@ -16,6 +16,7 @@ import * as rep from './reports.js';
 import * as pay from './payroll.js';
 import * as taxid from './taxid.js';
 import * as importer from './importer.js';
+import * as stax from './salestax.js';
 import * as plaidSvc from './plaid.js';
 import * as billing from './billing.js';
 import { reportLead } from './harborLead.js';
@@ -476,15 +477,21 @@ const contactFields = (b, cur) => {
   const is1099 = b.is_1099 && hasFeature('contractors_1099') ? 1 : 0;
   // SSN/EIN: gravado criptografado; prestador 1099 exige 9 números; mascarado vindo da tela mantém o que já existe
   const tax = taxid.prepareTaxId(b.tax_id, cur?.tax_id, { strict: !!is1099 && (b.kind || 'customer') !== 'customer' });
-  return [b.kind || 'customer', b.name.trim(), b.email || '', b.phone || '', tax, b.address || '', b.notes || '', Number.isInteger(+b.terms_days) ? +b.terms_days : 15, is1099];
+  // imposto sobre vendas (só faz sentido para clientes): isento, estado e alíquota padrão; sem os campos na requisição, mantém o que já existe
+  const exempt = b.tax_exempt === undefined ? (cur?.tax_exempt ?? 0) : (b.tax_exempt ? 1 : 0);
+  const exemptNote = b.tax_exempt_note === undefined ? (cur?.tax_exempt_note ?? '') : String(b.tax_exempt_note || '').slice(0, 80);
+  const taxState = b.tax_state === undefined ? (cur?.tax_state ?? '') : stax.cleanState(b.tax_state);
+  const rateId = b.tax_rate_id === undefined ? (cur?.tax_rate_id ?? null) : (b.tax_rate_id ? Number(b.tax_rate_id) : null);
+  if (rateId && !get('SELECT 1 FROM tax_rates WHERE id=?', rateId)) throw bad('Choose a valid sales tax rate');
+  return [b.kind || 'customer', b.name.trim(), b.email || '', b.phone || '', tax, b.address || '', b.notes || '', Number.isInteger(+b.terms_days) ? +b.terms_days : 15, is1099, exempt, exemptNote, taxState, rateId];
 };
 api.post('/contacts', can('sales', true), wrap((req, res) => {
-  const nid = insert('INSERT INTO contacts(kind,name,email,phone,tax_id,address,notes,terms_days,is_1099) VALUES(?,?,?,?,?,?,?,?,?)', ...contactFields(req.body));
+  const nid = insert('INSERT INTO contacts(kind,name,email,phone,tax_id,address,notes,terms_days,is_1099,tax_exempt,tax_exempt_note,tax_state,tax_rate_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)', ...contactFields(req.body));
   audit(req, 'create', 'contact', nid, req.body.name); ok(res, taxid.publicTaxId(get('SELECT * FROM contacts WHERE id=?', nid)));
 }));
 api.put('/contacts/:id', can('sales', true), wrap((req, res) => {
   const cid = id(req); const cur = get('SELECT * FROM contacts WHERE id=?', cid); if (!cur) throw new HttpError(404, 'Contact not found');
-  run('UPDATE contacts SET kind=?,name=?,email=?,phone=?,tax_id=?,address=?,notes=?,terms_days=?,is_1099=? WHERE id=?', ...contactFields(req.body, cur), cid);
+  run('UPDATE contacts SET kind=?,name=?,email=?,phone=?,tax_id=?,address=?,notes=?,terms_days=?,is_1099=?,tax_exempt=?,tax_exempt_note=?,tax_state=?,tax_rate_id=? WHERE id=?', ...contactFields(req.body, cur), cid);
   audit(req, 'update', 'contact', cid); ok(res, taxid.publicTaxId(get('SELECT * FROM contacts WHERE id=?', cid)));
 }));
 // Mostrar o número completo: só o dono, e fica no registro de auditoria (sem o número).
@@ -854,7 +861,7 @@ api.put('/lock-date', can('accounting', true), requireFeature('period_lock'), wr
 }));
 
 /* -------------------------------- relatórios ------------------------------ */
-const REPORT_FEATURE = { 'ap-aging': 'reports_full', 'expenses-by-vendor': 'reports_full', tax: 'reports_full', 'trial-balance': 'reports_full', inventory: 'inventory', budget: 'budgets', 'pnl-class': 'classes', '1099': 'contractors_1099' };
+const REPORT_FEATURE = { 'ap-aging': 'reports_full', 'expenses-by-vendor': 'reports_full', tax: 'reports_full', 'tax-jurisdiction': 'reports_full', 'trial-balance': 'reports_full', inventory: 'inventory', budget: 'budgets', 'pnl-class': 'classes', '1099': 'contractors_1099' };
 api.use('/reports/:name', (req, res, next) => { const f = REPORT_FEATURE[req.params.name]; return f ? requireFeature(f)(req, res, next) : next(); });
 api.get('/reports/budget', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.budgetVsActual(f, t)); }));
 api.get('/reports/pnl-class', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.plByClass(f, t)); }));
@@ -868,6 +875,16 @@ api.get('/reports/ap-aging', can('reports'), wrap((req, res) => ok(res, rep.agin
 api.get('/reports/sales-by-customer', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.salesByCustomer(f, t)); }));
 api.get('/reports/expenses-by-category', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.expensesByCategory(f, t)); }));
 api.get('/reports/expenses-by-vendor', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.expensesByVendor(f, t)); }));
+// Imposto sobre vendas: alíquotas com nome, estado de origem, limites de obrigação por estado e os dois relatórios.
+api.get('/tax/rates', can('sales'), wrap((_req, res) => ok(res, { rates: stax.listRates(), homeState: stax.homeState(), states: stax.STATES })));
+api.post('/tax/rates', can('settings', true), wrap((req, res) => { const r = stax.saveRate(req.body || {}); audit(req, 'create', 'tax_rate', r.id, `${r.name} ${r.rate}%`); ok(res, r); }));
+api.put('/tax/rates/:id', can('settings', true), wrap((req, res) => { const r = stax.saveRate({ ...req.body, id: id(req) }); audit(req, 'update', 'tax_rate', r.id, `${r.name} ${r.rate}%`); ok(res, r); }));
+api.delete('/tax/rates/:id', can('settings', true), wrap((req, res) => { stax.deleteRate(id(req)); audit(req, 'delete', 'tax_rate', id(req)); ok(res, {}); }));
+api.post('/tax/rates/state-base', can('settings', true), wrap((req, res) => { const r = stax.addStateBaseRates(); audit(req, 'create', 'tax_rate', null, `${r.added} state base rates`); ok(res, r); }));
+api.put('/tax/home-state', can('settings', true), wrap((req, res) => { const h = stax.setHomeState(req.body?.state); audit(req, 'update', 'settings', null, `sales tax home state ${h}`); ok(res, { homeState: h }); }));
+api.put('/tax/nexus/threshold', can('settings', true), wrap((req, res) => { stax.saveThreshold(req.body?.state, req.body || {}); audit(req, 'update', 'settings', null, `nexus limit ${req.body?.state}`); ok(res, stax.nexusStatus()); }));
+api.get('/reports/tax-jurisdiction', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, stax.jurisdictionReport(f, t)); }));
+api.get('/reports/tax-nexus', can('reports'), wrap((req, res) => ok(res, stax.nexusStatus(req.query.asof && isDate(req.query.asof) ? req.query.asof : today()))));
 api.get('/reports/tax', can('reports'), wrap((req, res) => { const [f, t] = range(req); ok(res, rep.taxSummary(f, t)); }));
 api.get('/reports/inventory', can('reports'), wrap((_req, res) => ok(res, rep.inventoryValuation())));
 

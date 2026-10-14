@@ -1121,3 +1121,65 @@ Unreadable date "{0}" (try the other date format) || Data ilegível "{0}" (tente
 Transaction type "{0}" is not imported || O tipo de lançamento "{0}" não é importado || El tipo de transacción "{0}" no se importa
 Products and services || Produtos e serviços || Productos y servicios
 Some columns were not recognized. Pick them if the file has them (optional): || Algumas colunas não foram reconhecidas. Escolha-as se o arquivo tiver (opcional): || Algunas columnas no se reconocieron. Elíjalas si el archivo las tiene (opcional):
+Sales tax || Imposto sobre vendas || Impuesto sobre ventas
+State || Estado || Estado
+Where this customer is. Used to watch your sales per state. || Onde fica este cliente. Serve para acompanhar suas vendas por estado. || Dónde está este cliente. Sirve para vigilar sus ventas por estado.
+Default tax rate || Alíquota padrão || Tasa de impuesto predeterminada
+Company default || Padrão da empresa || Predeterminada de la empresa
+Tax-exempt customer (no sales tax on invoices) || Cliente isento de imposto (sem imposto sobre vendas nas faturas) || Cliente exento de impuesto (sin impuesto sobre ventas en las facturas)
+Exemption certificate / reason || Certificado de isenção / motivo || Certificado de exención / motivo
+Resale certificate number || Número do certificado de revenda || Número del certificado de reventa
+Sales tax by jurisdiction || Imposto sobre vendas por jurisdição || Impuesto sobre ventas por jurisdicción
+Tax rate || Alíquota || Tasa de impuesto
+Rate % || Alíquota % || Tasa %
+Taxable sales || Vendas tributáveis || Ventas gravables
+Tax collected || Imposto cobrado || Impuesto cobrado
+Exempt customers || Clientes isentos || Clientes exentos
+Sales with no tax || Vendas sem imposto || Ventas sin impuesto
+Sales to tax-exempt customers {0} · other sales with no tax {1} || Vendas a clientes isentos {0} · outras vendas sem imposto {1} || Ventas a clientes exentos {0} · otras ventas sin impuesto {1}
+Sales by customer state || Vendas por estado do cliente || Ventas por estado del cliente
+No state set || Sem estado definido || Sin estado definido
+{0} is tax-exempt: no sales tax is charged on this document. || {0} é isento de imposto: nenhum imposto sobre vendas é cobrado neste documento. || {0} está exento de impuesto: no se cobra impuesto sobre ventas en este documento.
+Custom || Personalizada || Personalizada
+Over the limit || Acima do limite || Sobre el límite
+Close to the limit || Perto do limite || Cerca del límite
+Below the limit || Abaixo do limite || Por debajo del límite
+Your home state || Seu estado de origem || Su estado de origen
+No state sales tax || Sem imposto estadual sobre vendas || Sin impuesto estatal sobre ventas
+Name each rate you charge (for example "Texas + Austin 8.25%"). Pick it on an invoice line or set it as a customer's default. Reports then add up the tax you collected for each rate. || Dê um nome a cada alíquota que você cobra (por exemplo "Texas + Austin 8,25%"). Escolha-a na linha da fatura ou defina como padrão de um cliente. Os relatórios somam o imposto cobrado por alíquota. || Ponga nombre a cada tasa que cobra (por ejemplo "Texas + Austin 8,25%"). Elíjala en la línea de la factura o defínala como predeterminada de un cliente. Los informes suman el impuesto cobrado por tasa.
+Rate (%) || Alíquota (%) || Tasa (%)
+Add rate || Adicionar alíquota || Agregar tasa
+Update || Atualizar || Actualizar
+No rates yet. || Ainda não há alíquotas. || Aún no hay tasas.
+Starting point: add the state-level rate of every state that has a state sales tax. These are base rates only, without city or county taxes, and they can be out of date: check each one with your state before you charge it. || Ponto de partida: adiciona a alíquota estadual de todo estado que tem imposto estadual sobre vendas. São só alíquotas de base, sem impostos de cidade ou condado, e podem estar desatualizadas: confira cada uma com o seu estado antes de cobrar. || Punto de partida: agrega la tasa estatal de cada estado que tiene impuesto estatal sobre ventas. Son solo tasas base, sin impuestos de ciudad o condado, y pueden estar desactualizadas: verifique cada una con su estado antes de cobrar.
+Add state base rates || Adicionar alíquotas estaduais de base || Agregar tasas estatales base
+State rates added || Alíquotas estaduais adicionadas || Tasas estatales agregadas
+Where you may owe sales tax || Onde você pode dever imposto sobre vendas || Dónde puede deber impuesto sobre ventas
+Selling to customers in another state can create an obligation to register and collect sales tax there once you pass that state's limit. This table adds up your last 12 months of sales by customer state. The limits are common defaults and some states differ or change them: confirm with the state or your accountant. Fluxo does not register or file for you. || Vender a clientes de outro estado pode criar a obrigação de se registrar e cobrar imposto sobre vendas lá quando você passa do limite daquele estado. Esta tabela soma suas vendas dos últimos 12 meses por estado do cliente. Os limites são padrões comuns; alguns estados são diferentes ou mudam: confirme com o estado ou com o contador. O Fluxo não faz registro nem declara por você. || Vender a clientes de otro estado puede crear la obligación de registrarse y cobrar impuesto sobre ventas allí al pasar el límite de ese estado. Esta tabla suma sus ventas de los últimos 12 meses por estado del cliente. Los límites son valores comunes; algunos estados son distintos o los cambian: confirme con el estado o su contador. Fluxo no se registra ni declara por usted.
+{0} customers have no state set, so their sales are not counted per state. || {0} clientes não têm estado definido, então as vendas deles não entram na conta por estado. || {0} clientes no tienen estado definido, por lo que sus ventas no se cuentan por estado.
+Set the state || Definir o estado || Definir el estado
+Sales without a state: {0} || Vendas sem estado: {0} || Ventas sin estado: {0}
+Sales (12 months) || Vendas (12 meses) || Ventas (12 meses)
+Sales count || Número de vendas || Número de ventas
+Limit: sales || Limite: vendas || Límite: ventas
+Limit: count || Limite: número || Límite: cantidad
+No sales to customers with a state yet. || Ainda não há vendas a clientes com estado. || Aún no hay ventas a clientes con estado.
+Set a limit to 0 to ignore that kind of limit for a state. || Coloque 0 em um limite para ignorar esse tipo de limite num estado. || Ponga 0 en un límite para ignorarlo en un estado.
+The state where your business is based. You already owe sales tax there, so it is left out of the warnings below. || O estado onde sua empresa está. Você já deve imposto sobre vendas lá, então ele fica fora dos avisos abaixo. || El estado donde está su empresa. Ya debe impuesto sobre ventas allí, por lo que queda fuera de los avisos de abajo.
+Sales tax: you may need to register in {0} || Imposto sobre vendas: você pode precisar se registrar em {0} || Impuesto sobre ventas: quizá deba registrarse en {0}
+Sales tax: you are close to the limit in {0} || Imposto sobre vendas: você está perto do limite em {0} || Impuesto sobre ventas: está cerca del límite en {0}
+Choose a valid sales tax rate || Escolha uma alíquota válida || Elija una tasa de impuesto válida
+Sales tax rates || Alíquotas de imposto sobre vendas || Tasas de impuesto sobre ventas
+Enter a name for this tax rate || Informe um nome para esta alíquota || Ingrese un nombre para esta tasa
+The tax rate must be between 0 and 30% || A alíquota deve estar entre 0 e 30% || La tasa debe estar entre 0 y 30%
+Choose a valid US state || Escolha um estado dos EUA válido || Elija un estado de EE. UU. válido
+A tax rate with this name already exists || Já existe uma alíquota com esse nome || Ya existe una tasa con ese nombre
+Tax rate not found || Alíquota não encontrada || Tasa no encontrada
+Choose a state || Escolha um estado || Elija un estado
+Limits must be zero or more || Os limites devem ser zero ou mais || Los límites deben ser cero o más
+Unknown import type || Tipo de importação desconhecido || Tipo de importación desconocido
+The file is empty || O arquivo está vazio || El archivo está vacío
+The file is too large (4 MB maximum). Split it in two. || O arquivo é grande demais (máximo 4 MB). Divida em dois. || El archivo es demasiado grande (máximo 4 MB). Divídalo en dos.
+Could not find the header row. Check that this is the right file for this step. || Não achei a linha de títulos. Confira se este é o arquivo certo para este passo. || No encontré la fila de títulos. Verifique que sea el archivo correcto para este paso.
+Nothing to import from this file. || Nada para importar neste arquivo. || Nada que importar de este archivo.
+Enter the conversion date (the date your balances are as of). || Informe a data de corte (a data dos seus saldos). || Ingrese la fecha de corte (la fecha de sus saldos).
