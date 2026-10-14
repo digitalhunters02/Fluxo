@@ -10,6 +10,7 @@ import { Gate, Lock, PLAN_LABEL } from '../components/plan.jsx';
 import { IntegrationsTab, PaymentsTab, ApprovalsTab, SsoTab, ImportTab, GroupTab, AuditExport } from './GrowthSettings.jsx';
 import { TwoFactorCard, SecurityTab } from './SecurityUI.jsx';
 import SalesTaxSettings from './SalesTaxSettings.jsx';
+import { AccountantsTab } from './Accountants.jsx';
 
 /** "Levar tudo": ZIP com os dados da empresa em CSV; só o dono, em qualquer plano. */
 function ExportAll() {
@@ -195,7 +196,7 @@ function AutomationsTab() {
 
 const PLAN_FEATURES = [
   ['5 invoices per month & unlimited estimates', 'free'], ['Send by link, email button or PDF', 'free'], ['Expenses, receipts & sales receipts', 'free'], ['Bank CSV import & reconciliation', 'free'], ['Core financial reports', 'free'],
-  ['Unlimited invoices', 'starter'], ['Credit memos', 'starter'], ['Logo & brand color on invoices', 'starter'], ['Unlimited users', 'starter'],
+  ['Unlimited invoices', 'starter'], ['Credit memos', 'starter'], ['Logo & brand color on invoices', 'starter'], ['Unlimited users', 'starter'], ['Invite your accountant (read-only)', 'starter'],
   ['Bills & vendor payments', 'essentials'], ['Automatic bank connection (Plaid)', 'essentials'], ['Recurring invoices', 'essentials'], ['Time tracking', 'essentials'], ['Full report set & audit log', 'essentials'],
   ['Inventory (average cost)', 'plus'], ['Project profitability', 'plus'], ['Purchase orders', 'plus'], ['Budgets & budget vs actual', 'plus'], ['Classes & P&L by class', 'plus'], ['1099 contractor report', 'plus'], ['Close the books (period lock)', 'plus'],
   ['Email invoices from Fluxo', 'essentials'], ['Cash forecast', 'plus'],
@@ -204,7 +205,7 @@ const PLAN_FEATURES = [
   ['Single sign-on (SSO)', 'enterprise'],
 ];
 const FEATURE_LABEL = {
-  '5 invoices per month & unlimited estimates': t('5 invoices per month & unlimited estimates'), 'Send by link, email button or PDF': t('Send by link, email button or PDF'), 'Unlimited invoices': t('Unlimited invoices'), 'Credit memos': t('Credit memos'), 'Unlimited users': t('Unlimited users'),
+  '5 invoices per month & unlimited estimates': t('5 invoices per month & unlimited estimates'), 'Send by link, email button or PDF': t('Send by link, email button or PDF'), 'Unlimited invoices': t('Unlimited invoices'), 'Credit memos': t('Credit memos'), 'Unlimited users': t('Unlimited users'), 'Invite your accountant (read-only)': t('Invite your accountant (read-only)'),
   'Invoices, estimates & credit memos': t('Invoices, estimates & credit memos'), 'Expenses, receipts & sales receipts': t('Expenses, receipts & sales receipts'), 'Bank CSV import & reconciliation': t('Bank CSV import & reconciliation'),
   'Core financial reports': t('Core financial reports'), 'Logo & brand color on invoices': t('Logo & brand color on invoices'), 'Bills & vendor payments': t('Bills & vendor payments'), 'Automatic bank connection (Plaid)': t('Automatic bank connection (Plaid)'), 'Recurring invoices': t('Recurring invoices'),
   'Time tracking': t('Time tracking'), 'Full report set & audit log': t('Full report set & audit log'), 'Inventory (average cost)': t('Inventory (average cost)'), 'Project profitability': t('Project profitability'),
@@ -335,12 +336,12 @@ export default function Settings({ reloadSettings }) {
   const { tab = 'company' } = useParams();
   const nav = useNavigate();
   const owner = user.role === 'owner';
-  const tabs = [['company', t('Company')], ...(owner ? [['users', t('Users')]] : []), ['plan', t('Plan')], ['account', t('My account')], ['automations', t('Automations')],
+  const tabs = [['company', t('Company')], ...(owner ? [['users', t('Users')], ['accountants', <>{t('Accountant')}{!has('accountant_access') && <Lock />}</>]] : []), ...(user.role === 'cpa' ? [] : [['plan', t('Plan')]]), ['account', t('My account')], ...(user.role === 'cpa' ? [] : [['automations', t('Automations')]]),
     ...(owner ? [['roles', <>{t('Roles')}{!has('custom_roles') && <Lock />}</>], ['audit', <>{t('Audit log')}{!has('audit_log') && <Lock />}</>],
       ['sales-tax', t('Sales tax')], ['import', t('Import')], ['integrations', <>{t('Integrations')}{!has('api') && <Lock />}</>], ['payments', <>{t('Online payments')}{!has('online_payments') && <Lock />}</>],
       ['approvals', <>{t('Approvals')}{!has('approvals') && <Lock />}</>], ['security', t('Security')], ...(user.tenant ? [['group', <>{t('Group')}{!has('multi_company') && <Lock />}</>]] : []), ['sso', <>{t('Single sign-on')}{!has('sso') && <Lock />}</>]] : [])];
   return (<><PageHeader title={t('Settings')} /><Tabs tabs={tabs} value={tab} onChange={(k) => nav(`/settings/${k}`)} />
-    {tab === 'company' && <><Company reload={reloadSettings} /><LockDate />{owner && <ExportAll />}</>}{tab === 'plan' && <PlanTab />}{tab === 'automations' && <AutomationsTab />}{tab === 'account' && <Account />}{tab === 'users' && owner && <Users />}
+    {tab === 'company' && <><Company reload={reloadSettings} /><LockDate />{owner && <ExportAll />}</>}{tab === 'plan' && <PlanTab />}{tab === 'automations' && <AutomationsTab />}{tab === 'account' && <Account />}{tab === 'users' && owner && <Users />}{tab === 'accountants' && owner && <Gate feature="accountant_access"><AccountantsTab /></Gate>}
     {tab === 'roles' && owner && <Gate feature="custom_roles"><RolesTab /></Gate>}{tab === 'audit' && owner && <Gate feature="audit_log"><AuditExport /><Audit /></Gate>}
     {tab === 'sales-tax' && owner && <SalesTaxSettings />}{tab === 'import' && owner && <ImportTab />}{tab === 'integrations' && owner && <IntegrationsTab />}{tab === 'payments' && owner && <PaymentsTab />}{tab === 'approvals' && owner && <ApprovalsTab />}{tab === 'group' && owner && user.tenant && <GroupTab />}{tab === 'sso' && owner && <SsoTab />}{tab === 'security' && owner && <SecurityTab />}</>);
 }

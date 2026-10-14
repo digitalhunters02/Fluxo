@@ -3,6 +3,8 @@ import { get, run, insert, all } from './db.js';
 import { HttpError } from './accounting.js';
 
 export const ROLES = { owner: 'Owner', accountant: 'Accountant', sales: 'Sales', viewer: 'Read-only' };
+/** Contador convidado pelo dono (só leitura, sem vagas de usuário): não aparece na lista de usuários nem nos papéis escolhíveis. */
+export const CPA_ROLE = 'cpa';
 
 // Matriz de permissões: módulo -> papéis que podem escrever / ler
 const WRITE = {
@@ -11,9 +13,9 @@ const WRITE = {
   settings: ['owner'], users: ['owner'], payroll: ['owner', 'accountant'],
 };
 const READ = {
-  sales: ['owner', 'accountant', 'sales', 'viewer'], purchases: ['owner', 'accountant', 'viewer'], banking: ['owner', 'accountant', 'viewer'],
-  accounting: ['owner', 'accountant', 'viewer'], reports: ['owner', 'accountant', 'viewer'], projects: ['owner', 'accountant', 'sales', 'viewer'],
-  inventory: ['owner', 'accountant', 'sales', 'viewer'], settings: ['owner', 'accountant', 'sales', 'viewer'], users: ['owner'], payroll: ['owner', 'accountant'],
+  sales: ['owner', 'accountant', 'sales', 'viewer', 'cpa'], purchases: ['owner', 'accountant', 'viewer', 'cpa'], banking: ['owner', 'accountant', 'viewer', 'cpa'],
+  accounting: ['owner', 'accountant', 'viewer', 'cpa'], reports: ['owner', 'accountant', 'viewer', 'cpa'], projects: ['owner', 'accountant', 'sales', 'viewer', 'cpa'],
+  inventory: ['owner', 'accountant', 'sales', 'viewer', 'cpa'], settings: ['owner', 'accountant', 'sales', 'viewer', 'cpa'], users: ['owner'], payroll: ['owner', 'accountant', 'cpa'],
 };
 export const MODULES = ['sales', 'purchases', 'banking', 'accounting', 'reports', 'projects', 'inventory', 'payroll', 'settings'];
 export const permissionsFor = (role) => ({
@@ -104,4 +106,4 @@ export function rateLimitLogin(key) {
   if (attempts.size > 5000) for (const [k, v] of attempts) if (v.every((t) => now - t >= 15 * 60 * 1000)) attempts.delete(k); // não deixa o mapa crescer sem fim
 }
 export const clearAttempts = (key) => attempts.delete(key);
-export const listUsers = () => all('SELECT * FROM users ORDER BY id').map(publicUser);
+export const listUsers = () => all("SELECT * FROM users WHERE role<>'cpa' ORDER BY id").map(publicUser);

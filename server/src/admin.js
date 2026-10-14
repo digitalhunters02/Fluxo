@@ -32,7 +32,7 @@ export function requireAdmin(req, _res, next) {
 export function overview() {
   const rows = tenants.listTenants().map((t) => tenants.inTenant(t.slug, () => ({
     ...t, plan: getSetting('plan', 'free'), payroll: getSetting('addon_payroll', '0') === '1', subscription: getSetting('subscription_status', '') || (getSetting('plan', 'free') === 'free' ? 'free' : 'manual'),
-    users: get('SELECT COUNT(*) n FROM users WHERE active=1').n, invoices: get("SELECT COUNT(*) n FROM docs WHERE type='invoice'").n,
+    users: get("SELECT COUNT(*) n FROM users WHERE active=1 AND role<>'cpa'").n, invoices: get("SELECT COUNT(*) n FROM docs WHERE type='invoice'").n,
     last_invoice: get("SELECT MAX(created_at) d FROM docs WHERE type='invoice'").d || '',
   })));
   const byPlan = {};

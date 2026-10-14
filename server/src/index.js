@@ -26,6 +26,7 @@ import { reportLead } from './harborLead.js';
 import { registerGrowth, registerGrowthPublic } from './growth.js';
 import { createV1Router } from './integrations.js';
 import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, limitFor, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE, ENTERPRISE_FROM, ENTERPRISE_INCLUDED_COMPANIES, ENTERPRISE_EXTRA_COMPANY } from './plans.js';
+import { registerAccountants, registerAccountantsPublic } from './accountants.js';
 import { cleanPerms, authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, endSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
 import * as twofa from './twofa.js';
 
@@ -348,10 +349,21 @@ api.get('/admin-summary', wrap((req, res) => {
 }));
 
 registerGrowthPublic(api, { wrap, ok, publicTenant, withSlug });
+registerAccountantsPublic(api, { wrap, ok, publicTenant, withSlug });
 api.use(requireAuth);
+// Contador convidado (papel "cpa"): só leitura, só nas áreas de números. Fora disto nada passa, nem por engano em uma rota nova.
+const CPA_READ = /^\/(me|plan|status|settings|accounts|contacts|items|doc|docs|expenses|journal|ledger|banking|plaid\/(overview|activity|insights)|budgets|classes|close|dashboard|payroll|projects|recurring|reminders|reports|search|tax|time|assets|approvals|ai\/status|email\/status)(\/|$)/;
+const CPA_WRITE = /^\/(logout|me\/password|me\/reauth|me\/2fa\/(setup|enable|disable|recovery))$/; // só a própria conta: sair, senha e 2FA
+api.use((req, _res, next) => {
+  if (req.user?.role !== 'cpa') return next();
+  const reading = req.method === 'GET' || req.method === 'HEAD';
+  const allowed = reading ? CPA_READ.test(req.path) && !/\/tax-id$/.test(req.path) : CPA_WRITE.test(req.path);
+  next(allowed ? undefined : new HttpError(403, 'Your accountant access is read-only'));
+});
 api.use(twofa.setupGate); // com "2FA obrigatório", quem ainda não ativou só vê a tela de ativação
 twofa.registerTwoFactor(api, { wrap, ok, can, audit, listUsers });
 registerGrowth(api, { wrap, ok, can, requireFeature, audit, id, withSlug, multi });
+registerAccountants(api, { wrap, ok, twofa, id, multi });
 api.post('/logout', wrap((req, res) => { endSession(req.headers.authorization.slice(7)); ok(res, {}); }));
 const planInfo = () => ({ enterpriseFrom: ENTERPRISE_FROM, enterpriseIncluded: ENTERPRISE_INCLUDED_COMPANIES, enterpriseExtra: ENTERPRISE_EXTRA_COMPANY, plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, lockDate: getSetting('lock_date', ''), billing: billing.billingState(), limits: { bank_connections: limitFor('bank_connections'), invoices_per_month: limitFor('invoices_per_month'), users: limitFor('users'), invoices_used: invoicesThisMonth() } });
 api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), tenant: multi() ? tenants.currentSlug() : '', planInfo: planInfo(), twofa: twofa.twofaState(req.user), reauthOn: twofa.reauthOn() })));
@@ -385,7 +397,7 @@ api.get('/users', can('users'), wrap((_req, res) => ok(res, { users: listUsers()
 api.post('/users', can('users', true), twofa.requireFresh, wrap((req, res) => {
   const { name, email, password } = req.body;
   const userCap = limitFor('users');
-  if (userCap !== null && get('SELECT COUNT(*) n FROM users WHERE active=1').n >= userCap) throw new HttpError(402, 'Your plan includes one user. Upgrade to add more.', { feature: 'users', required: 'starter' });
+  if (userCap !== null && get("SELECT COUNT(*) n FROM users WHERE active=1 AND role<>'cpa'").n >= userCap) throw new HttpError(402, 'Your plan includes one user. Upgrade to add more.', { feature: 'users', required: 'starter' });
   const custom = req.body.custom_role_id ? Number(req.body.custom_role_id) : null;
   if (custom) { assertFeature('custom_roles'); if (!get('SELECT 1 FROM roles WHERE id=?', custom)) throw bad('Invalid role'); }
   let perms = null;
@@ -400,7 +412,7 @@ api.post('/users', can('users', true), twofa.requireFresh, wrap((req, res) => {
   audit(req, 'create', 'user', uid, `${email} (${role})`); ok(res, publicUser(get('SELECT * FROM users WHERE id=?', uid)));
 }));
 api.put('/users/:id', can('users', true), twofa.requireFresh, wrap((req, res) => {
-  const uid = id(req); const u = get('SELECT * FROM users WHERE id=?', uid);
+  const uid = id(req); const u = get("SELECT * FROM users WHERE id=? AND role<>'cpa'", uid); // contadores convidados são geridos na aba Contador
   if (!u) throw new HttpError(404, 'User not found');
   let custom = u.custom_role_id, perms = u.custom_perms;
   if ('custom_role_id' in req.body) { custom = req.body.custom_role_id ? Number(req.body.custom_role_id) : null; if (custom) { assertFeature('custom_roles'); if (!get('SELECT 1 FROM roles WHERE id=?', custom)) throw bad('Invalid role'); } }

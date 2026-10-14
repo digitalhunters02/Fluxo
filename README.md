@@ -32,7 +32,7 @@ Environment: `PORT`, `FLUXO_DB` (SQLite file path, default `server/data/fluxo.db
 | **Inventory** | Average-cost products, automatic COGS on sale, adjustments, low-stock alerts |
 | **Projects** | Billable time, one-click invoicing, profit per project |
 | **Reports** | P&L (with prior period), P&L by class, budget vs actual, balance sheet, cash flow, A/R and A/P aging, sales by customer, expenses by category/vendor, sales tax, inventory valuation, trial balance. CSV and PDF |
-| **Security** | scrypt passwords, four built-in roles plus custom roles, audit trail, full JSON backup |
+| **Security** | scrypt passwords, four built-in roles plus custom roles, read-only accountant invitations (link by email, end access instantly), audit trail, full JSON backup |
 
 ### Payroll scope (be aware)
 Fluxo **calculates and records** payroll using the 2026 IRS tables (Pub. 15-T percentage method for single / married filing jointly,

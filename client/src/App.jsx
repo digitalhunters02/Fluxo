@@ -26,6 +26,7 @@ import { Forgot, Reset } from './pages/Recover.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import Reminders, { useReminderCount } from './pages/Reminders.jsx';
 import PublicDoc from './pages/PublicDoc.jsx';
+import { AccountantInvitePage } from './pages/Accountants.jsx';
 import { Gate, Lock } from './components/plan.jsx';
 import Connections from './pages/Connections.jsx';
 import { Pricing, Welcome } from './pages/Pricing.jsx';
@@ -171,6 +172,7 @@ function Shell({ user, settings, logout }) {
       </aside>
       {searching && <GlobalSearch onClose={() => setSearching(false)} />}
       <main className="min-w-0 flex-1 p-4 md:p-8">
+        {user.role === 'cpa' && <div className="no-print mb-4 rounded-lg bg-sky-50 p-3 text-sm text-sky-800" role="status">{t('You are viewing {0} as an accountant. This access is read-only: you can look at everything, but nothing can be changed.', [settings.company_name])}</div>}
         {user.planInfo.billing?.status === 'past_due' && <div className="no-print mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{t('Your last payment failed.')} <NavLink to="/settings/plan" className="font-semibold underline">{t('Update your payment method')}</NavLink></div>}
         <Routes>
           <Route path="/" element={can('reports') ? <Dashboard /> : <Navigate to={home} replace />} />
@@ -241,6 +243,7 @@ export default function App() {
   if (loc.pathname === '/admin') return <ToastProvider><Admin /></ToastProvider>;
   if (loc.pathname === '/pricing') return <Pricing />;
   if (loc.pathname === '/welcome') return <Welcome />;
+  if (loc.pathname.startsWith('/accountant/')) return <ToastProvider><Routes><Route path="/accountant/:token" element={<AccountantInvitePage />} /></Routes></ToastProvider>;
   if (loc.pathname.startsWith('/p/')) return <ToastProvider><Routes><Route path="/p/:token" element={<PublicDoc />} /></Routes></ToastProvider>;
   if (!status) return <Loading />;
   if (status.error) return <div className="p-10 text-center text-rose-600">{t('Could not connect to the server.')}</div>;
