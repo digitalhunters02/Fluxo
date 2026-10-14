@@ -31,6 +31,7 @@ export function createStripeMock(secretKey = 'sk_test_123') {
       if (req.method === 'GET' && u.pathname === '/v1/prices') return send(200, { data: S.prices.filter((p) => p.lookup_key === [].concat(params.lookup_keys || [])[0] && p.active) });
       if (req.method === 'POST' && u.pathname === '/v1/accounts') { const id = `acct_${++S.n}`; S.accounts[id] = { id, charges_enabled: false, details_submitted: false, payouts_enabled: false, params }; return send(200, S.accounts[id]); }
       let am = u.pathname.match(/^\/v1\/accounts\/(\w+)$/);
+      if (am && req.method === 'POST' && S.accounts[am[1]]) { const c = params.capabilities || {}; S.accounts[am[1]].capabilities = { ...(S.accounts[am[1]].capabilities || {}), ...Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v.requested === 'true' ? 'inactive' : 'inactive'])) }; S.accounts[am[1]].lastUpdate = params; return send(200, S.accounts[am[1]]); }
       if (am && req.method === 'GET') return S.accounts[am[1]] ? send(200, S.accounts[am[1]]) : send(404, { error: { message: 'no such account' } });
       if (req.method === 'POST' && u.pathname === '/v1/account_links') return send(200, { url: `https://connect.stripe.test/setup/${params.account}`, account: params.account });
       if (req.method === 'POST' && u.pathname === '/v1/prices') {

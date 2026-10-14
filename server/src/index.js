@@ -17,6 +17,7 @@ import * as pay from './payroll.js';
 import * as taxid from './taxid.js';
 import * as importer from './importer.js';
 import * as stax from './salestax.js';
+import * as connectMod from './connect.js';
 import * as ai from './aiAssist.js';
 import { buildExport } from './exportAll.js';
 import * as plaidSvc from './plaid.js';
@@ -250,8 +251,9 @@ api.get('/public/doc/:token', publicTenant, wrap((req, res) => {
   const c = taxid.publicTaxId(get('SELECT name,email,phone,tax_id,address FROM contacts WHERE id=?', d.contact_id));
   const company = Object.fromEntries(all('SELECT key,value FROM settings').filter((s) => ['company_name', 'currency', 'locale', 'invoice_footer', 'company_tax_id', 'company_address', 'company_email', 'company_phone', 'company_logo', 'brand_color'].includes(s.key)).map((s) => [s.key, s.value]));
   const { share_token, created_by, ...safe } = d;
-  const payOnline = hasFeature('online_payments') && getSetting('connect_ready', '0') === '1' && d.type === 'invoice' && d.balance > 0 && ['sent', 'partial'].includes(d.status);
-  ok(res, { doc: safe, customer: c, company, payOnline });
+  const achPending = d.type === 'invoice' && d.balance > 0 && connectMod.achPending(d.id);
+  const payOnline = hasFeature('online_payments') && getSetting('connect_ready', '0') === '1' && d.type === 'invoice' && d.balance > 0 && ['sent', 'partial'].includes(d.status) && !achPending;
+  ok(res, { doc: safe, customer: c, company, payOnline, achPending });
 }));
 
 // o cliente aceita um orçamento pelo link público (assinatura digitada)

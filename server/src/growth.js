@@ -69,6 +69,7 @@ export function registerGrowth(api, h) {
   api.get('/connect/status', can('settings'), wrap(async (_req, res) => ok(res, hasFeature('online_payments') ? await connect.connectStatus() : { available: false })));
   api.post('/connect/onboard', can('settings', true), requireFeature('online_payments'), wrap(async (req, res) => ok(res, await connect.startOnboarding(billing.originOf(req)))));
   api.put('/connect/settings', can('settings', true), requireFeature('online_payments'), wrap((req, res) => { connect.saveConnectSettings(req.body || {}); audit(req, 'update', 'settings', null, 'online payments'); ok(res, {}); }));
+  api.put('/connect/ach', can('settings', true), requireFeature('online_payments'), wrap(async (req, res) => { const r = await connect.setAch(!!req.body?.enabled); audit(req, 'update', 'settings', null, `online payments: ACH ${req.body?.enabled ? 'on' : 'off'}`); ok(res, r); }));
 
   /* ------------------------------ migração ------------------------------ */
   api.post('/migrate/:kind', can('accounting', true), wrap((req, res) => {

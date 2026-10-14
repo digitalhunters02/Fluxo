@@ -85,6 +85,12 @@ function PaymentsInner() {
         {s.feePct > 0 && <span className="text-slate-500">{t('Platform fee: {0}% per payment', [s.feePct])}</span>}
       </div>
       <Button disabled={busy || !s.configured} onClick={() => run(async () => { const r = await api.post('/connect/onboard'); window.location.href = r.url; })}>{s.connected ? t('Continue in Stripe') : t('Connect with Stripe')}</Button>
+      {s.ready && (
+        <div className="mt-5 rounded-lg border border-slate-200 p-3" data-testid="ach-box">
+          <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={!!s.ach?.enabled} disabled={busy} data-testid="ach-toggle" onChange={(e) => run(async () => { await api.put('/connect/ach', { enabled: e.target.checked }); st.reload(); }, t('Saved'))} />{t('Let customers pay by bank transfer (ACH)')}</label>
+          <p className="mt-1 text-xs text-slate-500">{t('Bank payments take a few business days to arrive and can fail later. Stripe charges your Stripe account 0.8% per bank payment (up to $5), plus a fee when a payment fails or is disputed: check the current fees in your Stripe account. The invoice is marked paid only when the money is confirmed.')}</p>
+          {s.ach?.enabled && <p className={`mt-2 text-xs ${s.ach.ready ? 'text-emerald-700' : 'text-amber-700'}`} data-testid="ach-state">{s.ach.ready ? t('Bank payments are on.') : t('Waiting for Stripe to turn on bank payments for your account. You may need to finish setup in Stripe.')}</p>}
+        </div>)}
       {s.ready && banks.length > 0 && (
         <div className="mt-5 max-w-sm"><Field label={t('Deposit online payments into')} hint={t('The bank account in your books that receives these payments.')}>
           <Select value={s.depositAccountId || ''} onChange={(e) => run(async () => { await api.put('/connect/settings', { deposit_account_id: Number(e.target.value) }); st.reload(); }, t('Saved'))}>

@@ -1740,5 +1740,13 @@ export default {
  "Download everything in one ZIP of spreadsheets (CSV): the general ledger, customers and vendors, invoices and bills with their lines, payments, expenses, bank transactions, products, projects and payroll totals. Your data is yours, on any plan, at any time. Social Security/EIN numbers leave only with their last 4 digits; passwords and keys never leave.": "Descargue todo en un ZIP de hojas de cálculo (CSV): libro mayor, clientes y proveedores, facturas y cuentas por pagar con sus líneas, pagos, gastos, movimientos del banco, productos, proyectos y totales de nómina. Sus datos son suyos, en cualquier plan y en cualquier momento. Los números de Social Security/EIN salen solo con los últimos 4 dígitos; las contraseñas y claves nunca salen.",
  "Export downloaded": "Exportación descargada",
  "Preparing…": "Preparando…",
- "Download all my data (ZIP)": "Descargar todos mis datos (ZIP)"
+ "Download all my data (ZIP)": "Descargar todos mis datos (ZIP)",
+ "Let customers pay by bank transfer (ACH)": "Permitir que los clientes paguen por transferencia bancaria (ACH)",
+ "Bank payments take a few business days to arrive and can fail later. Stripe charges your Stripe account 0.8% per bank payment (up to $5), plus a fee when a payment fails or is disputed: check the current fees in your Stripe account. The invoice is marked paid only when the money is confirmed.": "Los pagos por banco tardan unos días hábiles en llegar y pueden fallar después. Stripe cobra a su cuenta de Stripe 0,8% por pago bancario (hasta US$ 5), más una tarifa cuando un pago falla o se disputa: revise las tarifas actuales en su cuenta de Stripe. La factura se marca como pagada solo cuando se confirma el dinero.",
+ "Bank payments are on.": "Pagos por banco activados.",
+ "Waiting for Stripe to turn on bank payments for your account. You may need to finish setup in Stripe.": "Esperando a que Stripe active los pagos por banco en su cuenta. Quizá deba terminar la configuración en Stripe.",
+ "A bank payment for this invoice is being processed. It can take a few business days to be confirmed.": "Un pago bancario de esta factura se está procesando. Puede tardar unos días hábiles en confirmarse.",
+ "Bank payment for invoice {0} failed": "El pago bancario de la factura {0} falló",
+ "Connect your Stripe account first": "Conecte primero su cuenta de Stripe",
+ "A bank payment for this invoice is already being processed. It can take a few business days.": "Un pago bancario de esta factura ya se está procesando. Puede tardar unos días hábiles."
 };

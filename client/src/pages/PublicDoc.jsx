@@ -12,7 +12,7 @@ export default function PublicDoc() {
   const { data, loading, error, reload } = useLoad(async () => { const r = await api.get(`/public/doc/${token}`); setFormat(r.company); return r; }, [token]);
   if (loading) return <Loading />;
   if (error) return <div className="mx-auto mt-20 max-w-md"><ErrorBox error={error} /></div>;
-  const { doc: d, customer: c, company, payOnline } = data;
+  const { doc: d, customer: c, company, payOnline, achPending } = data;
   const justPaid = new URLSearchParams(location.search).get('paid') === '1';
   const name = { invoice: t('INVOICE'), estimate: t('ESTIMATE'), credit: t('CREDIT MEMO') }[d.type];
   const brand = /^#[0-9a-fA-F]{6}$/.test(company.brand_color || '') ? company.brand_color : '#4338CA';
@@ -40,6 +40,7 @@ export default function PublicDoc() {
         </dl>
         {d.notes && <p className="mt-5 whitespace-pre-line border-t pt-4 text-sm text-slate-600">{d.notes}</p>}
         {justPaid && d.type === 'invoice' && <p className="mt-6 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800" data-testid="paid-note">{t('Thank you! Your payment was received. It can take a moment to show here.')}</p>}
+        {achPending && d.type === 'invoice' && <p className="no-print mt-6 rounded-lg bg-sky-50 p-3 text-sm text-sky-900" data-testid="ach-pending-note">{t('A bank payment for this invoice is being processed. It can take a few business days to be confirmed.')}</p>}
         {payOnline && d.type === 'invoice' && <div className="no-print mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4 text-center"><button className="btn btn-primary" style={{ background: brand }} disabled={busy} data-testid="pay-online" onClick={() => act(async () => { const r = await api.post(`/public/doc/${token}/pay`); window.location.href = r.url; })}>{t('Pay {0} online', [money(d.total - d.paid)])}</button><p className="mt-2 text-xs text-slate-500">{t('Secure payment by card or bank transfer, processed by Stripe.')}</p></div>}
         {d.type === 'estimate' && d.status === 'accepted' && (
           <p className="mt-6 rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{t('Accepted by {0} on {1}', [d.accepted_by || '', date((d.accepted_at || '').slice(0, 10))])}</p>
