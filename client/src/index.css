@@ -49,3 +49,9 @@ select.field, input.field { min-width: 0; max-width: 100%; }
   select,
   textarea { font-size: 16px !important; }
 }
+
+/* Celular: a página nunca fica mais larga que a tela e não balança de lado. */
+html, body { max-width: 100%; overscroll-behavior-x: none; }
+@supports (overflow: clip) { html, body { overflow-x: clip; } }
+/* Itens de grade e cartões podem encolher até a tela; tabela larga rola por dentro dela. */
+.grid > *, .card { min-width: 0; }
