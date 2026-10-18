@@ -1812,5 +1812,15 @@ export default {
  "Add U.S. payroll (${0}/yr + ${1} per employee/yr)": "Adicionar folha dos EUA (US${0}/ano + US${1} por funcionário/ano)",
  "Include U.S. payroll (${0}/yr + ${1} per employee/yr)": "Incluir folha dos EUA (US${0}/ano + US${1} por funcionário/ano)",
  "U.S. payroll: ${0}/year + ${1} per employee per year. Calculates and records payroll, pay stubs, W-2 and 941 summaries.": "Folha dos EUA: US${0}/ano + US${1} por funcionário por ano. Calcula e registra a folha, holerites e resumos de W-2 e 941.",
- "{0} companies in a group included, then ${1}/year for each extra company": "{0} empresas no grupo incluídas, depois US$ {1}/ano por empresa extra"
+ "{0} companies in a group included, then ${1}/year for each extra company": "{0} empresas no grupo incluídas, depois US$ {1}/ano por empresa extra",
+ "Insurance agency accounts": "Contas de agência de seguros",
+ "Adds the accounts an insurance agency needs: a premium trust bank account, premiums payable to carriers, and commission income. Nothing you already have is changed or removed.": "Acrescenta as contas que uma agência de seguros precisa: banco de custódia de prêmios, prêmios a repassar às seguradoras e receita de comissão. Nada do que você já tem é alterado ou removido.",
+ "Trust bank account": "Conta bancária de custódia",
+ "Premiums payable to carriers": "Prêmios a repassar às seguradoras",
+ "they should match. Check the entries sent from your agency system and reconcile the trust account with its statement.": "os dois devem bater. Confira os lançamentos enviados pelo sistema da agência e concilie a conta de custódia com o extrato.",
+ "Internal control only. Trust account rules vary by state: confirm them with your accountant and attorney.": "Apenas controle interno. As regras de conta de custódia variam por estado: confirme com seu contador e advogado.",
+ "Bank account that receives your commission": "Conta bancária que recebe a sua comissão",
+ "Choose later": "Escolher depois",
+ "Add insurance agency accounts": "Adicionar contas de agência de seguros",
+ "Insurance agency accounts added": "Contas de agência de seguros adicionadas"
 };

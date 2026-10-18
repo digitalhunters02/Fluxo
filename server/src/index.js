@@ -25,6 +25,7 @@ import * as billing from './billing.js';
 import { reportLead } from './harborLead.js';
 import { registerGrowth, registerGrowthPublic } from './growth.js';
 import { createV1Router } from './integrations.js';
+import * as agency from './agencyTemplate.js';
 import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, limitFor, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE, ENTERPRISE_FROM, ENTERPRISE_INCLUDED_COMPANIES, ENTERPRISE_EXTRA_COMPANY } from './plans.js';
 import { registerAccountants, registerAccountantsPublic } from './accountants.js';
 import { cleanPerms, authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, endSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
@@ -463,6 +464,12 @@ api.delete('/accounts/:id', can('accounting', true), wrap((req, res) => {
   run('DELETE FROM accounts WHERE id=?', aid); audit(req, 'delete', 'account', aid, a.name); ok(res, {});
 }));
 
+// Modelo de plano de contas (hoje: agência de seguros com conta de custódia). Só acrescenta contas; nunca apaga nem renomeia.
+api.get('/accounts/templates', can('accounting'), wrap((_req, res) => ok(res, { templates: [agency.templateStatus()], trust: agency.trustSummary() })));
+api.post('/accounts/templates/insurance-agency', can('accounting', true), wrap((req, res) => {
+  const r = agency.applyTemplate({ operatingAccountId: req.body?.operating_account_id });
+  audit(req, 'apply', 'account_template', null, `insurance agency: +${r.created.length} accounts`); ok(res, r);
+}));
 api.get('/journal', can('accounting'), wrap((req, res) => {
   const [from, to] = range(req);
   const entries = all('SELECT * FROM journal_entries WHERE date>=? AND date<=? ORDER BY date DESC, id DESC LIMIT 500', from, to);
@@ -661,7 +668,7 @@ api.get('/banking/accounts', can('banking'), wrap((_req, res) => ok(res, all(`SE
   COALESCE((SELECT SUM(debit-credit) FROM journal_lines WHERE account_id=a.id),0) AS net,
   (SELECT COUNT(*) FROM bank_txns WHERE account_id=a.id AND status='pending') AS pending,
   (SELECT MAX(statement_date) FROM reconciliations WHERE account_id=a.id) AS last_reconciled
-  FROM accounts a WHERE a.active=1 AND ((a.type='asset' AND a.subtype='bank') OR a.subtype='credit_card') ORDER BY a.code`)
+  FROM accounts a WHERE a.active=1 AND ((a.type='asset' AND a.subtype IN ('bank','trust_bank')) OR a.subtype='credit_card') ORDER BY a.code`)
   .map((a) => ({ ...a, balance: a.type === 'asset' ? a.net : -a.net })))));
 api.get('/banking/txns', can('banking'), wrap((req, res) => ok(res, bank.listTxns({ status: req.query.status || 'pending', account_id: req.query.account_id }))));
 api.post('/banking/import', can('banking', true), wrap((req, res) => { const r = bank.importTxns(Number(req.body.account_id), req.body.rows); audit(req, 'import', 'bank', null, `${r.added} novas`); ok(res, r); }));

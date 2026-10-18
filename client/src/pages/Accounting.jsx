@@ -43,6 +43,43 @@ function Ledger({ account, onClose }) {
   );
 }
 
+// Modelo de plano de contas para agência de seguros + custódia (prêmios de clientes que ainda vão para as seguradoras).
+function AgencyTemplate({ onChanged }) {
+  const { can } = useAuth();
+  const { data, loading, reload } = useLoad(async () => { const [tpl, banks] = await Promise.all([api.get('/accounts/templates'), api.get('/accounts/lookup')]); return { ...tpl, banks: banks.filter((a) => a.subtype === 'bank') }; });
+  const [run, busy] = useAction();
+  const [op, setOp] = useState('');
+  if (loading || !data) return null;
+  const tpl = data.templates[0];
+  const writable = can('accounting', true);
+  if (!tpl.applied && !writable) return null;
+  const trust = data.trust;
+  const apply = async () => { const r = await run(() => api.post('/accounts/templates/insurance-agency', op ? { operating_account_id: Number(op) } : {}), t('Insurance agency accounts added')); if (r) { reload(); onChanged(); } };
+  return (
+    <div data-testid="agency-template"><Card className="mb-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="font-medium">{t('Insurance agency accounts')} {tpl.applied && <Badge status="paid">{t('On')}</Badge>}</div>
+          <p className="mt-1 text-sm text-slate-600">{t('Adds the accounts an insurance agency needs: a premium trust bank account, premiums payable to carriers, and commission income. Nothing you already have is changed or removed.')}</p>
+          {tpl.applied && (
+            <p className="mt-2 text-sm text-slate-600" data-testid="trust-summary">
+              {t('Trust bank account')}: <b className="num">{money(trust.trustBankCents)}</b> · {t('Premiums payable to carriers')}: <b className="num">{money(trust.payableCents)}</b> · {t('Difference')}: <b className={`num ${trust.differenceCents === 0 ? 'text-green-700' : 'text-amber-700'}`}>{money(trust.differenceCents)}</b>
+              {trust.differenceCents !== 0 && <> — {t('they should match. Check the entries sent from your agency system and reconcile the trust account with its statement.')}</>}
+            </p>
+          )}
+          <p className="mt-2 text-xs text-slate-500">{t('Internal control only. Trust account rules vary by state: confirm them with your accountant and attorney.')}</p>
+        </div>
+        {writable && !tpl.applied && (
+          <div className="flex w-full flex-col gap-2 sm:w-64">
+            <Field label={t('Bank account that receives your commission')}><Select value={op} onChange={(e) => setOp(e.target.value)} aria-label={t('Bank account that receives your commission')}><option value="">{t('Choose later')}</option>{data.banks.map((a) => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}</Select></Field>
+            <Button disabled={busy} onClick={apply} data-testid="agency-apply">{t('Add insurance agency accounts')}</Button>
+          </div>
+        )}
+      </div>
+    </Card></div>
+  );
+}
+
 function Chart() {
   const { can } = useAuth();
   const { data, loading, error, reload } = useLoad(() => api.get('/accounts'));
@@ -54,6 +91,7 @@ function Chart() {
   if (error) return <ErrorBox error={error} retry={reload} />;
   return (
     <>
+      <AgencyTemplate onChanged={reload} />
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><SearchBox className="w-full max-w-sm" value={q} onChange={setQ} placeholder={t('Search accounts…')} />{can('accounting', true) && <Button onClick={() => setEdit({})}>{t('+ New account')}</Button>}</div>
       <Card pad={false}>
         <Table head={[t('Code'), t('Name'), t('Type'), { label: t('Balance'), right: true }, '']}>

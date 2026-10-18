@@ -1812,5 +1812,15 @@ export default {
  "Add U.S. payroll (${0}/yr + ${1} per employee/yr)": "Agregar nómina de EE. UU. (US${0}/año + US${1} por empleado/año)",
  "Include U.S. payroll (${0}/yr + ${1} per employee/yr)": "Incluir nómina de EE. UU. (US${0}/año + US${1} por empleado/año)",
  "U.S. payroll: ${0}/year + ${1} per employee per year. Calculates and records payroll, pay stubs, W-2 and 941 summaries.": "Nómina de EE. UU.: US${0}/año + US${1} por empleado por año. Calcula y registra la nómina, talones y resúmenes de W-2 y 941.",
- "{0} companies in a group included, then ${1}/year for each extra company": "{0} empresas en el grupo incluidas, luego US$ {1}/año por empresa extra"
+ "{0} companies in a group included, then ${1}/year for each extra company": "{0} empresas en el grupo incluidas, luego US$ {1}/año por empresa extra",
+ "Insurance agency accounts": "Cuentas de agencia de seguros",
+ "Adds the accounts an insurance agency needs: a premium trust bank account, premiums payable to carriers, and commission income. Nothing you already have is changed or removed.": "Agrega las cuentas que necesita una agencia de seguros: banco fiduciario de primas, primas por pagar a aseguradoras e ingresos por comisión. Nada de lo que ya tiene se cambia ni se elimina.",
+ "Trust bank account": "Cuenta bancaria fiduciaria",
+ "Premiums payable to carriers": "Primas por pagar a aseguradoras",
+ "they should match. Check the entries sent from your agency system and reconcile the trust account with its statement.": "deben coincidir. Revise los asientos enviados por el sistema de la agencia y concilie la cuenta fiduciaria con su estado de cuenta.",
+ "Internal control only. Trust account rules vary by state: confirm them with your accountant and attorney.": "Solo control interno. Las reglas de cuentas fiduciarias varían por estado: confírmelas con su contador y abogado.",
+ "Bank account that receives your commission": "Cuenta bancaria que recibe su comisión",
+ "Choose later": "Elegir después",
+ "Add insurance agency accounts": "Agregar cuentas de agencia de seguros",
+ "Insurance agency accounts added": "Cuentas de agencia de seguros agregadas"
 };

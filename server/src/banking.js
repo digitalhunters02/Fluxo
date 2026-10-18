@@ -5,7 +5,7 @@ import { HttpError, postEntry, getAccount, cents, isDate, removeEntries } from '
 
 const bad = (m) => new HttpError(400, m);
 const norm = (s) => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\d{2}[/.-]\d{2}([/.-]\d{2,4})?/g, ' ').replace(/[^a-z ]/g, ' ').replace(/\s+/g, ' ').trim();
-export const isBankAccount = (a) => a.type === 'asset' ? a.subtype === 'bank' : a.subtype === 'credit_card';
+export const isBankAccount = (a) => a.type === 'asset' ? (a.subtype === 'bank' || a.subtype === 'trust_bank') : a.subtype === 'credit_card';
 
 function requireBank(id) {
   const a = getAccount(id);
@@ -27,7 +27,7 @@ export function suggestCategory(description, amount) {
     for (const h of hist) {
       if ((h.amount < 0) !== (amount < 0)) continue;
       if (norm(h.description) !== d) continue;
-      const line = get(`SELECT jl.account_id FROM journal_lines jl JOIN accounts a ON a.id=jl.account_id WHERE jl.entry_id=? AND a.subtype NOT IN ('bank','credit_card') LIMIT 1`, h.entry_id);
+      const line = get(`SELECT jl.account_id FROM journal_lines jl JOIN accounts a ON a.id=jl.account_id WHERE jl.entry_id=? AND a.subtype NOT IN ('bank','trust_bank','credit_card') LIMIT 1`, h.entry_id);
       if (line) counts.set(line.account_id, (counts.get(line.account_id) || 0) + 1);
     }
     const best = [...counts].sort((a, b) => b[1] - a[1])[0];

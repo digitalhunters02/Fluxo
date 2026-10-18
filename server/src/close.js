@@ -14,7 +14,7 @@ export function checklist(period) {
   const end = lastDayOf(period);
   const manual = Object.fromEntries(all('SELECT key,done_by,done_at FROM close_tasks WHERE period=?', period).map((r) => [r.key, r]));
   // só entram na conferência as contas de banco/cartão que já tinham movimento até o fim do mês
-  const banks = all("SELECT id FROM accounts WHERE active=1 AND ((type='asset' AND subtype='bank') OR subtype='credit_card')")
+  const banks = all("SELECT id FROM accounts WHERE active=1 AND ((type='asset' AND subtype IN ('bank','trust_bank')) OR subtype='credit_card')")
     .filter((b) => get('SELECT 1 FROM journal_lines jl JOIN journal_entries je ON je.id=jl.entry_id WHERE jl.account_id=? AND je.date<=? LIMIT 1', b.id, end));
   const reconciled = banks.every((b) => get('SELECT 1 FROM reconciliations WHERE account_id=? AND statement_date>=?', b.id, end));
   const periodIndex = (a) => { const [y0, m0] = a.acquired_date.slice(0, 7).split('-').map(Number), [y, m] = period.split('-').map(Number); return (y - y0) * 12 + (m - m0); };

@@ -243,6 +243,8 @@ export function openDb(file) {
   addColumn('docs', 'approved_total', 'INTEGER');
   d.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_docs_external ON docs(external_id) WHERE external_id IS NOT NULL');
   d.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_external ON contacts(external_id) WHERE external_id IS NOT NULL');
+  addColumn('journal_entries', 'external_id', 'TEXT');                // lançamento de custódia enviado pelo sistema da agência (reenviar não duplica)
+  d.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_je_external ON journal_entries(external_id) WHERE external_id IS NOT NULL');
   ensurePhotoSchema(d);
   als.run({ db: d }, ensureDefaults);
   return d;

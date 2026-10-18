@@ -11,6 +11,7 @@ import { hasFeature, currentPlan, limitFor } from './plans.js';
 import { appUrl } from './mailer.js';
 import { assertSafeUrl, deliver, EVENTS, emit } from './events.js';
 import { requireFresh } from './twofa.js';
+import { recordTrustEntry, voidTrustEntry, trustSummary, templateApplied } from './agencyTemplate.js';
 
 const { HttpError, today, isDate } = acc;
 const bad = (m) => new HttpError(400, m);
@@ -114,7 +115,7 @@ export function createV1Router() {
     const plan = currentPlan();
     res.json({
       product: 'fluxo', plan, planName: plan.charAt(0).toUpperCase() + plan.slice(1), appUrl: appUrl(),
-      features: { api: hasFeature('api'), online_payments: hasFeature('online_payments') },
+      features: { api: hasFeature('api'), online_payments: hasFeature('online_payments'), trust: templateApplied() },
       bank: { allowed: hasFeature('bank_feeds') && (max === null || max > 0), max, connected: get('SELECT COUNT(*) AS n FROM plaid_items').n },
     });
   }));
@@ -158,6 +159,18 @@ export function createV1Router() {
     const accountId = b.accountId ? Number(b.accountId) : get("SELECT id FROM accounts WHERE subtype='bank' AND active=1 ORDER BY code LIMIT 1")?.id;
     const d = acc.addPayment(Number(req.params.id), { date: b.date || today(), amount: Math.round(Number(b.amountCents)), account_id: accountId, method: String(b.method || 'api').slice(0, 30), ref: String(b.reference || '').slice(0, 100) }, null);
     res.status(201).json({ invoice: docOut(d) });
+  }));
+
+  // Custódia (agência de seguros): o sistema da agência manda o prêmio recebido, o repasse à seguradora e a comissão retida.
+  // Exige o modelo "agência de seguros" ligado no Fluxo (Contabilidade → Plano de contas).
+  r.get('/trust/summary', wrap((_req, res) => res.json(trustSummary())));
+  r.post('/trust-entries', wrap((req, res) => {
+    const out = recordTrustEntry(req.body || {});
+    res.status(out.duplicate ? 200 : 201).json(out);
+  }));
+  r.post('/trust-entries/:externalId/void', wrap((req, res) => {
+    const out = voidTrustEntry(req.params.externalId, req.body?.date);
+    res.status(out.duplicate ? 200 : 201).json(out);
   }));
 
   r.use((_req, _res, next) => next(new HttpError(404, 'Unknown endpoint')));

@@ -1288,3 +1288,14 @@ Add U.S. payroll (${0}/yr + ${1} per employee/yr) || Adicionar folha dos EUA (US
 Include U.S. payroll (${0}/yr + ${1} per employee/yr) || Incluir folha dos EUA (US${0}/ano + US${1} por funcionário/ano) || Incluir nómina de EE. UU. (US${0}/año + US${1} por empleado/año)
 U.S. payroll: ${0}/year + ${1} per employee per year. Calculates and records payroll, pay stubs, W-2 and 941 summaries. || Folha dos EUA: US${0}/ano + US${1} por funcionário por ano. Calcula e registra a folha, holerites e resumos de W-2 e 941. || Nómina de EE. UU.: US${0}/año + US${1} por empleado por año. Calcula y registra la nómina, talones y resúmenes de W-2 y 941.
 {0} companies in a group included, then ${1}/year for each extra company || {0} empresas no grupo incluídas, depois US$ {1}/ano por empresa extra || {0} empresas en el grupo incluidas, luego US$ {1}/año por empresa extra
+Insurance agency accounts || Contas de agência de seguros || Cuentas de agencia de seguros
+Adds the accounts an insurance agency needs: a premium trust bank account, premiums payable to carriers, and commission income. Nothing you already have is changed or removed. || Acrescenta as contas que uma agência de seguros precisa: banco de custódia de prêmios, prêmios a repassar às seguradoras e receita de comissão. Nada do que você já tem é alterado ou removido. || Agrega las cuentas que necesita una agencia de seguros: banco fiduciario de primas, primas por pagar a aseguradoras e ingresos por comisión. Nada de lo que ya tiene se cambia ni se elimina.
+Trust bank account || Conta bancária de custódia || Cuenta bancaria fiduciaria
+Premiums payable to carriers || Prêmios a repassar às seguradoras || Primas por pagar a aseguradoras
+Difference || Diferença || Diferencia
+they should match. Check the entries sent from your agency system and reconcile the trust account with its statement. || os dois devem bater. Confira os lançamentos enviados pelo sistema da agência e concilie a conta de custódia com o extrato. || deben coincidir. Revise los asientos enviados por el sistema de la agencia y concilie la cuenta fiduciaria con su estado de cuenta.
+Internal control only. Trust account rules vary by state: confirm them with your accountant and attorney. || Apenas controle interno. As regras de conta de custódia variam por estado: confirme com seu contador e advogado. || Solo control interno. Las reglas de cuentas fiduciarias varían por estado: confírmelas con su contador y abogado.
+Bank account that receives your commission || Conta bancária que recebe a sua comissão || Cuenta bancaria que recibe su comisión
+Choose later || Escolher depois || Elegir después
+Add insurance agency accounts || Adicionar contas de agência de seguros || Agregar cuentas de agencia de seguros
+Insurance agency accounts added || Contas de agência de seguros adicionadas || Cuentas de agencia de seguros agregadas
