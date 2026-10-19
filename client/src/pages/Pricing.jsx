@@ -4,6 +4,7 @@ import { t, lang, LANGS, setLang } from '../i18n.jsx';
 import { api, setToken } from '../api.js';
 import { Button, Card, ErrorBox, Field, Input, Loading, ToastProvider, useAction, useLoad } from '../components/ui.jsx';
 import { IntervalToggle, PlanPrice } from '../components/plan.jsx';
+import { LegalLinks } from './Legal.jsx';
 
 const PLAN_INFO = {
   free: { name: t('Free'), blurb: t('Try Fluxo with no card'), features: [t('5 invoices per month & unlimited estimates'), t('Send by link, email button or PDF'), t('Expenses, receipts & sales receipts'), t('Bank CSV import & reconciliation'), t('Core financial reports'), t('Import from QuickBooks & Xero'), t('Sales tax by state'), t('Download all your data'), t('1 user')] },
@@ -26,6 +27,7 @@ function Shell({ children }) {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-6 pb-16">{children}</main>
+      <footer className="mx-auto max-w-6xl px-6 pb-10 text-center text-slate-500"><LegalLinks /></footer>
     </div>
   );
 }
@@ -108,6 +110,7 @@ export function Welcome() {
               <Field label={t('Your name')}><Input required value={f.name} onChange={set('name')} autoComplete="name" /></Field>
               <Field label={t('Email')}><Input type="email" required value={f.email} onChange={set('email')} autoComplete="username" /></Field>
               <Field label={t('Password')} hint={t('At least 8 characters')}><Input type="password" required minLength={8} value={f.password} onChange={set('password')} autoComplete="new-password" /></Field>
+              <p className="text-xs text-slate-500">{t('By creating an account you accept our legal terms:')} <LegalLinks className="inline" /></p>
               <Button className="w-full" disabled={busy}>{busy ? t('Please wait…') : t('Create my account')}</Button>
             </form>)}
       </div>

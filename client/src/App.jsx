@@ -31,6 +31,7 @@ import { Gate, Lock } from './components/plan.jsx';
 import Connections from './pages/Connections.jsx';
 import { Pricing, Welcome } from './pages/Pricing.jsx';
 import { ReauthModal, ForceSetup } from './pages/SecurityUI.jsx';
+import Legal, { LegalLinks } from './pages/Legal.jsx';
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
@@ -101,6 +102,7 @@ function AuthScreen({ status, onAuth, ssoError }) {
         {ssoError && <p className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700" data-testid="sso-error">{tr(ssoError)}</p>}
         {!status.needsSetup && <button type="button" data-testid="sso-button" className="btn btn-ghost mt-3 w-full" onClick={() => (f.email ? (window.location.href = `/api/sso/start?email=${encodeURIComponent(f.email)}`) : alert(t('Type your email first, then choose single sign-on.')))}>{t('Sign in with single sign-on')}</button>}
         {!status.needsSetup && <a href="/forgot" className="mt-3 block text-center text-sm text-brand-700 hover:underline">{t('Forgot your password?')}</a>}
+        <LegalLinks className="mt-4 text-center text-slate-500" />
       </form>
     </div>
   );
@@ -254,6 +256,8 @@ export default function App() {
 
   if (loc.pathname === '/forgot') return <ToastProvider><Forgot /></ToastProvider>;
   if (loc.pathname === '/reset') return <ToastProvider><Reset /></ToastProvider>;
+  if (loc.pathname === '/terms') return <Legal kind="terms" />;
+  if (loc.pathname === '/privacy') return <Legal kind="privacy" />;
   if (loc.pathname === '/confirm-email') return <ToastProvider><ConfirmEmail /></ToastProvider>;
   if (loc.pathname === '/admin') return <ToastProvider><Admin /></ToastProvider>;
   if (loc.pathname === '/pricing') return <Pricing />;

@@ -1884,5 +1884,8 @@ export default {
  "Not sent": "No enviado",
  "Sending invoices by email is part of the Essentials plan. Upgrade to use it.": "Enviar facturas por correo forma parte del plan Essentials. Mejore su plan para usarlo.",
  "The email could not be sent. Check the address and try again. If it keeps failing, ask the administrator to check the email settings.": "No se pudo enviar el correo. Revise la dirección e inténtelo de nuevo. Si sigue fallando, pida al administrador que revise la configuración de correo.",
- "Too many emails sent in the last hour. Please wait a little and try again.": "Demasiados correos enviados en la última hora. Espere un poco e inténtelo de nuevo."
+ "Too many emails sent in the last hour. Please wait a little and try again.": "Demasiados correos enviados en la última hora. Espere un poco e inténtelo de nuevo.",
+ "Legal": "Legal",
+ "Back to Fluxo": "Volver a Fluxo",
+ "By creating an account you accept our legal terms:": "Al crear la cuenta usted acepta nuestros términos legales:"
 };

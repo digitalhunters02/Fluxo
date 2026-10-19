@@ -1361,3 +1361,6 @@ Not sent || Não enviado || No enviado
 Sending invoices by email is part of the Essentials plan. Upgrade to use it. || Enviar faturas por e-mail faz parte do plano Essentials. Faça upgrade para usar. || Enviar facturas por correo forma parte del plan Essentials. Mejore su plan para usarlo.
 The email could not be sent. Check the address and try again. If it keeps failing, ask the administrator to check the email settings. || Não foi possível enviar o e-mail. Confira o endereço e tente de novo. Se continuar falhando, peça ao administrador para conferir as configurações de e-mail. || No se pudo enviar el correo. Revise la dirección e inténtelo de nuevo. Si sigue fallando, pida al administrador que revise la configuración de correo.
 Too many emails sent in the last hour. Please wait a little and try again. || Muitos e-mails enviados na última hora. Espere um pouco e tente de novo. || Demasiados correos enviados en la última hora. Espere un poco e inténtelo de nuevo.
+Legal || Legal || Legal
+Back to Fluxo || Voltar ao Fluxo || Volver a Fluxo
+By creating an account you accept our legal terms: || Ao criar a conta você aceita os nossos termos legais: || Al crear la cuenta usted acepta nuestros términos legales:
