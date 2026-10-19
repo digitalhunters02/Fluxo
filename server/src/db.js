@@ -226,8 +226,9 @@ export function openDb(file) {
   if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
   const d = new DatabaseSync(file);
   // WAL já estava ligado. busy_timeout: se outro processo estiver escrevendo no mesmo arquivo (ex.: o contêiner antigo durante um deploy), espera até 5 s em vez de falhar na hora com "database is locked".
-  // synchronous=NORMAL (seguro no WAL: não corrompe; numa queda de energia pode perder só os últimos instantes) deixa cada gravação mais rápida.
-  d.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON;');
+  // busy_timeout: com dois processos no mesmo arquivo (ex.: contêiner antigo e novo sobrepostos num deploy), espera em vez de falhar.
+  // Sem 'synchronous=NORMAL' de propósito: fica no padrão FULL, sem nenhum risco de perder gravação numa queda de energia.
+  d.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;');
   d.exec(SCHEMA);
   const addColumn = (table, col, ddl) => { if (!d.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === col)) d.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`); };
   addColumn('users', 'totp_secret_enc', 'TEXT');                   // 2FA: segredo do aplicativo autenticador (cifrado)
