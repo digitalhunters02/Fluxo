@@ -30,8 +30,11 @@ import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, has
 import { registerAccountants, registerAccountantsPublic } from './accountants.js';
 import { cleanPerms, authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, endSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
 import * as twofa from './twofa.js';
+import * as emailConfirm from './emailConfirm.js';
 
 const { HttpError, today, isDate, cents } = acc;
+/** Versão dos textos legais (Termos e Privacidade) mostrados no cadastro; muda quando o advogado revisar. */
+const LEGAL_VERSION = 'draft-2026-10-19';
 const bad = (m) => new HttpError(400, m);
 export const app = express();
 app.disable('x-powered-by');
@@ -86,14 +89,14 @@ const range = (req) => {
 
 /* ---------------------------------- auth ---------------------------------- */
 api.get('/status', wrap((_req, res) => ok(res, multi()
-  ? { needsSetup: false, multi: true, company: '', billing: billing.stripeConfigured(), requirePayment: false, recovery: mailer.recoveryReady() }
-  : { needsSetup: !get('SELECT 1 FROM users LIMIT 1'), company: getSetting('company_name'), billing: billing.stripeConfigured(), requirePayment: process.env.FLUXO_REQUIRE_PAYMENT === '1', recovery: mailer.recoveryReady() })));
+  ? { needsSetup: false, multi: true, company: '', billing: billing.stripeConfigured(), requirePayment: false, recovery: mailer.recoveryReady(), confirmEmail: emailConfirm.confirmationAvailable() }
+  : { needsSetup: !get('SELECT 1 FROM users LIMIT 1'), company: getSetting('company_name'), billing: billing.stripeConfigured(), requirePayment: process.env.FLUXO_REQUIRE_PAYMENT === '1', recovery: mailer.recoveryReady(), confirmEmail: false })));
 
 /** Idioma/moeda, nome da empresa e o usuário dono — dentro do banco da empresa atual. Usado pelo cadastro (/setup) e pelo bootstrapOwner(). */
-function createOwnerUser({ company_name, name, email, password, lang, currency }) {
+function createOwnerUser({ company_name, name, email, password, lang, currency, verified = true }) {
   applyLanguage(lang, { currency: ['USD', 'EUR', 'GBP', 'CAD', 'MXN'].includes(currency) ? currency : undefined });
   if (company_name) setSetting('company_name', company_name);
-  return insert('INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,\'owner\')', name.trim(), email.trim().toLowerCase(), hashPassword(password));
+  return insert(`INSERT INTO users(name,email,password_hash,role,email_verified_at) VALUES(?,?,?,'owner',${verified ? 'CURRENT_TIMESTAMP' : 'NULL'})`, name.trim(), email.trim().toLowerCase(), hashPassword(password));
 }
 
 /** Conta de dono criada na subida do servidor (BOOTSTRAP_OWNER_EMAIL + BOOTSTRAP_OWNER_PASSWORD), sem passar pelo navegador.
@@ -155,7 +158,9 @@ api.post('/setup', wrap(async (req, res) => {
   const provision = () => {
     if (multi()) { if (!paid) setPlan({ plan: 'free' }); } // hospedado: sem pagamento confirmado, só o plano gratuito
     else if (req.body.plan) setPlan({ plan: req.body.plan });
-    const uid = createOwnerUser({ company_name, name, email, password, lang, currency });
+    // hospedado e gratuito: o e-mail ainda precisa ser confirmado (quem pagou, ou quem instala o próprio servidor, já nasce confirmado)
+    const uid = createOwnerUser({ company_name, name, email, password, lang, currency, verified: !(multi() && !paid) });
+    if (multi()) setSetting('terms_accepted', `${new Date().toISOString()}|${LEGAL_VERSION}`); // o cadastro mostra "ao continuar, você aceita os Termos e a Privacidade"
     if (paid?.subscription) billing.applySubscription(paid.subscription);
     if (demo && !paid) import('./seed.js').then((m) => m.loadDemo(lang)).catch((e) => console.error('seed', e));
     return { token: withSlug(createSession(uid)), user: publicUser(get('SELECT * FROM users WHERE id=?', uid)) };
@@ -169,7 +174,21 @@ api.post('/setup', wrap(async (req, res) => {
   let out;
   try { out = tenants.inTenant(slug, provision); } catch (e) { tenants.dropTenant(slug); throw e; }
   tellHarbor();
-  ok(res, out);
+  // confirmação de e-mail (só hospedado e gratuito, e só se o servidor sabe mandar e-mail); falhar aqui nunca desfaz o cadastro
+  let confirmation = 'not_needed';
+  if (!paid) {
+    if (!emailConfirm.confirmationAvailable()) confirmation = 'unavailable';
+    else confirmation = await tenants.inTenant(slug, async () => { try { await emailConfirm.sendConfirmation(get("SELECT * FROM users WHERE role='owner' ORDER BY id LIMIT 1"), { slug, lang }); return 'sent'; } catch { return 'failed'; } });
+  }
+  ok(res, { ...out, emailConfirmation: confirmation });
+}));
+
+/** O link do e-mail abre a página /confirm-email?token=...; ela chama aqui (POST, para que um antivírus que só "abre" o link não confirme por engano). */
+api.post('/confirm-email', wrap((req, res) => {
+  rateLimitLogin(`confirm|${req.ip}`);
+  const [slug, raw] = multi() ? splitRef(req.body?.token || '') : ['', String(req.body?.token || '')];
+  const go = () => emailConfirm.confirmToken(raw);
+  if (multi()) { if (!tenants.tenantExists(slug) || tenants.isSuspended(slug)) throw new HttpError(400, 'This link is invalid or has expired. Sign in and ask for a new one.'); ok(res, tenants.inTenant(slug, go)); } else ok(res, go());
 }));
 
 api.post('/login', wrap((req, res) => {
@@ -302,7 +321,7 @@ api.post('/public/checkout', wrap(async (req, res) => {
 }));
 api.get('/public/signup', wrap(async (req, res) => {
   if (!multi() && get('SELECT 1 FROM users LIMIT 1')) return ok(res, { alreadySetup: true });
-  if (req.query.plan === 'free') return ok(res, { email: '', plan: 'free', payroll: false });
+  if (req.query.plan === 'free') return ok(res, { email: '', plan: 'free', payroll: false, confirmEmail: emailConfirm.confirmationAvailable() });
   const v = await billing.verifyCheckoutSession(req.query.session_id);
   if (multi() && v.customer && tenants.slugForLink('stripe_customer', v.customer)) return ok(res, { alreadySetup: true });
   ok(res, { email: v.email, plan: v.plan, payroll: v.payroll, ...(v.ref ? { ref: v.ref } : {}) });
@@ -370,7 +389,13 @@ registerGrowth(api, { wrap, ok, can, requireFeature, audit, id, withSlug, multi 
 registerAccountants(api, { wrap, ok, twofa, id, multi });
 api.post('/logout', wrap((req, res) => { endSession(req.headers.authorization.slice(7)); ok(res, {}); }));
 const planInfo = () => ({ enterpriseFrom: ENTERPRISE_FROM, enterpriseIncluded: ENTERPRISE_INCLUDED_COMPANIES, enterpriseExtra: ENTERPRISE_EXTRA_COMPANY, plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, yearlyPrices: yearlyPrices(), payrollYearlyPrice: payrollYearly(), annualDiscount: billing.ANNUAL_DISCOUNT, enterpriseExtraYearly: billing.priceFor(ENTERPRISE_EXTRA_COMPANY, 'year'), lockDate: getSetting('lock_date', ''), billing: billing.billingState(), limits: { bank_connections: limitFor('bank_connections'), invoices_per_month: limitFor('invoices_per_month'), users: limitFor('users'), invoices_used: invoicesThisMonth() } });
-api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), tenant: multi() ? tenants.currentSlug() : '', planInfo: planInfo(), twofa: twofa.twofaState(req.user), reauthOn: twofa.reauthOn() })));
+api.post('/me/email/resend', wrap(async (req, res) => {
+  if (req.user.email_verified_at) return ok(res, { confirmed: true });
+  rateLimitLogin(`resend|${req.user.id}|${req.ip}`);
+  await emailConfirm.sendConfirmation(req.user, { slug: multi() ? tenants.currentSlug() : '', lang: getSetting('lang', 'en') });
+  ok(res, { sentTo: req.user.email });
+}));
+api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), emailConfirm: emailConfirm.stateFor(req.user), tenant: multi() ? tenants.currentSlug() : '', planInfo: planInfo(), twofa: twofa.twofaState(req.user), reauthOn: twofa.reauthOn() })));
 api.get('/plan', wrap((_req, res) => ok(res, planInfo())));
 api.put('/plan', can('users', true), wrap((req, res) => {
   if (getSetting('billing_managed', '0') === '1' && process.env.FLUXO_ALLOW_MANUAL_PLAN !== '1') throw new HttpError(403, 'Your plan is managed by your subscription. Use Upgrade or Manage billing.');
@@ -412,7 +437,7 @@ api.post('/users', can('users', true), twofa.requireFresh, wrap((req, res) => {
   if (!password || password.length < 8) throw bad('Password must be at least 8 characters');
   if (get('SELECT 1 FROM users WHERE email=?', email.trim().toLowerCase())) throw bad('Email already registered');
   if (multi() && !tenants.registerEmail(email, tenants.currentSlug())) throw bad('Email already registered');
-  const uid = insert('INSERT INTO users(name,email,password_hash,role,custom_role_id,custom_perms) VALUES(?,?,?,?,?,?)', name.trim(), email.trim().toLowerCase(), hashPassword(password), role, custom, perms);
+  const uid = insert('INSERT INTO users(name,email,password_hash,role,custom_role_id,custom_perms,email_verified_at) VALUES(?,?,?,?,?,?,CURRENT_TIMESTAMP)', name.trim(), email.trim().toLowerCase(), hashPassword(password), role, custom, perms);
   audit(req, 'create', 'user', uid, `${email} (${role})`); ok(res, publicUser(get('SELECT * FROM users WHERE id=?', uid)));
 }));
 api.put('/users/:id', can('users', true), twofa.requireFresh, wrap((req, res) => {
@@ -576,6 +601,7 @@ api.param('type', (_req, _res, next, val) => { try { gateType(val); next(); } ca
 /** Plano free: limite de faturas novas por mês (conta pela data de criação, não pela data da fatura). */
 const invoicesThisMonth = () => get("SELECT COUNT(*) n FROM docs WHERE type='invoice' AND status!='void' AND strftime('%Y-%m',created_at)=strftime('%Y-%m','now')").n;
 function assertInvoiceQuota(adding) {
+  emailConfirm.assertInvoiceAllowed(adding);
   const cap = limitFor('invoices_per_month');
   if (cap !== null && invoicesThisMonth() + adding > cap) throw new HttpError(402, 'You have reached the invoice limit of your plan this month. Upgrade to create more.', { feature: 'invoices_per_month', required: 'starter' });
 }

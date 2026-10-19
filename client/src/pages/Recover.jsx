@@ -82,3 +82,32 @@ export function Reset() {
     </Frame>
   );
 }
+
+/** O link do e-mail de confirmação abre aqui; a página confirma sozinha e mostra o resultado. */
+export function ConfirmEmail() {
+  const [params] = useSearchParams();
+  const token = params.get('token') || '';
+  const [state, setState] = useState(token ? 'working' : 'bad');
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+  useEffect(() => { document.title = `${t('Confirm your email')} — Fluxo`; }, []);
+  useEffect(() => {
+    if (!token) return;
+    api.post('/confirm-email', { token }).then((r) => { setEmail(r.email); setState('ok'); }).catch((e) => { setError(e.message); setState('bad'); });
+  }, [token]);
+  return (
+    <Frame title={t('Confirm your email')}>
+      {state === 'working' && <p className="text-sm text-slate-600" role="status">{t('Please wait…')}</p>}
+      {state === 'ok' && (
+        <div className="space-y-3 text-sm text-slate-600" role="status">
+          <p>{t('Thank you! {0} is confirmed.', [email])}</p>
+          <Link to="/" className="btn btn-primary w-full">{t('Go to Fluxo')}</Link>
+        </div>)}
+      {state === 'bad' && (
+        <div className="space-y-3 text-sm text-slate-600" role="alert">
+          <p className="rounded-lg bg-amber-50 p-3 text-amber-800">{error || t('This link is invalid or has expired. Sign in and ask for a new one.')}</p>
+          <Link to="/" className="btn btn-primary w-full">{t('Sign in')}</Link>
+        </div>)}
+    </Frame>
+  );
+}

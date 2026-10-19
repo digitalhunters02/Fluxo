@@ -48,6 +48,7 @@ export default function Admin() {
       {error && <ErrorBox error={error} retry={load} />}
       {!data ? <Loading /> : (
         <>
+          {data.mail && !data.mail.linksReady && <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800" role="alert" data-testid="admin-mail-warning">{data.mail.configured ? t('Email is partly set up: APP_URL is missing, so links in emails (confirmation, password reset) are off.') : t('Email is not set up on this server (no SMTP or Resend). Email confirmation, password reset, invoice emails and the 12-month warning for unused accounts are off.')}</p>}
           <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
             <Card><div className="text-xs uppercase text-slate-500">{t('Companies')}</div><div className="num text-2xl font-semibold">{data.total}</div></Card>
             <Card><div className="text-xs uppercase text-slate-500">{t('Active')}</div><div className="num text-2xl font-semibold">{data.active}</div></Card>

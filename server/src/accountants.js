@@ -73,7 +73,7 @@ export function accept(raw, { name, password }) {
     if (u) { run('UPDATE users SET password_hash=?, active=1, name=? WHERE id=?', hashPassword(password), (name || inv.name || u.name).trim().slice(0, 100), u.id); run('DELETE FROM sessions WHERE user_id=?', u.id); uid = u.id; }
     else {
       if (tenants.multiEnabled() && !tenants.registerEmail(inv.email, tenants.currentSlug())) throw new HttpError(409, 'This email already has a Fluxo login for another company. Ask the owner to invite a different email address.');
-      uid = insert('INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,?)', (name || inv.name || inv.email.split('@')[0]).trim().slice(0, 100), inv.email, hashPassword(password), CPA_ROLE);
+      uid = insert('INSERT INTO users(name,email,password_hash,role,email_verified_at) VALUES(?,?,?,?,CURRENT_TIMESTAMP)', (name || inv.name || inv.email.split('@')[0]).trim().slice(0, 100), inv.email, hashPassword(password), CPA_ROLE);
     }
     run("UPDATE accountant_invites SET accepted_at=datetime('now'), user_id=? WHERE id=?", uid, inv.id);
     run('INSERT INTO audit_log(user_id,user_name,action,entity,entity_id,detail) VALUES(?,?,?,?,?,?)', uid, inv.email, 'accept', 'accountant', inv.id, 'accountant accepted the invitation (read-only)');

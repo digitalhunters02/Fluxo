@@ -101,6 +101,9 @@ export function Welcome() {
             <form onSubmit={submit} className="card space-y-3 p-6">
               <h1 className="text-xl font-semibold">{free ? t('Create your free account') : t('Payment received — create your account')}</h1>
               <p className="text-sm text-slate-500">{free ? t('No card needed. You can upgrade any time.') : t('Your plan is ready. Set up your owner login to start.')}</p>
+              {free && (data.confirmEmail
+                ? <p className="rounded-lg bg-brand-50 p-3 text-xs text-brand-700">{t('We will email you a link to confirm your address. Until you confirm it, a Free account can create up to 3 invoices.')}</p>
+                : <p className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600" data-testid="no-mail-note">{t('This server cannot send email yet, so email confirmation and password reset by email are off. You can still create your account.')}</p>)}
               <Field label={t('Company name')}><Input required value={f.company_name} onChange={set('company_name')} /></Field>
               <Field label={t('Your name')}><Input required value={f.name} onChange={set('name')} autoComplete="name" /></Field>
               <Field label={t('Email')}><Input type="email" required value={f.email} onChange={set('email')} autoComplete="username" /></Field>

@@ -127,6 +127,25 @@ function Audit() {
   return <><SearchBox className="mb-3 max-w-sm" value={q} onChange={setQ} placeholder={t('Search the audit log…')} /><Card pad={false}><Table head={[t('When'), t('Who'), t('Action'), t('Object'), t('Detail')]} empty={t('No records.')}>{search(data).map((a) => <tr key={a.id}><td className="td whitespace-nowrap">{date(a.at.slice(0, 10))} {a.at.slice(11, 16)}</td><td className="td">{a.user_name}</td><td className="td">{ACTIONS[a.action] || a.action}</td><td className="td">{ENTITIES[a.entity] || a.entity}{a.entity_id ? ` #${a.entity_id}` : ''}</td><td className="td text-slate-500">{a.detail}</td></tr>)}</Table></Card></>;
 }
 
+/** Estado da confirmação do e-mail de login (e, se faltar, o botão para receber o link de novo). */
+function EmailCard() {
+  const { user, refresh } = useAuth();
+  const [run, busy] = useAction();
+  const c = user.emailConfirm;
+  if (!c) return null;
+  return (
+    <Card title={t('Your email')}>
+      <p className="break-words text-sm text-slate-700">{user.email}</p>
+      {c.confirmed
+        ? <p className="mt-1 text-sm text-emerald-700" data-testid="email-confirmed">{t('Confirmed')}</p>
+        : c.available
+          ? <><p className="mt-1 text-sm text-amber-800">{t('Not confirmed yet. We sent a link to this address; check your spam folder too.')}</p>
+              <Button className="mt-3" variant="ghost" disabled={busy} onClick={() => run(async () => { await api.post('/me/email/resend'); await refresh(); }, t('Email sent to {0}', [user.email]))}>{t('Send the link again')}</Button></>
+          : <p className="mt-1 text-sm text-slate-500" data-testid="email-confirm-off">{t('Email confirmation is off because this server cannot send email yet. Nothing is blocked.')}</p>}
+    </Card>
+  );
+}
+
 function Account() {
   const [f, setF] = useState({ current: '', next: '' });
   const [run, busy] = useAction();
@@ -137,6 +156,7 @@ function Account() {
     const a = document.createElement('a'); a.href = URL.createObjectURL(await r.blob()); a.download = `fluxo-backup-${new Date().toISOString().slice(0, 10)}.json`; a.click();
   };
   return (<div className="grid max-w-3xl gap-4">
+    <EmailCard />
     <TwoFactorCard />
     <Card title={t('Change password')}><div className="grid max-w-sm gap-3"><Field label={t('Current password')}><Input type="password" value={f.current} onChange={(e) => setF({ ...f, current: e.target.value })} /></Field><Field label={t('New password')}><Input type="password" value={f.next} onChange={(e) => setF({ ...f, next: e.target.value })} /></Field>
       <Button disabled={busy || !f.current || f.next.length < 8} onClick={async () => { const r = await run(() => api.post('/me/password', f), t('Password changed')); if (r) setF({ current: '', next: '' }); }}>{t('Change')}</Button></div></Card>

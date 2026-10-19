@@ -22,7 +22,7 @@ import Payroll from './pages/Payroll.jsx';
 import Admin from './pages/Admin.jsx';
 import Assets from './pages/Assets.jsx';
 import Close from './pages/Close.jsx';
-import { Forgot, Reset } from './pages/Recover.jsx';
+import { Forgot, Reset, ConfirmEmail } from './pages/Recover.jsx';
 import GlobalSearch from './components/GlobalSearch.jsx';
 import Reminders, { useReminderCount } from './pages/Reminders.jsx';
 import PublicDoc from './pages/PublicDoc.jsx';
@@ -116,6 +116,19 @@ const NAV = [
   { to: '/settings', label: t('Settings'), icon: '⚙', read: 'settings' },
 ];
 
+/** Conta Free ainda sem e-mail confirmado: diz o limite com clareza e deixa pedir o link de novo. */
+function ConfirmEmailBanner({ user }) {
+  const [run, busy] = useAction();
+  const [sent, setSent] = useState(false);
+  const c = user.emailConfirm;
+  return (
+    <div className="no-print mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="status" data-testid="confirm-email-banner">
+      <span className="min-w-0 flex-1 break-words">{t('Confirm your email ({0}). Until you do, your Free account can create up to {1} invoices.', [user.email, c.invoiceCap])}{' '}{(sent || c.lastSentAt) && t('We sent you a link; check your spam folder too.')}</span>
+      <Button variant="ghost" disabled={busy} onClick={async () => { const r = await run(() => api.post('/me/email/resend'), t('Email sent to {0}', [user.email])); if (r) setSent(true); }}>{c.lastSentAt || sent ? t('Send the link again') : t('Send me the link')}</Button>
+    </div>
+  );
+}
+
 function Shell({ user, settings, logout }) {
   const { has } = useAuth();
   const [open, setOpen] = useState(false);
@@ -173,6 +186,7 @@ function Shell({ user, settings, logout }) {
       {searching && <GlobalSearch onClose={() => setSearching(false)} />}
       <main className="min-w-0 flex-1 p-4 md:p-8">
         {user.role === 'cpa' && <div className="no-print mb-4 rounded-lg bg-sky-50 p-3 text-sm text-sky-800" role="status">{t('You are viewing {0} as an accountant. This access is read-only: you can look at everything, but nothing can be changed.', [settings.company_name])}</div>}
+        {user.role === 'owner' && user.emailConfirm?.limited && <ConfirmEmailBanner user={user} />}
         {user.planInfo.billing?.status === 'past_due' && <div className="no-print mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{t('Your last payment failed.')} <NavLink to="/settings/plan" className="font-semibold underline">{t('Update your payment method')}</NavLink></div>}
         <Routes>
           <Route path="/" element={can('reports') ? <Dashboard /> : <Navigate to={home} replace />} />
@@ -240,6 +254,7 @@ export default function App() {
 
   if (loc.pathname === '/forgot') return <ToastProvider><Forgot /></ToastProvider>;
   if (loc.pathname === '/reset') return <ToastProvider><Reset /></ToastProvider>;
+  if (loc.pathname === '/confirm-email') return <ToastProvider><ConfirmEmail /></ToastProvider>;
   if (loc.pathname === '/admin') return <ToastProvider><Admin /></ToastProvider>;
   if (loc.pathname === '/pricing') return <Pricing />;
   if (loc.pathname === '/welcome') return <Welcome />;

@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { get, getSetting } from './db.js';
 import { HttpError } from './accounting.js';
 import * as tenants from './tenants.js';
+import * as mailer from './mailer.js';
 
 const TTL = 12 * 60 * 60 * 1000;
 const cfg = () => ({ email: String(process.env.FLUXO_ADMIN_EMAIL || '').trim().toLowerCase(), password: String(process.env.FLUXO_ADMIN_PASSWORD || '') });
@@ -37,5 +38,5 @@ export function overview() {
   })));
   const byPlan = {};
   for (const r of rows) byPlan[r.plan] = (byPlan[r.plan] || 0) + 1;
-  return { total: rows.length, active: rows.filter((r) => r.status === 'active').length, byPlan, tenants: rows };
+  return { total: rows.length, active: rows.filter((r) => r.status === 'active').length, byPlan, tenants: rows, mail: { configured: mailer.mailConfigured(), linksReady: mailer.recoveryReady() } };
 }

@@ -141,7 +141,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   const lang = ['en', 'pt', 'es'].includes(process.env.LANG_CODE) ? process.env.LANG_CODE : 'en';
   if (!get('SELECT 1 FROM users LIMIT 1')) {
     applyLanguage(lang);
-    insert("INSERT INTO users(name,email,password_hash,role) VALUES(?,?,?,'owner')", 'Demo', 'demo@fluxo.app', hashPassword('demo12345'));
+    insert("INSERT INTO users(name,email,password_hash,role,email_verified_at) VALUES(?,?,?,'owner',CURRENT_TIMESTAMP)", 'Demo', 'demo@fluxo.app', hashPassword('demo12345'));
     console.log('User created: demo@fluxo.app / demo12345');
   }
   console.log(loadDemo(lang) ? 'Demo data loaded.' : 'Database already has data; nothing done.');

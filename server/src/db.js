@@ -205,6 +205,15 @@ CREATE TABLE IF NOT EXISTS tax_rates (
 CREATE TABLE IF NOT EXISTS close_tasks (
   period TEXT NOT NULL, key TEXT NOT NULL, done_by TEXT, done_at TEXT, PRIMARY KEY (period, key)
 );
+CREATE TABLE IF NOT EXISTS email_verifications (
+  token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, email TEXT NOT NULL,
+  expires_at TEXT NOT NULL, used_at TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS doc_emails (
+  id INTEGER PRIMARY KEY, doc_id INTEGER NOT NULL REFERENCES docs(id) ON DELETE CASCADE, to_addr TEXT NOT NULL, subject TEXT NOT NULL DEFAULT '',
+  with_pdf INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL DEFAULT 'sent', error TEXT NOT NULL DEFAULT '',
+  user_id INTEGER, user_name TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS reminders (
   id INTEGER PRIMARY KEY, kind TEXT NOT NULL, ref_key TEXT NOT NULL UNIQUE, title TEXT NOT NULL, detail TEXT DEFAULT '', link TEXT DEFAULT '', data TEXT DEFAULT '',
   due_date TEXT, snoozed_until TEXT, done_at TEXT, repeat TEXT NOT NULL DEFAULT '', manual INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -224,6 +233,10 @@ export function openDb(file) {
   addColumn('users', 'recovery_codes', 'TEXT');                     // resumos (SHA-256) dos códigos de recuperação ainda não usados
   addColumn('sessions', 'verified_at', 'TEXT');                     // última vez que a pessoa confirmou a senha nesta sessão
   d.exec("UPDATE sessions SET verified_at = created_at WHERE verified_at IS NULL");
+  if (!d.prepare('PRAGMA table_info(users)').all().some((c) => c.name === 'email_verified_at')) { // confirmação de e-mail: quem já existia conta como confirmado (ninguém é preso por uma atualização)
+    d.exec('ALTER TABLE users ADD COLUMN email_verified_at TEXT');
+    d.exec('UPDATE users SET email_verified_at = created_at');
+  }
   addColumn('users', 'custom_perms', 'TEXT');                       // acesso por aba definido por usuário
   addColumn('recurring', 'anchor_day', 'INTEGER');                  // dia do mês original: evita que "dia 31" derive para 28 depois de fevereiro
   addColumn('recurring', 'last_error', "TEXT NOT NULL DEFAULT ''");  // por que a última geração falhou (aparece na tela e vira lembrete)
