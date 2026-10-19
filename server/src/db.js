@@ -86,6 +86,8 @@ CREATE TABLE IF NOT EXISTS journal_lines (
 );
 CREATE INDEX IF NOT EXISTS idx_jl_account ON journal_lines(account_id);
 CREATE INDEX IF NOT EXISTS idx_jl_entry ON journal_lines(entry_id);
+-- procura de lançamento com o mesmo valor (importação de extrato, conciliação): sem este índice cada linha do extrato lia todas as linhas da conta do banco
+CREATE INDEX IF NOT EXISTS idx_jl_account_amount ON journal_lines(account_id, (debit-credit));
 CREATE TABLE IF NOT EXISTS stock_moves (
   id INTEGER PRIMARY KEY, item_id INTEGER NOT NULL REFERENCES items(id), qty_delta REAL NOT NULL, unit_cost INTEGER NOT NULL DEFAULT 0,
   source_type TEXT NOT NULL, source_id INTEGER, date TEXT NOT NULL
@@ -205,6 +207,14 @@ CREATE TABLE IF NOT EXISTS tax_rates (
 CREATE TABLE IF NOT EXISTS close_tasks (
   period TEXT NOT NULL, key TEXT NOT NULL, done_by TEXT, done_at TEXT, PRIMARY KEY (period, key)
 );
+-- índices que faltavam (listar/abrir documento, pagamentos, extrato bancário, despesas por data)
+CREATE INDEX IF NOT EXISTS idx_doc_lines_doc ON doc_lines(doc_id);
+CREATE INDEX IF NOT EXISTS idx_payments_doc ON payments(doc_id);
+CREATE INDEX IF NOT EXISTS idx_docs_contact ON docs(contact_id, type, status);
+CREATE INDEX IF NOT EXISTS idx_docs_type_date ON docs(type, issue_date);
+CREATE INDEX IF NOT EXISTS idx_bank_txns_entry ON bank_txns(entry_id);
+CREATE INDEX IF NOT EXISTS idx_bank_txns_acct ON bank_txns(account_id, status, date);
+CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
 CREATE TABLE IF NOT EXISTS reminders (
   id INTEGER PRIMARY KEY, kind TEXT NOT NULL, ref_key TEXT NOT NULL UNIQUE, title TEXT NOT NULL, detail TEXT DEFAULT '', link TEXT DEFAULT '', data TEXT DEFAULT '',
   due_date TEXT, snoozed_until TEXT, done_at TEXT, repeat TEXT NOT NULL DEFAULT '', manual INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -215,7 +225,9 @@ CREATE TABLE IF NOT EXISTS reminders (
 export function openDb(file) {
   if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
   const d = new DatabaseSync(file);
-  d.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+  // WAL já estava ligado. busy_timeout: se outro processo estiver escrevendo no mesmo arquivo (ex.: o contêiner antigo durante um deploy), espera até 5 s em vez de falhar na hora com "database is locked".
+  // synchronous=NORMAL (seguro no WAL: não corrompe; numa queda de energia pode perder só os últimos instantes) deixa cada gravação mais rápida.
+  d.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON;');
   d.exec(SCHEMA);
   const addColumn = (table, col, ddl) => { if (!d.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === col)) d.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${ddl}`); };
   addColumn('users', 'totp_secret_enc', 'TEXT');                   // 2FA: segredo do aplicativo autenticador (cifrado)
@@ -255,7 +267,7 @@ const depths = new WeakMap();
 export function tx(fn) {
   const d = current();
   if (depths.get(d) > 0) return fn();
-  d.exec('BEGIN');
+  d.exec('BEGIN IMMEDIATE'); // pega a vez de escrever já no início: com BEGIN comum, quem leu e depois escreve falha na hora (sem esperar o busy_timeout) se outro processo gravou entre os dois
   depths.set(d, 1);
   try {
     const r = fn();

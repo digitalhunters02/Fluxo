@@ -4,12 +4,13 @@ import { today, addDays, addMonths, advance, computeLines } from './accounting.j
 /** Saldo na natureza da conta (positivo = normal). */
 const natural = (r) => (['asset', 'expense'].includes(r.type) ? r.debit - r.credit : r.credit - r.debit);
 
+/** Totais de débito e crédito por conta no período, numa passada só pelas linhas do período.
+ * (Antes: duas subconsultas por conta, e o SQLite escolhia percorrer todos os lançamentos do período para CADA conta; ~430 ms por chamada com 20 mil lançamentos.) */
 function periodRows(from, to) {
   return all(`
-    SELECT a.id, a.code, a.name, a.type, a.subtype,
-      COALESCE((SELECT SUM(jl.debit) FROM journal_lines jl JOIN journal_entries je ON je.id=jl.entry_id WHERE jl.account_id=a.id AND je.date>=? AND je.date<=?),0) AS debit,
-      COALESCE((SELECT SUM(jl.credit) FROM journal_lines jl JOIN journal_entries je ON je.id=jl.entry_id WHERE jl.account_id=a.id AND je.date>=? AND je.date<=?),0) AS credit
-    FROM accounts a WHERE a.type IN ('income','expense') ORDER BY a.code`, from, to, from, to).map((r) => ({ ...r, balance: natural(r) }));
+    WITH s AS (SELECT jl.account_id, SUM(jl.debit) AS d, SUM(jl.credit) AS c FROM journal_entries je JOIN journal_lines jl ON jl.entry_id=je.id WHERE je.date>=? AND je.date<=? GROUP BY jl.account_id)
+    SELECT a.id, a.code, a.name, a.type, a.subtype, COALESCE(s.d,0) AS debit, COALESCE(s.c,0) AS credit
+    FROM accounts a LEFT JOIN s ON s.account_id=a.id WHERE a.type IN ('income','expense') ORDER BY a.code`, from, to).map((r) => ({ ...r, balance: natural(r) }));
 }
 
 export function profitAndLoss(from, to) {
@@ -30,10 +31,9 @@ export function profitAndLoss(from, to) {
 
 export function balanceSheet(asof) {
   const rows = all(`
-    SELECT a.id, a.code, a.name, a.type, a.subtype,
-      COALESCE((SELECT SUM(jl.debit) FROM journal_lines jl JOIN journal_entries je ON je.id=jl.entry_id WHERE jl.account_id=a.id AND je.date<=?),0) AS debit,
-      COALESCE((SELECT SUM(jl.credit) FROM journal_lines jl JOIN journal_entries je ON je.id=jl.entry_id WHERE jl.account_id=a.id AND je.date<=?),0) AS credit
-    FROM accounts a ORDER BY a.code`, asof, asof).map((r) => ({ ...r, balance: natural(r) }));
+    WITH s AS (SELECT jl.account_id, SUM(jl.debit) AS d, SUM(jl.credit) AS c FROM journal_entries je JOIN journal_lines jl ON jl.entry_id=je.id WHERE je.date<=? GROUP BY jl.account_id)
+    SELECT a.id, a.code, a.name, a.type, a.subtype, COALESCE(s.d,0) AS debit, COALESCE(s.c,0) AS credit
+    FROM accounts a LEFT JOIN s ON s.account_id=a.id ORDER BY a.code`, asof).map((r) => ({ ...r, balance: natural(r) }));
   const pick = (t) => rows.filter((r) => r.type === t && (r.balance !== 0));
   const assets = pick('asset'), liabilities = pick('liability'), equity = pick('equity');
   const earnings = rows.filter((r) => r.type === 'income').reduce((s, r) => s + r.balance, 0) - rows.filter((r) => r.type === 'expense').reduce((s, r) => s + r.balance, 0);
@@ -44,10 +44,9 @@ export function balanceSheet(asof) {
 
 export function trialBalance(asof) {
   const rows = all(`
-    SELECT a.id, a.code, a.name, a.type,
-      COALESCE((SELECT SUM(jl.debit) FROM journal_lines jl JOIN journal_entries je ON je.id=jl.entry_id WHERE jl.account_id=a.id AND je.date<=?),0) AS debit,
-      COALESCE((SELECT SUM(jl.credit) FROM journal_lines jl JOIN journal_entries je ON je.id=jl.entry_id WHERE jl.account_id=a.id AND je.date<=?),0) AS credit
-    FROM accounts a ORDER BY a.code`, asof, asof).filter((r) => r.debit || r.credit)
+    WITH s AS (SELECT jl.account_id, SUM(jl.debit) AS d, SUM(jl.credit) AS c FROM journal_entries je JOIN journal_lines jl ON jl.entry_id=je.id WHERE je.date<=? GROUP BY jl.account_id)
+    SELECT a.id, a.code, a.name, a.type, COALESCE(s.d,0) AS debit, COALESCE(s.c,0) AS credit
+    FROM accounts a LEFT JOIN s ON s.account_id=a.id ORDER BY a.code`, asof).filter((r) => r.debit || r.credit)
     .map((r) => { const net = r.debit - r.credit; return { ...r, debitBalance: net > 0 ? net : 0, creditBalance: net < 0 ? -net : 0 }; });
   return { asof, rows, totalDebit: rows.reduce((s, r) => s + r.debitBalance, 0), totalCredit: rows.reduce((s, r) => s + r.creditBalance, 0) };
 }
@@ -55,12 +54,13 @@ export function trialBalance(asof) {
 /** Fluxo de caixa (método direto): movimentos em contas bancárias atribuídos às contrapartidas. */
 export function cashFlow(from, to) {
   const cashIds = new Set(all('SELECT id FROM accounts WHERE subtype IN (\'bank\')').map((r) => r.id));
-  const entries = all('SELECT id, date FROM journal_entries WHERE date>=? AND date<=?', from, to);
+  // uma consulta só para todas as linhas do período (antes: uma consulta por lançamento, ~4.500 por ano), na mesma ordem de antes
+  const byEntry = new Map();
+  for (const l of all(`SELECT jl.entry_id, jl.account_id, jl.debit, jl.credit, a.name, a.type, a.subtype FROM journal_entries je JOIN journal_lines jl ON jl.entry_id=je.id
+    JOIN accounts a ON a.id=jl.account_id WHERE je.date>=? AND je.date<=? ORDER BY je.date, je.id, jl.id`, from, to)) { const a = byEntry.get(l.entry_id); if (a) a.push(l); else byEntry.set(l.entry_id, [l]); }
   const bucket = { operating: new Map(), investing: new Map(), financing: new Map() };
   let net = 0;
-  const lineStmt = (id) => all('SELECT jl.*, a.name, a.type, a.subtype FROM journal_lines jl JOIN accounts a ON a.id=jl.account_id WHERE entry_id=?', id);
-  for (const e of entries) {
-    const ls = lineStmt(e.id);
+  for (const ls of byEntry.values()) {
     const cash = ls.filter((l) => cashIds.has(l.account_id));
     if (!cash.length) continue;
     const others = ls.filter((l) => !cashIds.has(l.account_id));
