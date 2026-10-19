@@ -106,5 +106,6 @@ test('bancos antigos: quem já existia fica confirmado na atualização', async 
   const d = openDb(file);
   assert.ok(d.prepare("SELECT email_verified_at v FROM users WHERE email='velho@x.com'").get().v);
   d.close();
+  fs.rmSync(path.dirname(file), { recursive: true, force: true });
 });
 test.after(() => server.close());
