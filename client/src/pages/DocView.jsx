@@ -1,13 +1,14 @@
 import { METHOD_KEYS, PLATFORM_KEYS, methodLabel } from '../methods.js';
 import { withBankDup } from '../bankDup.js';
 import { t } from '../i18n.jsx';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { api } from '../api.js';
+import { api, downloadFile } from '../api.js';
 import { date, fromCents, money, number, toCents, today } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, useAction, useLoad, useToast } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
 import { AiCollectionButton } from '../components/AiAssist.jsx';
+import { Lock, PLAN_LABEL } from '../components/plan.jsx';
 
 const NAMES = { invoice: t('Invoice'), estimate: t('Estimate'), bill: t('Bill'), credit: t('Credit memo'), po: t('Purchase order') };
 
@@ -31,20 +32,70 @@ function ApplyCreditModal({ credit, onClose, onDone }) {
   );
 }
 
-function EmailModal({ doc, onClose, onDone }) {
-  const [run, busy] = useAction();
-  const { data: st } = useLoad(() => api.get('/email/status'));
-  const [f, setF] = useState({ to: doc.contact_email || '', message: '' });
-  const send = async () => { const r = await run(() => api.post(`/doc/${doc.id}/email`, f), t('Email sent')); if (r) onDone(); };
+/** Plano sem envio de e-mail: explica com calma qual plano libera e o que dá para fazer enquanto isso. */
+function EmailLockedModal({ onClose, link }) {
+  const { planInfo } = useAuth();
+  const toast = useToast();
   return (
-    <Modal title={t('Email {0}', [doc.number])} onClose={onClose} footer={<><Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button><Button disabled={busy || !f.to || st?.ready === false} onClick={send}>{t('Send')}</Button></>}>
-      {st?.ready === false && <p className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{t('Email is not set up on this server yet. Ask your administrator to configure an email provider.')}</p>}
-      <div className="grid gap-3">
-        <Field label={t('To')}><Input type="email" value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} /></Field>
-        <Field label={t('Message (optional)')}><textarea className="field" rows={4} value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} /></Field>
-      </div>
-      <p className="mt-3 text-xs text-slate-400">{t('The email has a link to view the document online.')}</p>
+    <Modal title={t('Email the invoice from Fluxo')} onClose={onClose} footer={<><Button variant="ghost" onClick={onClose}>{t('Close')}</Button><Link to="/settings/plan" className="btn btn-primary">{t('See plans')}</Link></>}>
+      <p className="text-sm text-slate-700" data-testid="email-locked">{t('Sending invoices by email from Fluxo, with the PDF attached, is part of the Essentials plan. You are on {0}.', [PLAN_LABEL[planInfo.plan]])}</p>
+      <p className="mt-3 text-sm text-slate-500">{t('Until then you can copy the link and send it yourself, or open it in your own email app.')}</p>
+      <Button className="mt-3" variant="ghost" onClick={async () => { try { await navigator.clipboard.writeText(link); toast(t('Link copied')); } catch { prompt(t('Copy the link:'), link); } }}>{t('Copy link')}</Button>
     </Modal>
+  );
+}
+
+/** Enviar pelo Fluxo: a pessoa vê e edita assunto e texto, escolhe anexar o PDF e só então envia. */
+function EmailModal({ doc, onClose, onDone, link }) {
+  const [run, busy] = useAction();
+  const toast = useToast();
+  const { data, loading, error } = useLoad(() => api.get(`/doc/${doc.id}/emails`), [doc.id]);
+  const [f, setF] = useState(null);
+  useEffect(() => { if (data && !f) setF({ ...data.draft, attach_pdf: true }); }, [data, f]);
+  const ready = data?.ready !== false;
+  const send = async () => { const r = await run(() => api.post(`/doc/${doc.id}/email`, { to: f.to, subject: f.subject, message: f.message, attach_pdf: f.attach_pdf }), t('Email sent to {0}', [f.to])); if (r) onDone(); };
+  return (
+    <Modal title={t('Email {0}', [doc.number])} wide onClose={onClose} footer={<><Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button><Button disabled={busy || !f || !f.to || !ready} onClick={send}>{busy ? t('Please wait…') : t('Send')}</Button></>}>
+      {loading && <Loading />}
+      {error && <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700" role="alert">{error}</p>}
+      {data && !ready && (
+        <div className="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800" role="alert" data-testid="email-not-configured">
+          <p className="font-medium">{t('Email is not set up on this server yet.')}</p>
+          <p className="mt-1">{t('Nothing will be sent from here until the administrator configures an email provider. Meanwhile, copy the link or download the PDF and send it yourself.')}</p>
+          <div className="mt-2 flex flex-wrap gap-2"><Button variant="ghost" onClick={async () => { try { await navigator.clipboard.writeText(link); toast(t('Link copied')); } catch { prompt(t('Copy the link:'), link); } }}>{t('Copy link')}</Button></div>
+        </div>)}
+      {f && (
+        <div className="grid gap-3">
+          <Field label={t('To')}><Input type="email" value={f.to} onChange={(e) => setF({ ...f, to: e.target.value })} /></Field>
+          <Field label={t('Subject')}><Input value={f.subject} maxLength={200} onChange={(e) => setF({ ...f, subject: e.target.value })} /></Field>
+          <Field label={t('Message')} hint={t('You can change the text. The link to view the document online is added at the end.')}><textarea className="field" rows={8} maxLength={4000} value={f.message} onChange={(e) => setF({ ...f, message: e.target.value })} /></Field>
+          <label className="flex items-center gap-2 text-sm text-slate-700"><input type="checkbox" checked={f.attach_pdf} onChange={(e) => setF({ ...f, attach_pdf: e.target.checked })} />{t('Attach the PDF')}</label>
+          <div><Button variant="ghost" onClick={() => run(() => downloadFile(`/doc/${doc.id}/pdf`, `${doc.number}.pdf`))}>{t('Download the PDF to check it')}</Button></div>
+        </div>)}
+    </Modal>
+  );
+}
+
+/** Quem enviou o quê e quando; falhas aparecem como falhas (nunca como enviado). */
+function EmailHistory({ docId, refreshKey }) {
+  const { data } = useLoad(() => api.get(`/doc/${docId}/emails`).catch(() => null), [docId, refreshKey]);
+  const rows = data?.history || [];
+  if (!rows.length) return null;
+  return (
+    <Card title={t('Emails sent')} className="no-print mx-auto mt-4 max-w-4xl" pad={false}>
+      <ul className="divide-y divide-slate-100">
+        {rows.map((r) => (
+          <li key={r.id} data-testid="email-history-row" className="px-5 py-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <span className="font-medium break-all">{r.to_addr}</span>
+              {r.status === 'sent' ? <span className="text-emerald-700">{r.with_pdf ? t('Sent with PDF') : t('Sent')}</span> : <span className="text-rose-700">{t('Not sent')}</span>}
+            </div>
+            <div className="mt-0.5 break-words text-slate-600">{r.subject}</div>
+            <div className="mt-0.5 text-xs text-slate-500">{date(r.created_at.slice(0, 10))} {r.created_at.slice(11, 16)}{r.user_name ? ` · ${t('By')} ${r.user_name}` : ''}</div>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }
 
@@ -100,6 +151,7 @@ export default function DocView() {
   const [applying, setApplying] = useState(false);
   const [refunding, setRefunding] = useState(false);
   const [emailing, setEmailing] = useState(false);
+  const [sentTick, setSentTick] = useState(0);
   const appr = useLoad(() => (has('approvals') && d?.type === 'bill' ? api.get('/approvals') : null), [id, d?.status, d?.total, d?.approval_status]);
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} retry={reload} />;
@@ -120,7 +172,7 @@ export default function DocView() {
         {!purchase && <Button variant="ghost" onClick={async () => { try { await navigator.clipboard.writeText(link); toast(t('Link copied')); } catch { prompt(t('Copy the link:'), link); } }}>{t('Copy link')}</Button>}
         {!purchase && d.contact_email && <a className="btn btn-ghost" href={`mailto:${d.contact_email}?subject=${encodeURIComponent(`${NAMES[d.type]} ${d.number}`)}&body=${encodeURIComponent(t('Hi! Here is the link to view the document: {0}', [link]))}`}>{t('Send by email')}</a>}
         {d.type === 'invoice' && d.overdue && w && <AiCollectionButton docId={d.id} email={d.contact_email} tenant={user.tenant} />}
-        {!purchase && posted && has('email_invoices') && w && <Button variant="ghost" onClick={() => setEmailing(true)}>{t('Email to customer')}</Button>}
+        {!purchase && posted && w && <Button variant="ghost" data-testid="email-to-customer" onClick={() => setEmailing(true)}>{t('Email to customer')}{!has('email_invoices') && <Lock />}</Button>}
         {d.type === 'bill' && needsApproval && <span className="rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800" data-testid="needs-approval">{t('Needs approval')}</span>}
         {w && d.type === 'bill' && needsApproval && <><Button disabled={busy} onClick={() => act('approve', t('Approved'))}>{t('Approve')}</Button><Button variant="ghost" disabled={busy} onClick={() => act('reject', t('Rejected'))}>{t('Reject')}</Button></>}
         {w && !['void', 'invoiced', 'billed'].includes(d.status) && <Link className="btn btn-ghost" to={`/document/${d.type}/${d.id}/edit`}>{t('Edit')}</Link>}
@@ -156,6 +208,7 @@ export default function DocView() {
         {d.notes && <p className="mt-5 whitespace-pre-line border-t border-slate-100 pt-4 text-sm text-slate-600">{d.notes}</p>}
         {!purchase && settings.invoice_footer && <p className="mt-4 text-center text-xs text-slate-400">{settings.invoice_footer}</p>}
       </Card>
+      {!purchase && <EmailHistory docId={d.id} refreshKey={sentTick} />}
       {d.payments.length > 0 && (
         <Card title={t('Payments')} className="no-print mx-auto mt-4 max-w-4xl" pad={false}>
           <Table head={[t('Date'), t('Account'), t('Method'), t('Ref.'), { label: t('Amount'), right: true }, '']}>
@@ -188,7 +241,7 @@ export default function DocView() {
       )}
       {applying && <ApplyCreditModal credit={d} onClose={() => setApplying(false)} onDone={() => { setApplying(false); reload(); }} />}
       {refunding && <RefundModal credit={d} onClose={() => setRefunding(false)} onDone={() => { setRefunding(false); reload(); }} />}
-      {emailing && <EmailModal doc={d} onClose={() => setEmailing(false)} onDone={() => { setEmailing(false); reload(); }} />}
+      {emailing && (has('email_invoices') ? <EmailModal doc={d} link={link} onClose={() => setEmailing(false)} onDone={() => { setEmailing(false); setSentTick((n) => n + 1); reload(); }} /> : <EmailLockedModal link={link} onClose={() => setEmailing(false)} />)}
       {paying && <PaymentModal doc={d} onClose={() => setPaying(false)} onDone={() => { setPaying(false); reload(); }} />}
     </>
   );

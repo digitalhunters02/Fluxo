@@ -1869,5 +1869,20 @@ export default {
  "Deleted on": "Eliminada el",
  "Data removed": "Datos eliminados",
  "{0} documents, {1} expenses, {2} users": "{0} documentos, {1} gastos, {2} usuarios",
- "Nothing has been deleted yet.": "Aún no se ha eliminado nada."
+ "Nothing has been deleted yet.": "Aún no se ha eliminado nada.",
+ "Email the invoice from Fluxo": "Enviar la factura por correo desde Fluxo",
+ "Sending invoices by email from Fluxo, with the PDF attached, is part of the Essentials plan. You are on {0}.": "Enviar facturas por correo desde Fluxo, con el PDF adjunto, forma parte del plan Essentials. Usted está en el plan {0}.",
+ "Until then you can copy the link and send it yourself, or open it in your own email app.": "Mientras tanto puede copiar el enlace y enviarlo usted mismo, o abrirlo en su aplicación de correo.",
+ "Email is not set up on this server yet.": "El correo aún no está configurado en este servidor.",
+ "Nothing will be sent from here until the administrator configures an email provider. Meanwhile, copy the link or download the PDF and send it yourself.": "No se enviará nada desde aquí hasta que el administrador configure un proveedor de correo. Mientras tanto, copie el enlace o descargue el PDF y envíelo usted mismo.",
+ "You can change the text. The link to view the document online is added at the end.": "Puede cambiar el texto. El enlace para ver el documento en línea se agrega al final.",
+ "Attach the PDF": "Adjuntar el PDF",
+ "Download the PDF to check it": "Descargar el PDF para revisarlo",
+ "Emails sent": "Correos enviados",
+ "By": "Por",
+ "Sent with PDF": "Enviado con PDF",
+ "Not sent": "No enviado",
+ "Sending invoices by email is part of the Essentials plan. Upgrade to use it.": "Enviar facturas por correo forma parte del plan Essentials. Mejore su plan para usarlo.",
+ "The email could not be sent. Check the address and try again. If it keeps failing, ask the administrator to check the email settings.": "No se pudo enviar el correo. Revise la dirección e inténtelo de nuevo. Si sigue fallando, pida al administrador que revise la configuración de correo.",
+ "Too many emails sent in the last hour. Please wait a little and try again.": "Demasiados correos enviados en la última hora. Espere un poco e inténtelo de nuevo."
 };

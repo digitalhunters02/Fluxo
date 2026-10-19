@@ -55,12 +55,27 @@ export function registerGrowth(api, h) {
   registerIntegrationAdmin(api, h);
 
   /* ------------------------------ e-mail de faturas ------------------------------ */
-  api.post('/doc/:id/email', can('sales', true), requireFeature('email_invoices'), wrap(async (req, res) => {
+  const docLink = (req, d) => `${billing.originOf(req)}/p/${withSlug(d.share_token)}`;
+  const planGate = () => { if (!hasFeature('email_invoices')) throw new HttpError(402, 'Sending invoices by email is part of the Essentials plan. Upgrade to use it.', { feature: 'email_invoices', required: 'essentials' }); };
+  // rascunho do e-mail (para a pessoa editar) + histórico de envios do documento
+  api.get('/doc/:id/emails', can('sales'), wrap((req, res) => {
+    const d = acc.loadDoc(id(req));
+    if (!d || !['invoice', 'estimate', 'credit'].includes(d.type)) throw new HttpError(404, 'Document not found');
+    ok(res, { ready: docmail.emailReady(), allowed: hasFeature('email_invoices'), draft: docmail.draftFor(d.id), history: docmail.history(d.id) });
+  }));
+  api.get('/doc/:id/pdf', can('sales'), wrap((req, res) => {
+    const d = acc.loadDoc(id(req));
+    if (!d || !['invoice', 'estimate', 'credit'].includes(d.type)) throw new HttpError(404, 'Document not found');
+    const { buffer } = docmail.pdfFor(d.id, docLink(req, d));
+    res.setHeader('Content-Type', 'application/pdf'); res.setHeader('Content-Disposition', `attachment; filename="${String(d.number).replace(/[^A-Za-z0-9._-]+/g, '-')}.pdf"`); res.setHeader('Cache-Control', 'no-store');
+    res.end(buffer);
+  }));
+  api.post('/doc/:id/email', can('sales', true), wrap(async (req, res) => {
+    planGate();
     const d = acc.loadDoc(id(req));
     if (!d) throw new HttpError(404, 'Document not found');
-    const link = `${billing.originOf(req)}/p/${withSlug(d.share_token)}`;
-    const r = await docmail.emailDocument(d.id, req.body || {}, link);
-    audit(req, 'email', d.type, d.id, `${d.number} → ${r.sentTo}`);
+    const r = await docmail.emailDocument(d.id, req.body || {}, docLink(req, d), req.user);
+    audit(req, 'email', d.type, d.id, `${d.number} → ${r.sentTo}${r.withPdf ? ' (PDF)' : ''}`);
     ok(res, r);
   }));
   api.get('/email/status', wrap((_req, res) => ok(res, { ready: docmail.emailReady() })));

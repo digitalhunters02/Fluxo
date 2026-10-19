@@ -122,7 +122,7 @@ function ConfirmEmailBanner({ user }) {
   const [sent, setSent] = useState(false);
   const c = user.emailConfirm;
   return (
-    <div className="no-print mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="status" data-testid="confirm-email-banner">
+    <div className="no-print mb-4 flex flex-col gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 sm:flex-row sm:items-center sm:gap-3" role="status" data-testid="confirm-email-banner">
       <span className="min-w-0 flex-1 break-words">{t('Confirm your email ({0}). Until you do, your Free account can create up to {1} invoices.', [user.email, c.invoiceCap])}{' '}{(sent || c.lastSentAt) && t('We sent you a link; check your spam folder too.')}</span>
       <Button variant="ghost" disabled={busy} onClick={async () => { const r = await run(() => api.post('/me/email/resend'), t('Email sent to {0}', [user.email])); if (r) setSent(true); }}>{c.lastSentAt || sent ? t('Send the link again') : t('Send me the link')}</Button>
     </div>

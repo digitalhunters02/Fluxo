@@ -1869,5 +1869,20 @@ export default {
  "Deleted on": "Apagada em",
  "Data removed": "Dados removidos",
  "{0} documents, {1} expenses, {2} users": "{0} documentos, {1} despesas, {2} usuários",
- "Nothing has been deleted yet.": "Nada foi apagado ainda."
+ "Nothing has been deleted yet.": "Nada foi apagado ainda.",
+ "Email the invoice from Fluxo": "Enviar a fatura por e-mail pelo Fluxo",
+ "Sending invoices by email from Fluxo, with the PDF attached, is part of the Essentials plan. You are on {0}.": "Enviar faturas por e-mail pelo Fluxo, com o PDF anexo, faz parte do plano Essentials. Você está no plano {0}.",
+ "Until then you can copy the link and send it yourself, or open it in your own email app.": "Até lá, você pode copiar o link e enviar por conta própria, ou abrir no seu aplicativo de e-mail.",
+ "Email is not set up on this server yet.": "O e-mail ainda não está configurado neste servidor.",
+ "Nothing will be sent from here until the administrator configures an email provider. Meanwhile, copy the link or download the PDF and send it yourself.": "Nada será enviado por aqui até o administrador configurar um provedor de e-mail. Enquanto isso, copie o link ou baixe o PDF e envie por conta própria.",
+ "You can change the text. The link to view the document online is added at the end.": "Você pode mudar o texto. O link para ver o documento online é acrescentado no final.",
+ "Attach the PDF": "Anexar o PDF",
+ "Download the PDF to check it": "Baixar o PDF para conferir",
+ "Emails sent": "E-mails enviados",
+ "By": "Por",
+ "Sent with PDF": "Enviado com PDF",
+ "Not sent": "Não enviado",
+ "Sending invoices by email is part of the Essentials plan. Upgrade to use it.": "Enviar faturas por e-mail faz parte do plano Essentials. Faça upgrade para usar.",
+ "The email could not be sent. Check the address and try again. If it keeps failing, ask the administrator to check the email settings.": "Não foi possível enviar o e-mail. Confira o endereço e tente de novo. Se continuar falhando, peça ao administrador para conferir as configurações de e-mail.",
+ "Too many emails sent in the last hour. Please wait a little and try again.": "Muitos e-mails enviados na última hora. Espere um pouco e tente de novo."
 };
