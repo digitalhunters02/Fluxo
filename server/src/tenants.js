@@ -23,6 +23,9 @@ const ctl = () => {
     CREATE TABLE IF NOT EXISTS links (kind TEXT NOT NULL, key TEXT NOT NULL, slug TEXT NOT NULL REFERENCES tenants(slug), PRIMARY KEY (kind, key));
     CREATE TABLE IF NOT EXISTS groups (id TEXT PRIMARY KEY, name TEXT NOT NULL, owner_slug TEXT NOT NULL REFERENCES tenants(slug), created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE IF NOT EXISTS group_members (group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE, slug TEXT NOT NULL UNIQUE REFERENCES tenants(slug), joined_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (group_id, slug));
+    CREATE TABLE IF NOT EXISTS cleanup_warnings (slug TEXT PRIMARY KEY, warned_at TEXT NOT NULL, delete_after TEXT NOT NULL, last_activity TEXT NOT NULL DEFAULT '', to_email TEXT NOT NULL DEFAULT '');
+    CREATE TABLE IF NOT EXISTS cleanup_log (id INTEGER PRIMARY KEY, at TEXT NOT NULL, slug TEXT NOT NULL, company TEXT NOT NULL DEFAULT '', email_masked TEXT NOT NULL DEFAULT '', email_hash TEXT NOT NULL DEFAULT '', plan TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT '', last_activity TEXT NOT NULL DEFAULT '', warned_at TEXT NOT NULL DEFAULT '', counts TEXT NOT NULL DEFAULT '{}', reason TEXT NOT NULL DEFAULT '');
+    CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL DEFAULT '');
     CREATE TABLE IF NOT EXISTS group_invites (code_hash TEXT PRIMARY KEY, group_id TEXT NOT NULL REFERENCES groups(id) ON DELETE CASCADE, expires_at TEXT NOT NULL, used_at TEXT);
   `);
   if (!control.prepare('PRAGMA table_info(tenants)').all().some((c) => c.name === 'status')) control.exec("ALTER TABLE tenants ADD COLUMN status TEXT NOT NULL DEFAULT 'active'");
@@ -97,9 +100,10 @@ export function createTenant({ name, ownerEmail, referralCode }) {
   openTenant(slug);
   return slug;
 }
-/** Desfaz uma empresa cuja configuração inicial falhou. */
+/** Desfaz uma empresa (cadastro que falhou, ou conta Free abandonada apagada pela limpeza): índice, vínculos e o arquivo do banco. */
 export function dropTenant(slug) {
-  qr('DELETE FROM links WHERE slug=?', slug); qr('DELETE FROM identities WHERE slug=?', slug); qr('DELETE FROM tenants WHERE slug=?', slug);
+  qr('DELETE FROM links WHERE slug=?', slug); qr('DELETE FROM identities WHERE slug=?', slug); qr('DELETE FROM cleanup_warnings WHERE slug=?', slug); qr('DELETE FROM tenants WHERE slug=?', slug);
+  try { cache.get(slug)?.close(); } catch { /* já fechado */ }
   cache.delete(slug);
   const f = tenantFile(slug);
   if (f !== ':memory:') for (const x of ['', '-wal', '-shm']) fs.rmSync(f + x, { force: true });
@@ -152,3 +156,18 @@ export function leaveGroup(slug) {
   qr('DELETE FROM group_members WHERE slug=?', slug);
   return true;
 }
+
+/* ------------------------- apoio à limpeza de contas abandonadas (cleanup.js) ------------------------- */
+export const getTenant = (slug) => q('SELECT slug,name,owner_email,status,created_at FROM tenants WHERE slug=?', slug) || null;
+export const cleanupWarning = (slug) => q('SELECT * FROM cleanup_warnings WHERE slug=?', slug) || null;
+export const listCleanupWarnings = () => qa('SELECT * FROM cleanup_warnings ORDER BY warned_at');
+export function saveCleanupWarning({ slug, warned_at, delete_after, last_activity, to_email }) {
+  qr('INSERT INTO cleanup_warnings(slug,warned_at,delete_after,last_activity,to_email) VALUES(?,?,?,?,?) ON CONFLICT(slug) DO UPDATE SET warned_at=excluded.warned_at, delete_after=excluded.delete_after, last_activity=excluded.last_activity, to_email=excluded.to_email', slug, warned_at, delete_after, last_activity, to_email);
+}
+export const clearCleanupWarning = (slug) => qr('DELETE FROM cleanup_warnings WHERE slug=?', slug);
+export function addCleanupLog(e) {
+  qr('INSERT INTO cleanup_log(at,slug,company,email_masked,email_hash,plan,created_at,last_activity,warned_at,counts,reason) VALUES(?,?,?,?,?,?,?,?,?,?,?)', e.at, e.slug, e.company, e.email_masked, e.email_hash, e.plan, e.created_at, e.last_activity, e.warned_at, JSON.stringify(e.counts || {}), e.reason || '');
+}
+export const cleanupLog = (limit = 100) => qa('SELECT * FROM cleanup_log ORDER BY id DESC LIMIT ?', limit).map((r) => ({ ...r, counts: (() => { try { return JSON.parse(r.counts); } catch { return {}; } })() }));
+export const getMeta = (key, d = '') => q('SELECT value FROM meta WHERE key=?', key)?.value ?? d;
+export const setMeta = (key, value) => qr('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', key, String(value));

@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { get, run, insert, all } from './db.js';
 import { HttpError } from './accounting.js';
+import { touchActivity } from './activity.js';
 
 export const ROLES = { owner: 'Owner', accountant: 'Accountant', sales: 'Sales', viewer: 'Read-only' };
 /** Contador convidado pelo dono (só leitura, sem vagas de usuário): não aparece na lista de usuários nem nos papéis escolhíveis. */
@@ -61,6 +62,7 @@ export function createSession(user_id) {
   const token = crypto.randomBytes(32).toString('hex');
   insert('INSERT INTO sessions(token,user_id,verified_at) VALUES(?,?,CURRENT_TIMESTAMP)', hashToken(token), user_id);
   run('DELETE FROM sessions WHERE created_at < datetime(\'now\',\'-30 days\')');
+  touchActivity();
   return token;
 }
 /** Apaga a sessão que usa este código (aceita também sessões antigas, guardadas sem resumo). */
@@ -79,6 +81,7 @@ export function authenticate(req, _res, next) {
       const { skey, ...u } = row;
       if (skey !== hashed) run('UPDATE sessions SET token=? WHERE token=?', hashed, skey);
       req.user = u; req.sessionKey = hashed;
+      touchActivity();
     }
   }
   next();

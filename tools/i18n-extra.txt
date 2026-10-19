@@ -1320,3 +1320,29 @@ Confirm your email to keep creating invoices. We sent you a link; you can ask fo
 We just sent you an email. Wait a minute before asking for another one. || Acabamos de enviar um e-mail. Espere um minuto antes de pedir outro. || Acabamos de enviarle un correo. Espere un minuto antes de pedir otro.
 Too many emails requested today. Check your spam folder or try again tomorrow. || Pedidos de e-mail demais hoje. Olhe a pasta de spam ou tente de novo amanhã. || Demasiados correos pedidos hoy. Revise la carpeta de spam o inténtelo de nuevo mañana.
 We could not send the email right now. Please try again in a few minutes. || Não foi possível enviar o e-mail agora. Tente de novo em alguns minutos. || No pudimos enviar el correo ahora. Inténtelo de nuevo en unos minutos.
+Will be warned || Será avisada || Se le avisará
+Warned || Avisada || Avisada
+Waiting for the notice period || Aguardando o prazo do aviso || Esperando el plazo del aviso
+Will be deleted || Será apagada || Se eliminará
+Warning cancelled (back in use) || Aviso cancelado (voltou a usar) || Aviso cancelado (volvió a usar)
+Cannot warn: email not set up || Não dá para avisar: e-mail não configurado || No se puede avisar: correo no configurado
+Warning failed, will retry || O aviso falhou, vai tentar de novo || El aviso falló, se reintentará
+Error || Erro || Error
+Run the cleanup now? Accounts already warned more than {0} days ago will be deleted for good. Accounts not yet warned get the warning email. || Rodar a limpeza agora? Contas avisadas há mais de {0} dias serão apagadas para sempre. Contas ainda não avisadas recebem o e-mail de aviso. || ¿Ejecutar la limpieza ahora? Las cuentas avisadas hace más de {0} días se eliminarán para siempre. Las cuentas aún no avisadas reciben el correo de aviso.
+Done: {0} warned, {1} deleted. || Pronto: {0} avisadas, {1} apagadas. || Listo: {0} avisadas, {1} eliminadas.
+Unused free accounts || Contas gratuitas paradas || Cuentas gratuitas sin uso
+Free accounts with no use for {0} months, no paid plan, no payroll, no connected bank and no accounting entries from the last {1} months get a warning email and {2} days to sign in before they are deleted. || Contas gratuitas sem uso há {0} meses, sem plano pago, sem folha, sem banco conectado e sem lançamentos dos últimos {1} meses recebem um e-mail de aviso e {2} dias para entrar antes de serem apagadas. || Las cuentas gratuitas sin uso durante {0} meses, sin plan de pago, sin nómina, sin banco conectado y sin asientos de los últimos {1} meses reciben un correo de aviso y {2} días para entrar antes de ser eliminadas.
+Automatic cleanup is ON (runs once a day). || A limpeza automática está LIGADA (roda uma vez por dia). || La limpieza automática está ACTIVADA (se ejecuta una vez al día).
+Automatic cleanup is OFF. Set FLUXO_CLEANUP=1 on the server to turn it on. You can still preview it and run it by hand. || A limpeza automática está DESLIGADA. Defina FLUXO_CLEANUP=1 no servidor para ligar. Você ainda pode ver a prévia e rodar na mão. || La limpieza automática está DESACTIVADA. Defina FLUXO_CLEANUP=1 en el servidor para activarla. Aun así puede ver la vista previa y ejecutarla a mano.
+Email is not set up, so no account will be warned or deleted. || O e-mail não está configurado, então nenhuma conta será avisada nem apagada. || El correo no está configurado, así que ninguna cuenta será avisada ni eliminada.
+Last use || Último uso || Último uso
+Last accounting entry || Último lançamento || Último asiento
+What happens || O que acontece || Qué pasa
+No unused free accounts right now. || Nenhuma conta gratuita parada no momento. || Ninguna cuenta gratuita sin uso por ahora.
+Refresh preview || Atualizar prévia || Actualizar vista previa
+Run the cleanup now || Rodar a limpeza agora || Ejecutar la limpieza ahora
+Deleted accounts (record) || Contas apagadas (registro) || Cuentas eliminadas (registro)
+Deleted on || Apagada em || Eliminada el
+Data removed || Dados removidos || Datos eliminados
+{0} documents, {1} expenses, {2} users || {0} documentos, {1} despesas, {2} usuários || {0} documentos, {1} gastos, {2} usuarios
+Nothing has been deleted yet. || Nada foi apagado ainda. || Aún no se ha eliminado nada.

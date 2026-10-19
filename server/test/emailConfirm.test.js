@@ -23,6 +23,7 @@ test('sem provedor de e-mail: o cadastro funciona, nada é limitado e o servidor
   assert.equal(r.status, 200); assert.equal(r.body.emailConfirmation, 'unavailable');
   const me = await call('/me', 'GET', undefined, r.body.token);
   assert.deepEqual([me.body.emailConfirm.confirmed, me.body.emailConfirm.available, me.body.emailConfirm.limited], [false, false, false]);
+  assert.deepEqual([me.body.planInfo.plan, me.body.planInfo.payroll, me.body.planInfo.features.payroll], ['free', false, false]);   // Free não ganha o complemento de folha de graça
   await call('/contacts', 'POST', { kind: 'customer', name: 'C' }, r.body.token);
   for (let i = 0; i < 5; i++) assert.equal((await invoice(r.body.token)).status, 200, `fatura ${i + 1} sem limite de confirmação`);   // vale só o limite normal do Free (5)
   const resend = await call('/me/email/resend', 'POST', {}, r.body.token);

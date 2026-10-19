@@ -14,6 +14,46 @@ async function call(method, path, body) {
 }
 const PLAN = { free: 'Free', starter: 'Starter', essentials: 'Essentials', plus: 'Plus', advanced: 'Advanced', business: 'Business', enterprise: 'Enterprise' };
 
+const CLEAN_STATE = { would_warn: t('Will be warned'), warned: t('Warned'), waiting: t('Waiting for the notice period'), would_delete: t('Will be deleted'), deleted: t('Deleted'), cancelled: t('Warning cancelled (back in use)'), blocked_no_email: t('Cannot warn: email not set up'), warn_failed: t('Warning failed, will retry'), error: t('Error') };
+
+/** Contas Free paradas: prévia do que a limpeza faria, botão para rodar agora e o histórico do que já foi apagado. */
+function CleanupCard() {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const load = useCallback(async () => { try { setData(await call('GET', '/cleanup')); setError(''); } catch (e) { setError(e.message); } }, []);
+  useEffect(() => { load(); }, [load]);
+  const runNow = async () => {
+    if (!confirm(t('Run the cleanup now? Accounts already warned more than {0} days ago will be deleted for good. Accounts not yet warned get the warning email.', [data.config.graceDays]))) return;
+    setBusy(true); setMsg('');
+    try { const r = await call('POST', '/cleanup/run', {}); const n = (s) => r.items.filter((i) => i.state === s).length; setMsg(t('Done: {0} warned, {1} deleted.', [n('warned'), n('deleted')])); await load(); } catch (e) { setError(e.message); }
+    setBusy(false);
+  };
+  return (
+    <Card title={t('Unused free accounts')} className="mt-4">
+      {error && <p className="mb-2 text-sm text-rose-700" role="alert">{error}</p>}
+      {!data ? <Loading /> : (<>
+        <p className="mb-2 text-sm text-slate-600">{t('Free accounts with no use for {0} months, no paid plan, no payroll, no connected bank and no accounting entries from the last {1} months get a warning email and {2} days to sign in before they are deleted.', [data.config.idleMonths, data.config.fiscalMonths, data.config.graceDays])}</p>
+        <p className={`mb-3 rounded-lg p-2 text-sm ${data.enabled ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'}`} data-testid="cleanup-enabled">{data.enabled ? t('Automatic cleanup is ON (runs once a day).') : t('Automatic cleanup is OFF. Set FLUXO_CLEANUP=1 on the server to turn it on. You can still preview it and run it by hand.')}</p>
+        {!data.mailReady && <p className="mb-3 rounded-lg bg-amber-50 p-2 text-sm text-amber-800">{t('Email is not set up, so no account will be warned or deleted.')}</p>}
+        <div className="overflow-x-auto">
+          <Table head={[t('Company'), t('Owner'), t('Last use'), t('Last accounting entry'), t('What happens')]} empty={t('No unused free accounts right now.')}>
+            {data.items.map((i) => <tr key={i.slug}><td className="td font-medium">{i.company || i.slug}</td><td className="td">{i.owner}</td><td className="td">{i.lastActivity ? date(i.lastActivity) : '—'}</td><td className="td">{i.lastFiscal ? date(i.lastFiscal) : '—'}</td><td className="td">{CLEAN_STATE[i.state] || i.state}{i.deleteAfter ? ` (${date(i.deleteAfter)})` : ''}</td></tr>)}
+          </Table>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3"><Button variant="ghost" disabled={busy} onClick={load}>{t('Refresh preview')}</Button><Button disabled={busy || !data.items.length} onClick={runNow}>{busy ? t('Please wait…') : t('Run the cleanup now')}</Button>{msg && <span className="text-sm text-emerald-700" role="status">{msg}</span>}</div>
+        <h3 className="mb-1 mt-5 text-sm font-semibold">{t('Deleted accounts (record)')}</h3>
+        <div className="overflow-x-auto">
+          <Table head={[t('Deleted on'), t('Company'), t('Owner'), t('Last use'), t('Data removed')]} empty={t('Nothing has been deleted yet.')}>
+            {data.log.map((l) => <tr key={l.id}><td className="td">{date(l.at.slice(0, 10))}</td><td className="td font-medium">{l.company}<div className="text-xs font-normal text-slate-500">{l.slug}</div></td><td className="td">{l.email_masked}</td><td className="td">{l.last_activity ? date(l.last_activity) : '—'}</td><td className="td text-xs">{t('{0} documents, {1} expenses, {2} users', [l.counts.documents ?? 0, l.counts.expenses ?? 0, l.counts.users ?? 0])}</td></tr>)}
+          </Table>
+        </div>
+      </>)}
+    </Card>
+  );
+}
+
 /** Painel do dono da plataforma: quem são os clientes, em que plano estão e quem está suspenso. */
 export default function Admin() {
   const [authed, setAuthed] = useState(!!store.get());
@@ -65,6 +105,7 @@ export default function Admin() {
               ))}
             </Table>
           </Card>
+          <CleanupCard />
         </>)}
     </div>
   );

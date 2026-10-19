@@ -31,6 +31,7 @@ import { registerAccountants, registerAccountantsPublic } from './accountants.js
 import { cleanPerms, authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, endSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
 import * as twofa from './twofa.js';
 import * as emailConfirm from './emailConfirm.js';
+import * as cleanup from './cleanup.js';
 
 const { HttpError, today, isDate, cents } = acc;
 /** Versão dos textos legais (Termos e Privacidade) mostrados no cadastro; muda quando o advogado revisar. */
@@ -156,7 +157,7 @@ api.post('/setup', wrap(async (req, res) => {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(email).trim())) throw bad('Enter a valid email');
   if (!password || password.length < 8) throw bad('The password must be at least 8 characters');
   const provision = () => {
-    if (multi()) { if (!paid) setPlan({ plan: 'free' }); } // hospedado: sem pagamento confirmado, só o plano gratuito
+    if (multi()) { if (!paid) setPlan({ plan: 'free', payroll: false }); } // hospedado: sem pagamento confirmado, só o plano gratuito (e sem o complemento de folha, que o banco novo traz ligado por padrão)
     else if (req.body.plan) setPlan({ plan: req.body.plan });
     // hospedado e gratuito: o e-mail ainda precisa ser confirmado (quem pagou, ou quem instala o próprio servidor, já nasce confirmado)
     const uid = createOwnerUser({ company_name, name, email, password, lang, currency, verified: !(multi() && !paid) });
@@ -262,6 +263,9 @@ api.post('/admin/tenants/:slug/:action', admin.requireAdmin, wrap((req, res) => 
   if (!['suspend', 'resume'].includes(req.params.action) || !tenants.setStatus(req.params.slug, req.params.action === 'suspend' ? 'suspended' : 'active')) throw new HttpError(404, 'Route not found');
   ok(res, { slug: req.params.slug, status: req.params.action === 'suspend' ? 'suspended' : 'active' });
 }));
+// limpeza de contas Free abandonadas: prévia do que seria avisado/apagado, histórico do que já foi apagado e "rodar agora"
+api.get('/admin/cleanup', admin.requireAdmin, wrap(async (_req, res) => ok(res, await cleanup.overview())));
+api.post('/admin/cleanup/run', admin.requireAdmin, wrap(async (req, res) => ok(res, await cleanup.runCleanup({ dryRun: !!req.body?.dryRun }))));
 api.get('/admin/enabled', wrap((_req, res) => ok(res, { enabled: admin.adminEnabled() })));
 
 // visualização pública de documento (link compartilhável)
@@ -1044,5 +1048,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   tick(); setInterval(tick, 60 * 60 * 1000).unref();
   const bankTick = () => { const job = () => (get('SELECT 1 FROM plaid_items LIMIT 1') ? plaidSvc.syncAll().catch((e) => console.error('bank sync', e.message)) : undefined); return multi() ? tenants.eachTenant(job) : job(); };
   setInterval(bankTick, 60 * 60 * 1000).unref();
+  if (multi()) { // contas Free paradas há 12 meses: aviso por e-mail, 30 dias de prazo e só então a exclusão (precisa de FLUXO_CLEANUP=1; ver README)
+    const daily = () => cleanup.runDaily().catch((e) => console.error('cleanup', e.message));
+    setTimeout(daily, 5 * 60 * 1000).unref(); setInterval(daily, 6 * 60 * 60 * 1000).unref();
+  }
   startPhotoBilling({ pool: photoPool, getSubscription: photoBilling, envBilling: false, eachTenant: multi() ? tenants.eachTenant : undefined });
 }
