@@ -13,22 +13,35 @@ function requireBank(id) {
   return a;
 }
 
+/** Regras e histórico lidos UMA vez. A importação de extrato chama suggestCategory uma vez por linha (até 5.000);
+ * antes, cada chamada relia as regras e 800 transações e normalizava todas elas de novo (~2 ms por linha). */
+export function suggestionContext() {
+  const rules = all('SELECT * FROM bank_rules ORDER BY id').map((r) => ({ ...r, norm: norm(r.pattern) }));
+  const hist = new Map(); // "sinal|descrição normalizada" -> transações categorizadas parecidas (mais novas primeiro)
+  for (const h of all(`SELECT description, entry_id, amount FROM bank_txns WHERE status='categorized' AND entry_id IS NOT NULL ORDER BY id DESC LIMIT 800`)) {
+    const k = `${h.amount < 0 ? '-' : '+'}|${norm(h.description)}`;
+    const a = hist.get(k); if (a) a.push(h); else hist.set(k, [h]);
+  }
+  return { rules, hist, accountOf: new Map() };
+}
+
 /** Sugere categoria: 1) regras do usuário 2) histórico de transações parecidas. */
-export function suggestCategory(description, amount) {
+export function suggestCategory(description, amount, ctx = suggestionContext()) {
   const d = norm(description);
-  for (const r of all('SELECT * FROM bank_rules ORDER BY id')) {
+  for (const r of ctx.rules) {
     if (r.direction === 'in' && amount < 0) continue;
     if (r.direction === 'out' && amount > 0) continue;
-    if (d.includes(norm(r.pattern))) return { account_id: r.account_id, source: 'rule' };
+    if (d.includes(r.norm)) return { account_id: r.account_id, source: 'rule' };
   }
   if (d.length >= 3) {
-    const hist = all(`SELECT description, suggested_account_id, entry_id, amount FROM bank_txns WHERE status='categorized' AND entry_id IS NOT NULL ORDER BY id DESC LIMIT 800`);
     const counts = new Map();
-    for (const h of hist) {
-      if ((h.amount < 0) !== (amount < 0)) continue;
-      if (norm(h.description) !== d) continue;
-      const line = get(`SELECT jl.account_id FROM journal_lines jl JOIN accounts a ON a.id=jl.account_id WHERE jl.entry_id=? AND a.subtype NOT IN ('bank','trust_bank','credit_card') LIMIT 1`, h.entry_id);
-      if (line) counts.set(line.account_id, (counts.get(line.account_id) || 0) + 1);
+    for (const h of ctx.hist.get(`${amount < 0 ? '-' : '+'}|${d}`) || []) {
+      let acct = ctx.accountOf.get(h.entry_id);
+      if (acct === undefined) {
+        acct = get(`SELECT jl.account_id FROM journal_lines jl JOIN accounts a ON a.id=jl.account_id WHERE jl.entry_id=? AND a.subtype NOT IN ('bank','trust_bank','credit_card') LIMIT 1`, h.entry_id)?.account_id ?? null;
+        ctx.accountOf.set(h.entry_id, acct);
+      }
+      if (acct !== null) counts.set(acct, (counts.get(acct) || 0) + 1);
     }
     const best = [...counts].sort((a, b) => b[1] - a[1])[0];
     if (best) return { account_id: best[0], source: 'history' };
@@ -93,6 +106,7 @@ export function importTxns(account_id, rows) {
   tx(() => {
     const used = [];
     const seen = new Map();
+    const ctx = suggestionContext();
     for (const r of rows) {
       if (!isDate(r.date)) throw bad(`Invalid date: ${r.date}`);
       const amount = cents(r.amount);
@@ -102,7 +116,7 @@ export function importTxns(account_id, rows) {
       const n = (seen.get(base) || 0) + 1; seen.set(base, n); // transações idênticas no mesmo arquivo são válidas
       const hash = r.external_id ? String(r.external_id) : crypto.createHash('sha1').update(`${base}|${n}`).digest('hex');
       if (get('SELECT 1 FROM bank_txns WHERE hash=?', hash)) { duplicates++; continue; }
-      const sug = suggestCategory(description, amount) || (r.suggested_account_id ? { account_id: r.suggested_account_id, source: 'category' } : null);
+      const sug = suggestCategory(description, amount, ctx) || (r.suggested_account_id ? { account_id: r.suggested_account_id, source: 'category' } : null);
       const match = findMatch(account_id, r.date, amount, used);
       if (match) used.push(match);
       insert(`INSERT INTO bank_txns(account_id,date,description,amount,hash,suggested_account_id,suggested_line_id,suggestion_source) VALUES(?,?,?,?,?,?,?,?)`,
