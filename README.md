@@ -100,13 +100,32 @@ Set `FLUXO_MULTI=1` and every company gets its **own SQLite file** (`<data>/tena
 2. Set `APP_URL` (your public https URL) and, when you have them, the Stripe and Plaid keys.
 3. Stripe: add a webhook to `https://<your-domain>/api/stripe/webhook` for `checkout.session.completed`, `customer.subscription.*`, `invoice.paid`, `invoice.payment_failed`; copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
 4. Plaid: set `PLAID_WEBHOOK_URL` to `https://<your-domain>/api/plaid/webhook`.
-5. **Back up `/data`** (disk snapshots) and keep a copy of `FLUXO_ENCRYPTION_KEY`.
+5. **Back up `/data`** (see *Backup and restore* below) and keep a copy of `FLUXO_ENCRYPTION_KEY` somewhere that is **not** the server.
 
 One instance serves many small companies. Scaling beyond a single machine means moving the per-company files to a shared database, which is a separate piece of work.
 
+## Backup and restore (all companies, tested)
+**What is backed up**: every database in one `.zip` — `main.db`, `control.db` (the index of companies, login emails, Stripe/Plaid links) and one file per company — plus `manifest.json` with, for each database, the SHA-256 of the file, the SQLite integrity check, row counts and a hash of the content of every table. The copy is made with `VACUUM INTO`, so it is consistent while the server keeps running. **The encryption key is never inside the file**: keep `FLUXO_ENCRYPTION_KEY` apart (password manager). Without it, SSN/EIN, bank tokens and 2FA secrets in a restored copy will not open; the restore warns you when the key on the machine differs from the one used for the backup.
+
+**Automatic**: on a multi-company server a backup runs once a day (first one 2 minutes after the server starts) into `FLUXO_BACKUP_DIR/_platform/` (default `/data/backups/_platform/`), keeping the newest 7 (`FLUXO_BACKUP_KEEP`). `FLUXO_BACKUP_DAILY=0` turns it off, `=1` turns it on for a single-company install. **That folder is on the same disk as the data, so it only protects against mistakes. Copy it off the server** (VPS snapshot, `rsync`/`rclone` to another machine or a bucket, or Coolify's backup of the `/data` volume) — this step is yours.
+**On demand**: `docker exec <container> node server/src/backupCli.js backup` (or `npm run backup` from the repository, with the same environment variables as the server). `/admin` can also start one (`POST /api/admin/backups/run`, list with `GET /api/admin/backups`); downloading is deliberately not offered in the web panel (the admin cannot read customers' books from there), copy the files from the server instead.
+
+**Check a backup without restoring** (do this now and then): `node server/src/backupCli.js verify /path/fluxo-backup-20261019-1530.zip` — it re-reads every database and compares checksum, integrity and content with the manifest.
+
+**Restore, step by step** (disaster or moving to a new server):
+1. Put the `.zip` on the machine and make sure the **same `FLUXO_ENCRYPTION_KEY`** is set. Use the same `FLUXO_DB` path as production (`/data/fluxo.db` in Docker); `control.db` and `tenants/` are restored next to it.
+2. **Stop the server** (so nothing writes while the files are replaced).
+3. `node server/src/backupCli.js restore /path/fluxo-backup-20261019-1530.zip --to /data` (with an empty `/data`). If `/data` already has databases the command refuses; add `--force` to proceed — the old files are first moved to `/data/_before-restore-<date>/` so nothing is lost.
+4. The command re-opens each restored database and compares its integrity and content with the backup; it must end with "identical". Anything else: stop and do not start the server.
+5. Start the server and check `/healthz` (`"db":"ok"`), sign in, open an invoice.
+The command messages follow `FLUXO_CLI_LANG` (or `LANG`): `en`, `pt` or `es`. A restore moves the system back to the moment of the backup: anything created after it (sign-ups, invoices) is gone, and companies deleted by the cleanup come back with the data they had then.
+**Tested**: `server/test/backup.test.js` takes a backup, wrecks the live data, restores into a new folder, compares the content hash of every table with the one in the manifest, then starts a real server on the restored folder and checks login, invoices and a decrypted SSN. A damaged `.zip` is refused.
+
+**Monitoring**: `GET /healthz` answers `200` with `{"ok":true,"version":"1.0.0","commit":"…","db":"ok","uptime_s":…,"email":"configured|not_configured","backup":{"enabled":true,"last_at":"…","age_hours":3},"warnings":[…]}` and `503` when the database does not answer. `warnings` can contain `backup_stale` (no backup for 36 h), `backup_off` and `email_not_configured`. Point your uptime tool at it: alert on a non-200 answer or a timeout, and (optionally) on `backup_stale` in the body. Set `SOURCE_COMMIT` (Coolify does) to see the deployed commit.
+
 ## Reminders, automations, team access, themes
 - **Reminders** (bell + `/reminders`): overdue invoices (with a ready-to-send email from the user's own inbox), bills and estimates coming due, low stock, bank transactions to review, the U.S. tax calendar (federal estimated tax, Form 941, W-2/1099-NEC), and your own repeating reminders. Each one can be switched on or off under Settings > Automations. Nothing is sent to anyone.
-- **Daily backup**: optional, a JSON copy per company in `FLUXO_BACKUP_DIR`, last 14 kept.
+- **Daily JSON copy per company** (optional, Settings > Automations): a JSON export per company in `FLUXO_BACKUP_DIR/<company>/`, last 14 kept. This is for people who want a readable file; the **real server backup** (all databases, restorable) is described under *Backup and restore* below.
 - **Team access by tab** (Starter and up): choose which tabs each person can view or change. Named reusable roles stay on Advanced.
 - **Mobile**: top bar with a menu button and the Fluxo logo, kept below the iPhone clock/notch; the menu slides in from the left.
 - **Dark mode**: toggle in the sidebar (or top bar on phones); follows the device until you choose.

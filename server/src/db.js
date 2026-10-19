@@ -8,6 +8,7 @@ import { ensurePhotoSchema } from './photoSchema.js';
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const dataDir = process.env.FLUXO_DB && process.env.FLUXO_DB !== ':memory:' ? path.dirname(process.env.FLUXO_DB) : path.join(here, '..', 'data');
 const dbPath = process.env.FLUXO_DB || path.join(dataDir, 'fluxo.db');
+export const mainDbFile = dbPath;
 
 /** Banco da requisição atual. No modo multi-empresa cada empresa tem o seu arquivo; fora de uma empresa vale o banco padrão. */
 export const als = new AsyncLocalStorage();
@@ -291,6 +292,8 @@ export const get = (sql, ...p) => {
   const r = current().prepare(sql).get(...nullify(p));
   return r ? { ...r } : undefined;
 };
+/** Cópia consistente do banco atual (VACUUM INTO): pode rodar com o servidor em uso, sem parar nada. */
+export const snapshotTo = (file) => { current().exec(`VACUUM INTO '${String(file).replace(/'/g, "''")}'`); };
 export const run = (sql, ...p) => current().prepare(sql).run(...nullify(p));
 export const insert = (sql, ...p) => Number(current().prepare(sql).run(...nullify(p)).lastInsertRowid);
 

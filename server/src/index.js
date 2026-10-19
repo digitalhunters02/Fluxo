@@ -32,6 +32,7 @@ import { cleanPerms, authenticate, requireAuth, can, audit, MODULES, effectivePe
 import * as twofa from './twofa.js';
 import * as emailConfirm from './emailConfirm.js';
 import * as cleanup from './cleanup.js';
+import * as backup from './backup.js';
 
 const { HttpError, today, isDate, cents } = acc;
 /** Versão dos textos legais (Termos e Privacidade) mostrados no cadastro; muda quando o advogado revisar. */
@@ -51,7 +52,7 @@ app.use((req, res, next) => {
   if (req.secure) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
   next();
 });
-app.get('/healthz', (_req, res) => res.json({ ok: true }));
+app.get('/healthz', (_req, res) => { const h = backup.health(); res.status(h.ok ? 200 : 503).set('Cache-Control', 'no-store').json(h); }); // para monitoramento: versão, banco, backup
 app.use(express.json({ limit: '4mb', verify: (req, _res, buf) => { req.rawBody = buf; } })); // rawBody: assinatura dos webhooks
 /** Modo multi-empresa: o token tem a forma "empresa.token"; escolhe o banco da empresa antes de qualquer consulta. */
 const multi = () => tenants.multiEnabled();
@@ -266,6 +267,9 @@ api.post('/admin/tenants/:slug/:action', admin.requireAdmin, wrap((req, res) => 
 // limpeza de contas Free abandonadas: prévia do que seria avisado/apagado, histórico do que já foi apagado e "rodar agora"
 api.get('/admin/cleanup', admin.requireAdmin, wrap(async (_req, res) => ok(res, await cleanup.overview())));
 api.post('/admin/cleanup/run', admin.requireAdmin, wrap(async (req, res) => ok(res, await cleanup.runCleanup({ dryRun: !!req.body?.dryRun }))));
+// backup de todos os bancos num .zip (a lista mostra os arquivos; a cópia fica na pasta do servidor e quem baixa é o administrador do servidor, não o painel)
+api.get('/admin/backups', admin.requireAdmin, wrap((_req, res) => ok(res, { enabled: backup.dailyEnabled(), dir: backup.backupDir(), keep: backup.keepCount(), files: backup.listBackups() })));
+api.post('/admin/backups/run', admin.requireAdmin, wrap((_req, res) => { const r = backup.runBackup(); ok(res, { name: path.basename(r.file), bytes: r.bytes, databases: r.manifest.files.length }); }));
 api.get('/admin/enabled', wrap((_req, res) => ok(res, { enabled: admin.adminEnabled() })));
 
 // visualização pública de documento (link compartilhável)
@@ -1048,6 +1052,10 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   tick(); setInterval(tick, 60 * 60 * 1000).unref();
   const bankTick = () => { const job = () => (get('SELECT 1 FROM plaid_items LIMIT 1') ? plaidSvc.syncAll().catch((e) => console.error('bank sync', e.message)) : undefined); return multi() ? tenants.eachTenant(job) : job(); };
   setInterval(bankTick, 60 * 60 * 1000).unref();
+  if (backup.dailyEnabled()) { // backup diário de todos os bancos (.zip em FLUXO_BACKUP_DIR/_platform, guarda os 7 mais novos)
+    const daily = () => { try { const r = backup.runIfDue(); if (r) console.log(`backup: ${path.basename(r.file)} (${r.bytes} bytes)`); } catch (e) { console.error('backup failed:', e.message); } };
+    setTimeout(daily, 2 * 60 * 1000).unref(); setInterval(daily, 60 * 60 * 1000).unref();
+  }
   if (multi()) { // contas Free paradas há 12 meses: aviso por e-mail, 30 dias de prazo e só então a exclusão (precisa de FLUXO_CLEANUP=1; ver README)
     const daily = () => cleanup.runDaily().catch((e) => console.error('cleanup', e.message));
     setTimeout(daily, 5 * 60 * 1000).unref(); setInterval(daily, 6 * 60 * 60 * 1000).unref();

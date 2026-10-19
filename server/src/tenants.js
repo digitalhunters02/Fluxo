@@ -11,9 +11,10 @@ export const multiEnabled = () => process.env.FLUXO_MULTI === '1';
 const inMemory = () => process.env.FLUXO_DB === ':memory:' || process.env.FLUXO_CONTROL_DB === ':memory:';
 
 let control = null;
+export const controlFile = () => process.env.FLUXO_CONTROL_DB || (inMemory() ? ':memory:' : path.join(dataDir, 'control.db'));
 const ctl = () => {
   if (control) return control;
-  const file = process.env.FLUXO_CONTROL_DB || (inMemory() ? ':memory:' : path.join(dataDir, 'control.db'));
+  const file = controlFile();
   if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true });
   control = new DatabaseSync(file);
   control.exec('PRAGMA journal_mode = WAL;');
@@ -38,7 +39,7 @@ const qa = (sql, ...p) => ctl().prepare(sql).all(...p);
 const qr = (sql, ...p) => ctl().prepare(sql).run(...p);
 
 const cache = new Map();
-const tenantFile = (slug) => (inMemory() ? ':memory:' : path.join(process.env.FLUXO_TENANTS_DIR || path.join(dataDir, 'tenants'), `${slug}.db`));
+export const tenantFile = (slug) => (inMemory() ? ':memory:' : path.join(process.env.FLUXO_TENANTS_DIR || path.join(dataDir, 'tenants'), `${slug}.db`));
 
 export const tenantExists = (slug) => !!(slug && /^[a-z0-9-]+$/.test(slug) && q('SELECT 1 FROM tenants WHERE slug=?', slug));
 export const currentSlug = () => als.getStore()?.slug || '';
@@ -171,3 +172,7 @@ export function addCleanupLog(e) {
 export const cleanupLog = (limit = 100) => qa('SELECT * FROM cleanup_log ORDER BY id DESC LIMIT ?', limit).map((r) => ({ ...r, counts: (() => { try { return JSON.parse(r.counts); } catch { return {}; } })() }));
 export const getMeta = (key, d = '') => q('SELECT value FROM meta WHERE key=?', key)?.value ?? d;
 export const setMeta = (key, value) => qr('INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', key, String(value));
+
+/** Cópia consistente do banco de controle (índice de empresas, e-mails de login, vínculos). */
+export const snapshotControl = (file) => { ctl().exec(`VACUUM INTO '${String(file).replace(/'/g, "''")}'`); };
+export const tenantCount = () => q('SELECT COUNT(*) n FROM tenants').n;

@@ -12,7 +12,10 @@
     "seed": "npm run seed -w server",
     "test": "npm test -w server",
     "i18n:build": "node tools/i18n-build.mjs",
-    "i18n:check": "node tools/i18n-build.mjs && node tools/i18n-check.mjs"
+    "i18n:check": "node tools/i18n-build.mjs && node tools/i18n-check.mjs",
+    "backup": "npm run backup -w server --",
+    "restore": "npm run restore -w server --",
+    "backup:verify": "npm run backup:verify -w server --"
   },
   "devDependencies": {
     "concurrently": "^9.0.1"
