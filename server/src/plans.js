@@ -1,6 +1,8 @@
 // Planos e permissões por função: cada recurso exige um plano mínimo (como o QuickBooks Online).
 import { getSetting, setSetting } from './db.js';
 import { HttpError } from './accounting.js';
+import { makeGates } from './planGates.js';
+import { previewPlanNow } from './owner.js';
 
 export const PLAN_ORDER = ['free', 'starter', 'essentials', 'plus', 'advanced', 'business', 'enterprise'];
 /** Planos com assinatura no Stripe (o plano free não tem preço nem cobrança). */
@@ -36,10 +38,15 @@ export const LIMITS = {
 /** Limite do plano atual; null = sem limite. */
 export const limitFor = (name) => LIMITS[name][currentPlan()] ?? null;
 
-export const currentPlan = () => { const p = getSetting('plan', 'advanced'); return PLAN_ORDER.includes(p) ? p : 'advanced'; };
+/** Plano em vigor. Na requisição do DONO da plataforma em modo "ver como plano" (X-Preview-Plan), é o plano visto — só durante a requisição, nada é gravado. */
+export const currentPlan = () => {
+  const view = previewPlanNow();
+  if (view && PLAN_ORDER.includes(view)) return view;
+  const p = getSetting('plan', 'advanced'); return PLAN_ORDER.includes(p) ? p : 'advanced';
+};
 /** Plano de uma empresa específica (usado pela consolidação do grupo, que lê várias empresas). */
 export const planRank = (name) => PLAN_ORDER.indexOf(name);
-export const hasAddon = (a) => getSetting(`addon_${a}`, '0') === '1';
+export const hasAddon = (a) => (previewPlanNow() ? false : getSetting(`addon_${a}`, '0') === '1'); // na prévia o cliente do plano visto não tem complemento
 export function hasFeature(f) {
   if (ADDON_FEATURES.includes(f)) return hasAddon(f);
   const min = FEATURES[f];
@@ -60,3 +67,29 @@ export function setPlan({ plan, payroll }) {
   if (plan !== undefined) { if (!PLAN_ORDER.includes(plan)) throw new HttpError(400, 'Invalid plan'); setSetting('plan', plan); }
   if (payroll !== undefined) setSetting('addon_payroll', payroll ? '1' : '0');
 }
+
+// ---- RECURSOS COM SELO ("mapa recurso -> plano mínimo") ----
+// A fonte é FEATURES (acima): uma linha por recurso. EXTRA_GATES são limites que também ganham selo (ex.: fatura ilimitada).
+// O plano mínimo de cada recurso e "o que cada plano acrescenta" saem daqui; o front só consome (/me, /plan e /public/plans).
+export const EXTRA_GATES = { unlimited_invoices: 'starter', photo_import: 'essentials' }; // fatura ilimitada (Free: 5 por mês) e leitura de recibo por foto
+const GATE_MIN = { ...FEATURES, ...EXTRA_GATES };
+const cap = (k) => k[0].toUpperCase() + k.slice(1);
+const PLAN_DEFS = Object.fromEntries(PLAN_ORDER.map((key, rank) => [key, { key, name: cap(key), sold: true, rank }]));
+const GATE_FNS = Object.fromEntries(Object.entries(GATE_MIN).map(([g, min]) => [g, (p) => p.rank >= PLAN_DEFS[min].rank]));
+const gateTable = makeGates(PLAN_DEFS, GATE_FNS, 'free');
+export const minPlanForGate = (g) => (ADDON_FEATURES.includes(g) ? null : gateTable.minPlanForGate(g));
+
+/** { recurso: { minPlan, locked } } para o plano EM VIGOR (sem argumento: só o plano mínimo, para a página pública). Complementos: { addon, locked }. */
+export function publicGates(planKey) {
+  const out = gateTable.publicGates(planKey);
+  for (const a of ADDON_FEATURES) out[a] = { minPlan: null, addon: a, ...(planKey ? { locked: !hasAddon(a) } : {}) };
+  return out;
+}
+
+/** Catálogo para o front: planos na ordem de venda, preço mensal/anual e o que cada plano ACRESCENTA. `yearly` = { plano: preço anual }. */
+export function publicCatalog(yearly = {}) {
+  const adds = gateTable.addsByPlan();
+  return PLAN_ORDER.map((key) => ({ key, name: PLAN_DEFS[key].name, rank: PLAN_DEFS[key].rank, price: { month: PLAN_PRICES[key], year: yearly[key] ?? PLAN_PRICES[key] * 12 }, adds: adds[key] || [] }));
+}
+/** Complementos vendidos à parte (folha de pagamento): preço base + por funcionário. */
+export const publicAddons = (yearly) => ({ payroll: { key: 'payroll', price: { month: PAYROLL_ADDON_PRICE.base, year: yearly?.base ?? PAYROLL_ADDON_PRICE.base * 12 }, perUnit: { month: PAYROLL_ADDON_PRICE.perEmployee, year: yearly?.perEmployee ?? PAYROLL_ADDON_PRICE.perEmployee * 12 } } });

@@ -26,10 +26,11 @@ import { reportLead } from './harborLead.js';
 import { registerGrowth, registerGrowthPublic } from './growth.js';
 import { createV1Router } from './integrations.js';
 import * as agency from './agencyTemplate.js';
-import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, limitFor, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE, ENTERPRISE_FROM, ENTERPRISE_INCLUDED_COMPANIES, ENTERPRISE_EXTRA_COMPANY } from './plans.js';
+import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, limitFor, publicGates, publicCatalog, publicAddons, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE, ENTERPRISE_FROM, ENTERPRISE_INCLUDED_COMPANIES, ENTERPRISE_EXTRA_COMPANY } from './plans.js';
 import { registerAccountants, registerAccountantsPublic } from './accountants.js';
 import { cleanPerms, authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, endSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
 import * as twofa from './twofa.js';
+import { applyPreview, blockInPreview, isPlatformOwner } from './owner.js';
 import * as emailConfirm from './emailConfirm.js';
 import * as cleanup from './cleanup.js';
 import * as backup from './backup.js';
@@ -76,6 +77,7 @@ const publicTenant = (req, _res, next) => {
 };
 const withSlug = (token) => (multi() && tenants.currentSlug() ? `${tenants.currentSlug()}.${token}` : token);
 app.use(authenticate);
+app.use(applyPreview(PLAN_ORDER)); // "ver como plano": só vale para o dono da plataforma (OWNER_EMAILS); para os demais o cabeçalho X-Preview-Plan é ignorado
 
 const api = express.Router();
 const wrap = (fn) => (req, res, next) => { try { Promise.resolve(fn(req, res)).catch(next); } catch (e) { next(e); } };
@@ -318,7 +320,7 @@ api.post('/stripe/webhook', wrap(async (req, res) => {
 // Plano anual: 12 mensalidades com 10% de desconto, ao centavo (mesma conta que o Stripe usa para criar o preço).
 const yearlyPrices = () => Object.fromEntries(Object.entries(PLAN_PRICES).map(([k, v]) => [k, billing.priceFor(v, 'year')]));
 const payrollYearly = () => ({ base: billing.priceFor(PAYROLL_ADDON_PRICE.base, 'year'), perEmployee: billing.priceFor(PAYROLL_ADDON_PRICE.perEmployee, 'year') });
-api.get('/public/plans', wrap((_req, res) => ok(res, { configured: billing.stripeConfigured(), needsSetup: multi() || !get('SELECT 1 FROM users LIMIT 1'), order: PLAN_ORDER, prices: PLAN_PRICES, enterpriseFrom: ENTERPRISE_FROM, enterpriseIncluded: ENTERPRISE_INCLUDED_COMPANIES, enterpriseExtra: ENTERPRISE_EXTRA_COMPANY, enterpriseExtraYearly: billing.priceFor(ENTERPRISE_EXTRA_COMPANY, 'year'), salesEmail: process.env.FLUXO_SALES_EMAIL || '', payrollPrice: PAYROLL_ADDON_PRICE, yearlyPrices: yearlyPrices(), payrollYearlyPrice: payrollYearly(), annualDiscount: billing.ANNUAL_DISCOUNT })));
+api.get('/public/plans', wrap((_req, res) => ok(res, { configured: billing.stripeConfigured(), needsSetup: multi() || !get('SELECT 1 FROM users LIMIT 1'), order: PLAN_ORDER, prices: PLAN_PRICES, enterpriseFrom: ENTERPRISE_FROM, enterpriseIncluded: ENTERPRISE_INCLUDED_COMPANIES, enterpriseExtra: ENTERPRISE_EXTRA_COMPANY, enterpriseExtraYearly: billing.priceFor(ENTERPRISE_EXTRA_COMPANY, 'year'), salesEmail: process.env.FLUXO_SALES_EMAIL || '', payrollPrice: PAYROLL_ADDON_PRICE, yearlyPrices: yearlyPrices(), payrollYearlyPrice: payrollYearly(), annualDiscount: billing.ANNUAL_DISCOUNT, catalog: publicCatalog(yearlyPrices()), gates: publicGates(), addons: publicAddons(payrollYearly()) })));
 api.post('/public/checkout', wrap(async (req, res) => {
   rateLimitLogin(`checkout|${req.ip}`);
   if (!multi() && get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(403, 'This installation already has an account. Sign in to change your plan.');
@@ -403,9 +405,9 @@ api.post('/me/email/resend', wrap(async (req, res) => {
   await emailConfirm.sendConfirmation(req.user, { slug: multi() ? tenants.currentSlug() : '', lang: getSetting('lang', 'en') });
   ok(res, { sentTo: req.user.email });
 }));
-api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), emailConfirm: emailConfirm.stateFor(req.user), tenant: multi() ? tenants.currentSlug() : '', planInfo: planInfo(), twofa: twofa.twofaState(req.user), reauthOn: twofa.reauthOn() })));
+api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), emailConfirm: emailConfirm.stateFor(req.user), tenant: multi() ? tenants.currentSlug() : '', planInfo: planInfo(), owner: isPlatformOwner(req.user), previewPlan: req.previewPlan || null, catalog: publicCatalog(yearlyPrices()), gates: publicGates(currentPlan()), addons: publicAddons(payrollYearly()), twofa: twofa.twofaState(req.user), reauthOn: twofa.reauthOn() })));
 api.get('/plan', wrap((_req, res) => ok(res, planInfo())));
-api.put('/plan', can('users', true), wrap((req, res) => {
+api.put('/plan', can('users', true), blockInPreview, wrap((req, res) => {
   if (getSetting('billing_managed', '0') === '1' && process.env.FLUXO_ALLOW_MANUAL_PLAN !== '1') throw new HttpError(403, 'Your plan is managed by your subscription. Use Upgrade or Manage billing.');
   // Hospedado com cobrança ligada: ninguém sobe de plano sozinho sem assinar (senão o plano pago sairia de graça). Descer para o Free pode.
   if (multi() && billing.stripeConfigured() && process.env.FLUXO_ALLOW_MANUAL_PLAN !== '1' && req.body.plan !== undefined && req.body.plan !== 'free' && req.body.plan !== currentPlan()) throw new HttpError(402, 'Subscribe to this plan to use it.');
@@ -730,9 +732,9 @@ api.post('/transfers', can('banking', true), wrap((req, res) => {
 
 /* ------------------------------- cobrança (Stripe) ------------------------------- */
 api.get('/billing', can('users'), wrap((_req, res) => ok(res, planInfo())));
-api.post('/billing/checkout', can('users', true), wrap(async (req, res) => ok(res, await billing.createCheckout({ plan: req.body.plan, payroll: req.body.payroll === undefined ? hasAddon('payroll') : !!req.body.payroll, origin: billing.originOf(req), interval: req.body.interval }))));
-api.post('/billing/change', can('users', true), wrap(async (req, res) => { await billing.changeSubscription({ plan: req.body.plan, payroll: req.body.payroll }); audit(req, 'update', 'settings', null, `plan ${currentPlan()}`); ok(res, planInfo()); }));
-api.post('/billing/portal', can('users', true), wrap(async (req, res) => ok(res, await billing.createPortal(billing.originOf(req)))));
+api.post('/billing/checkout', can('users', true), blockInPreview, wrap(async (req, res) => ok(res, await billing.createCheckout({ plan: req.body.plan, payroll: req.body.payroll === undefined ? hasAddon('payroll') : !!req.body.payroll, origin: billing.originOf(req), interval: req.body.interval }))));
+api.post('/billing/change', can('users', true), blockInPreview, wrap(async (req, res) => { await billing.changeSubscription({ plan: req.body.plan, payroll: req.body.payroll }); audit(req, 'update', 'settings', null, `plan ${currentPlan()}`); ok(res, planInfo()); }));
+api.post('/billing/portal', can('users', true), blockInPreview, wrap(async (req, res) => ok(res, await billing.createPortal(billing.originOf(req)))));
 
 /* --------------------------- conexão bancária (Plaid) ---------------------------- */
 api.use('/plaid', can('banking'), requireFeature('bank_feeds'));
@@ -1008,7 +1010,7 @@ const photoPool = sqlitePoolFrom({ all, run });
 const photoBilling = async () => ({ stripe_customer_id: getSetting('stripe_customer_id', ''), stripe_subscription_id: getSetting('stripe_subscription_id', '') });
 api.use('/photo-import', createPhotoImportRouter({
   pool: photoPool, requireAuth,
-  requireAdmin: (req, _res, next) => (req.user?.role === 'owner' ? next() : next(new HttpError(403, 'Only the owner can change this'))),
+  requireAdmin: (req, res, next) => (req.user?.role === 'owner' ? blockInPreview(req, res, next) : next(new HttpError(403, 'Only the owner can change this'))), // só muda o uso extra de foto (cobrado): na prévia, não
   requirePage: (page) => can(page, true),
   effectivePlan: async () => currentPlan(), getSubscription: photoBilling, envBilling: false,
   planLimits: { free: 0, starter: 0, essentials: 100, plus: 250, advanced: 500, business: 1500, enterprise: 5000 },
