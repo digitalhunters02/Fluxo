@@ -91,6 +91,7 @@ Set `FLUXO_MULTI=1` and every company gets its **own SQLite file** (`<data>/tena
 - Public invoice links carry the company: `/p/<company>.<token>`.
 - Stripe and Plaid webhooks are routed to the right company through the control database. Recurring invoices and bank syncs run for each company.
 - Platform admin: set `FLUXO_ADMIN_EMAIL` and `FLUXO_ADMIN_PASSWORD` (12+ characters) and open `/admin` to see every company, its plan and usage, and to suspend or reactivate one. There is no impersonation: you cannot read a customer's books from there.
+- Plan badges and "View as plan": every feature that needs a higher plan shows a small badge with the plan name and opens a friendly "Available on the X plan" window. The platform owner can open **View as plan** (top of every page) and see the whole app as any plan, without changing the account or billing. Set `OWNER_EMAILS` (comma-separated) to the owner's email(s); only a confirmed email of a company owner on that list is obeyed (the `X-Preview-Plan` header is ignored for everyone else). While previewing, plan and billing changes answer 409.
 - Without `FLUXO_MULTI`, nothing changes: one company per installation.
 
 ### Deploy

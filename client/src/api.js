@@ -1,5 +1,6 @@
 import { t, tr } from './i18n.jsx';
 const KEY = 'fluxo_token';
+export const API_URL = '/api'; // endereço do servidor (usado também pelo selo de plano para o 'ver como plano')
 export const getToken = () => { try { return localStorage.getItem(KEY); } catch { return null; } };
 export const setToken = (t) => { try { t ? localStorage.setItem(KEY, t) : localStorage.removeItem(KEY); } catch { /* ignore */ } };
 let onUnauthorized = () => {};
@@ -8,7 +9,7 @@ export const setReauthHandler = (fn) => { askReauth = fn; };
 export const setUnauthorizedHandler = (fn) => { onUnauthorized = fn; };
 
 async function req(method, path, body, retried = false) {
-  const res = await fetch('/api' + path, {
+  const res = await fetch(API_URL + path, {
     method,
     headers: { 'Content-Type': 'application/json', ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -26,7 +27,7 @@ async function req(method, path, body, retried = false) {
 }
 /** Baixa um arquivo da API (com o mesmo tratamento de sessão vencida e de "confirme a senha" das outras chamadas). */
 export async function downloadFile(path, fallbackName, retried = false) {
-  const res = await fetch('/api' + path, { headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {} });
+  const res = await fetch(API_URL + path, { headers: getToken() ? { Authorization: `Bearer ${getToken()}` } : {} });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     if (res.status === 401 && getToken()) onUnauthorized();

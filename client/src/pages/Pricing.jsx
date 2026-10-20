@@ -5,6 +5,18 @@ import { api, setToken } from '../api.js';
 import { Button, Card, ErrorBox, Field, Input, Loading, ToastProvider, useAction, useLoad } from '../components/ui.jsx';
 import { IntervalToggle, PlanPrice } from '../components/plan.jsx';
 import { LegalLinks } from './Legal.jsx';
+import PlanBadge from '../PlanBadge.jsx';
+import { PublicPlanProvider } from '../components/planBridge.jsx';
+
+/** Frase de venda -> recurso do servidor (FEATURES). O selo ao lado mostra o plano onde o recurso ENTRA, vindo do servidor. */
+const BULLET_GATE = {
+  [t('Unlimited invoices')]: 'unlimited_invoices', [t('Credit memos')]: 'credit_memos', [t('Logo & brand color on invoices')]: 'branding', [t('Unlimited users')]: 'user_access',
+  [t('Invite your accountant (1, read-only)')]: 'accountant_access', [t('Bills & vendor payments')]: 'bills', [t('Recurring invoices')]: 'recurring', [t('Time tracking')]: 'time_tracking',
+  [t('Connect banks automatically (2)')]: 'bank_feeds', [t('Inventory (average cost)')]: 'inventory', [t('Purchase orders')]: 'purchase_orders', [t('Budgets, classes & 1099 report')]: 'budgets',
+  [t('Custom roles & permissions')]: 'custom_roles', [t('Batch invoicing')]: 'batch_invoices', [t('Online payments (card and bank) with Stripe')]: 'online_payments', [t('API keys & webhooks')]: 'api',
+  [t('Bill approvals & separation of duties')]: 'approvals', [t('Group of companies & consolidated reports')]: 'multi_company', [t('Fixed assets & depreciation')]: 'fixed_assets',
+  [t('Month-end close checklist')]: 'close_checklist', [t('Audit log export')]: 'audit_export', [t('Single sign-on (SSO)')]: 'sso',
+};
 
 const PLAN_INFO = {
   free: { name: t('Free'), blurb: t('Try Fluxo with no card'), features: [t('5 invoices per month & unlimited estimates'), t('Send by link, email button or PDF'), t('Expenses, receipts & sales receipts'), t('Bank CSV import & reconciliation'), t('Core financial reports'), t('Import from QuickBooks & Xero'), t('Sales tax by state'), t('Download all your data'), t('1 user')] },
@@ -46,7 +58,7 @@ export function Pricing() {
   useEffect(() => { document.title = `${t('Pricing')} — Fluxo`; }, []);
   const go = (plan) => plan === 'free' ? nav(`/welcome?plan=free${ref ? `&ref=${encodeURIComponent(ref)}` : ''}`) : run(async () => { const r = await api.post('/public/checkout', { plan, payroll, interval, email: email || undefined, ref: ref || undefined }); window.location.href = r.url; });
   return (
-    <ToastProvider><Shell>
+    <ToastProvider><PublicPlanProvider data={data}><Shell>
       <div className="mx-auto max-w-2xl py-8 text-center">
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">{t('Choose your plan')}</h1>
         <p className="mt-2 text-slate-600">{t('Start free, or pick a paid plan with unlimited users. Change or cancel any time.')}</p>
@@ -64,16 +76,16 @@ export function Pricing() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {data.order.map((p) => (
               <Card key={p} className={chosen === p ? 'ring-2 ring-brand-500' : ''}>
-                <h2 className="text-lg font-semibold">{PLAN_INFO[p].name}</h2><p className="text-sm text-slate-500">{PLAN_INFO[p].blurb}</p>
+                <h2 className="text-lg font-semibold" data-plan-card={p}>{PLAN_INFO[p].name}<PlanBadge plan={p} /></h2><p className="text-sm text-slate-500">{PLAN_INFO[p].blurb}</p>
                 <PlanPrice plan={p} prices={data.prices} yearlyPrices={data.yearlyPrices} interval={interval} />
-                <ul className="mb-5 space-y-1.5 text-sm">{PLAN_INFO[p].features.map((f) => <li key={f}>✓ {f}</li>)}{p === 'enterprise' && <li>✓ {interval === 'year' && data.enterpriseExtraYearly ? t('{0} companies in a group included, then ${1}/year for each extra company', [data.enterpriseIncluded, data.enterpriseExtraYearly]) : t('{0} companies in a group included, then ${1}/month for each extra company', [data.enterpriseIncluded, data.enterpriseExtra])}</li>}</ul>
+                <ul className="mb-5 space-y-1.5 text-sm">{PLAN_INFO[p].features.map((x) => <li key={x}>✓ {x}{BULLET_GATE[x] && data.gates?.[BULLET_GATE[x]]?.minPlan === p && <PlanBadge plan={p} />}</li>)}{p === 'enterprise' && <li>✓ {interval === 'year' && data.enterpriseExtraYearly ? t('{0} companies in a group included, then ${1}/year for each extra company', [data.enterpriseIncluded, data.enterpriseExtraYearly]) : t('{0} companies in a group included, then ${1}/month for each extra company', [data.enterpriseIncluded, data.enterpriseExtra])}</li>}</ul>
                 <Button className="w-full" disabled={busy || !data.needsSetup || (p !== 'free' && !data.configured)} onClick={() => { setChosen(p); go(p); }}>{busy && chosen === p ? t('Please wait…') : p === 'free' ? t('Start free') : t('Choose {0}', [PLAN_INFO[p].name])}</Button>
               </Card>
             ))}
           </div>
           <p className="mt-6 text-center text-xs text-slate-400">{t('Secure payment by Stripe. You will create your account right after paying.')}</p>
         </>)}
-    </Shell></ToastProvider>
+    </Shell></PublicPlanProvider></ToastProvider>
   );
 }
 

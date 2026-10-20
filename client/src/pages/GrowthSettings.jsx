@@ -5,7 +5,7 @@ import { api } from '../api.js';
 import { date, money, toCents, fromCents } from '../format.js';
 import { Button, Card, ErrorBox, Field, Input, Loading, Select, Table, useAction, useLoad, useToast } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
-import { Gate } from '../components/plan.jsx';
+import { Gate, LockedHint, NextPlanChip } from '../components/plan.jsx';
 
 const SecretBox = ({ label, value }) => {
   const [copied, setCopied] = useState(false);
@@ -265,7 +265,7 @@ export function GroupTab() {
             <div>
               <Field label={t('New group name')}><Input value={name} onChange={(e) => setName(e.target.value)} /></Field>
               <Button className="mt-2" disabled={busy || !name.trim() || !has('multi_company')} onClick={() => run(async () => { await api.post('/group', { name }); reload(); })}>{t('Create group')}</Button>
-              {!has('multi_company') && <p className="mt-2 text-xs text-amber-700">{t('Creating a group needs the Business plan.')}</p>}
+              <LockedHint gate="multi_company" className="mt-2" />
             </div>
             <div>
               <Field label={t('Have an invitation code?')}><Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="XXXX-XXXX-XXXX" /></Field>
@@ -275,7 +275,7 @@ export function GroupTab() {
         ) : (
           <>
             <h3 className="font-semibold">{g.name}</h3>
-            <p className="mb-2 text-xs text-slate-500">{g.limit != null ? t('Up to {0} companies on this plan.', [g.limit]) : t('No limit on the number of companies.')}</p>
+            <p className="mb-2 text-xs text-slate-500">{g.limit != null ? t('Up to {0} companies on this plan.', [g.limit]) : t('No limit on the number of companies.')}{g.limit != null && <NextPlanChip limit="group_companies" />}</p>
             {g.billing && <p className="mb-2 text-xs text-slate-500" data-testid="group-billing">{g.billing.extra > 0 ? t('Enterprise: {0} companies included + {1} extra at ${2} = ${3}/month (plus the base price).', [g.billing.included, g.billing.extra, g.billing.perCompany, g.billing.extra * g.billing.perCompany]) : t('Enterprise: {0} companies included, no extra charge yet.', [g.billing.included])}</p>}
             <ul className="mb-3 space-y-1 text-sm">{g.members.map((m) => <li key={m.slug}>• {m.name}{m.owner ? ` (${t('owner')})` : ''}</li>)}</ul>
             {invite && <SecretBox label={t('Give this code to the owner of the other company. It works once, for 7 days:')} value={invite} />}
@@ -293,7 +293,7 @@ export function GroupTab() {
 export function AuditExport() {
   const { has } = useAuth();
   const [run, busy] = useAction();
-  if (!has('audit_export')) return <p className="mb-3 text-xs text-slate-400">{t('Exporting the audit log to CSV is part of the Business plan.')}</p>;
+  if (!has('audit_export')) return <LockedHint gate="audit_export" className="mb-3 max-w-md" />;
   return <div className="mb-3"><Button variant="ghost" disabled={busy} onClick={() => run(async () => {
     const r = await fetch('/api/audit/export.csv', { headers: { Authorization: `Bearer ${localStorage.getItem('fluxo_token')}` } });
     if (!r.ok) throw new Error(t('Could not export'));

@@ -8,7 +8,7 @@ import { date, fromCents, money, number, toCents, today } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, useAction, useLoad, useToast } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
 import { AiCollectionButton } from '../components/AiAssist.jsx';
-import { Lock, PLAN_LABEL } from '../components/plan.jsx';
+import PlanBadge, { usePlanGate } from '../PlanBadge.jsx';
 
 const NAMES = { invoice: t('Invoice'), estimate: t('Estimate'), bill: t('Bill'), credit: t('Credit memo'), po: t('Purchase order') };
 
@@ -28,19 +28,6 @@ function ApplyCreditModal({ credit, onClose, onDone }) {
           <Field label={t('Amount')} hint={`${t('Credit balance:')} ${money(credit.balance)}`}><Input inputMode="decimal" value={amount} onChange={(e) => setF({ ...f, amount: e.target.value })} /></Field>
           <Field label={t('Date')}><Input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></Field>
         </div>)}
-    </Modal>
-  );
-}
-
-/** Plano sem envio de e-mail: explica com calma qual plano libera e o que dá para fazer enquanto isso. */
-function EmailLockedModal({ onClose, link }) {
-  const { planInfo } = useAuth();
-  const toast = useToast();
-  return (
-    <Modal title={t('Email the invoice from Fluxo')} onClose={onClose} footer={<><Button variant="ghost" onClick={onClose}>{t('Close')}</Button><Link to="/settings/plan" className="btn btn-primary">{t('See plans')}</Link></>}>
-      <p className="text-sm text-slate-700" data-testid="email-locked">{t('Sending invoices by email from Fluxo, with the PDF attached, is part of the Essentials plan. You are on {0}.', [PLAN_LABEL[planInfo.plan]])}</p>
-      <p className="mt-3 text-sm text-slate-500">{t('Until then you can copy the link and send it yourself, or open it in your own email app.')}</p>
-      <Button className="mt-3" variant="ghost" onClick={async () => { try { await navigator.clipboard.writeText(link); toast(t('Link copied')); } catch { prompt(t('Copy the link:'), link); } }}>{t('Copy link')}</Button>
     </Modal>
   );
 }
@@ -145,6 +132,7 @@ export default function DocView() {
   const nav = useNavigate();
   const toast = useToast();
   const { can, settings, user, has } = useAuth();
+  const emailGate = usePlanGate('email_invoices');
   const { data: d, loading, error, reload } = useLoad(() => api.get(`/doc/${id}`), [id]);
   const [run, busy] = useAction();
   const [paying, setPaying] = useState(false);
@@ -172,7 +160,7 @@ export default function DocView() {
         {!purchase && <Button variant="ghost" onClick={async () => { try { await navigator.clipboard.writeText(link); toast(t('Link copied')); } catch { prompt(t('Copy the link:'), link); } }}>{t('Copy link')}</Button>}
         {!purchase && d.contact_email && <a className="btn btn-ghost" href={`mailto:${d.contact_email}?subject=${encodeURIComponent(`${NAMES[d.type]} ${d.number}`)}&body=${encodeURIComponent(t('Hi! Here is the link to view the document: {0}', [link]))}`}>{t('Send by email')}</a>}
         {d.type === 'invoice' && d.overdue && w && <AiCollectionButton docId={d.id} email={d.contact_email} tenant={user.tenant} />}
-        {!purchase && posted && w && <Button variant="ghost" data-testid="email-to-customer" onClick={() => setEmailing(true)}>{t('Email to customer')}{!has('email_invoices') && <Lock />}</Button>}
+        {!purchase && posted && w && <Button variant="ghost" data-testid="email-to-customer" data-plan-locked={emailGate.locked ? emailGate.minPlan : undefined} onClick={() => (emailGate.locked ? emailGate.open() : setEmailing(true))}>{t('Email to customer')}<PlanBadge gate="email_invoices" /></Button>}
         {d.type === 'bill' && needsApproval && <span className="rounded bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-800" data-testid="needs-approval">{t('Needs approval')}</span>}
         {w && d.type === 'bill' && needsApproval && <><Button disabled={busy} onClick={() => act('approve', t('Approved'))}>{t('Approve')}</Button><Button variant="ghost" disabled={busy} onClick={() => act('reject', t('Rejected'))}>{t('Reject')}</Button></>}
         {w && !['void', 'invoiced', 'billed'].includes(d.status) && <Link className="btn btn-ghost" to={`/document/${d.type}/${d.id}/edit`}>{t('Edit')}</Link>}
@@ -241,7 +229,7 @@ export default function DocView() {
       )}
       {applying && <ApplyCreditModal credit={d} onClose={() => setApplying(false)} onDone={() => { setApplying(false); reload(); }} />}
       {refunding && <RefundModal credit={d} onClose={() => setRefunding(false)} onDone={() => { setRefunding(false); reload(); }} />}
-      {emailing && (has('email_invoices') ? <EmailModal doc={d} link={link} onClose={() => setEmailing(false)} onDone={() => { setEmailing(false); setSentTick((n) => n + 1); reload(); }} /> : <EmailLockedModal link={link} onClose={() => setEmailing(false)} />)}
+      {emailing && has('email_invoices') && <EmailModal doc={d} link={link} onClose={() => setEmailing(false)} onDone={() => { setEmailing(false); setSentTick((n) => n + 1); reload(); }} />}
       {paying && <PaymentModal doc={d} onClose={() => setPaying(false)} onDone={() => { setPaying(false); reload(); }} />}
     </>
   );

@@ -37,6 +37,13 @@ export const LIMITS = {
 };
 /** Limite do plano atual; null = sem limite. */
 export const limitFor = (name) => LIMITS[name][currentPlan()] ?? null;
+/** Menor plano ACIMA do atual que tem um limite maior (ou sem limite) para `name`; null se o atual já é o maior. Alimenta o selo "Starter" ao lado de "limite atingido". */
+export function nextPlanWithMore(name) {
+  const cur = currentPlan(), here = LIMITS[name][cur] ?? null;
+  if (here === null) return null;
+  for (const p of PLAN_ORDER.slice(PLAN_ORDER.indexOf(cur) + 1)) { const v = LIMITS[name][p] ?? null; if (v === null || v > here) return p; }
+  return null;
+}
 
 /** Plano em vigor. Na requisição do DONO da plataforma em modo "ver como plano" (X-Preview-Plan), é o plano visto — só durante a requisição, nada é gravado. */
 export const currentPlan = () => {
@@ -44,6 +51,8 @@ export const currentPlan = () => {
   if (view && PLAN_ORDER.includes(view)) return view;
   const p = getSetting('plan', 'advanced'); return PLAN_ORDER.includes(p) ? p : 'advanced';
 };
+/** Plano de VERDADE da empresa (nunca o da prévia do dono). */
+export const realPlan = () => { const p = getSetting('plan', 'advanced'); return PLAN_ORDER.includes(p) ? p : 'advanced'; };
 /** Plano de uma empresa específica (usado pela consolidação do grupo, que lê várias empresas). */
 export const planRank = (name) => PLAN_ORDER.indexOf(name);
 export const hasAddon = (a) => (previewPlanNow() ? false : getSetting(`addon_${a}`, '0') === '1'); // na prévia o cliente do plano visto não tem complemento

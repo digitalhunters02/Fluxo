@@ -6,7 +6,8 @@ import { addDays, date, money, number, today } from '../format.js';
 import { download } from '../csv.js';
 import { Button, Card, ErrorBox, Field, Input, Loading, PageHeader, Select, Table, useLoad } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
-import { Lock, UpgradeNotice } from '../components/plan.jsx';
+import { UpgradeNotice } from '../components/plan.jsx';
+import PlanBadge, { usePlan } from '../PlanBadge.jsx';
 import { AiExplain } from '../components/AiAssist.jsx';
 
 const year = today().slice(0, 4);
@@ -154,6 +155,8 @@ export default function Reports() {
   const { report = 'pnl' } = useParams();
   const { has, user } = useAuth();
   const nav = useNavigate();
+  const plan = usePlan();
+  const lockedReport = (k) => !!(FEATURE_OF[k] && !has(FEATURE_OF[k]));
   const cfg = REPORTS[report];
   const groups = GROUPS.map(([g, keys]) => [g, keys.filter((k) => !k.startsWith('group-') || user.tenant)]).filter(([, keys]) => keys.length); // consolidação só no modo hospedado
   const [[from, to], setRange] = useState(PRESETS.year[1]());
@@ -169,9 +172,9 @@ export default function Reports() {
         <Button variant="ghost" disabled={!data || locked} onClick={() => download(`${report}.csv`, cfg.csv(data))}>{t('Export CSV')}</Button><Button variant="ghost" onClick={() => window.print()}>{t('Print / PDF')}</Button>
       </PageHeader>
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[14rem_minmax(0,1fr)]">
-        <Select className="field no-print lg:hidden" aria-label={t('Report')} value={report} onChange={(e) => nav(`/reports/${e.target.value}`)}>{groups.map(([g, keys]) => <optgroup key={g} label={g}>{keys.map((k) => <option key={k} value={k}>{REPORTS[k].title}</option>)}</optgroup>)}</Select>
+        <Select className="field no-print lg:hidden" aria-label={t('Report')} value={report} onChange={(e) => (lockedReport(e.target.value) && plan.enabled ? plan.openGate(FEATURE_OF[e.target.value]) : nav(`/reports/${e.target.value}`))}>{groups.map(([g, keys]) => <optgroup key={g} label={g}>{keys.map((k) => <option key={k} value={k}>{REPORTS[k].title}{lockedReport(k) && plan.gates[FEATURE_OF[k]] ? ` · ${plan.planName(plan.gates[FEATURE_OF[k]].minPlan)}` : ''}</option>)}</optgroup>)}</Select>
         <nav className="no-print hidden space-y-4 lg:block">{groups.map(([g, keys]) => <div key={g}><div className="mb-1 px-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{g}</div>
-          {keys.map((k) => <NavLink key={k} to={`/reports/${k}`} className={({ isActive }) => `block rounded-lg px-2 py-1.5 text-sm ${isActive ? 'bg-brand-50 font-medium text-brand-700' : 'text-slate-600 hover:bg-slate-100'}`}>{REPORTS[k].title}{FEATURE_OF[k] && !has(FEATURE_OF[k]) && <Lock />}</NavLink>)}</div>)}</nav>
+          {keys.map((k) => <NavLink key={k} to={`/reports/${k}`} data-plan-locked={lockedReport(k) ? plan.gates[FEATURE_OF[k]]?.minPlan : undefined} onClick={lockedReport(k) && plan.enabled ? (e) => { e.preventDefault(); plan.openGate(FEATURE_OF[k]); } : undefined} className={({ isActive }) => `block rounded-lg px-2 py-2 text-sm ${isActive ? 'bg-brand-50 font-medium text-brand-700' : 'text-slate-600 hover:bg-slate-100'}`}>{REPORTS[k].title}{FEATURE_OF[k] && <PlanBadge gate={FEATURE_OF[k]} />}</NavLink>)}</div>)}</nav>
         <Card title={title} pad={false}>
           {(cfg.range || cfg.asof) && <div className="no-print flex flex-wrap items-end gap-3 border-b border-slate-100 p-3">
             {cfg.range ? <><Field label={t('Period')}><Select value="" onChange={(e) => e.target.value && setRange(PRESETS[e.target.value][1]())}><option value="">{t('Shortcuts…')}</option>{Object.entries(PRESETS).map(([k, [l]]) => <option key={k} value={k}>{l}</option>)}</Select></Field>

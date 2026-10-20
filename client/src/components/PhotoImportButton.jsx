@@ -5,6 +5,7 @@ import PhotoImportModal from './PhotoImportModal.jsx';
 import { photoT } from './photoImportStrings.js';
 import { api, getToken } from '../api.js';
 import { lang } from '../i18n.jsx';
+import PlanBadge, { usePlanGate } from '../PlanBadge.jsx';
 
 const CLS = {
   btnPrimary: 'inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50',
@@ -28,13 +29,14 @@ const photoApi = {
 
 export default function PhotoImportButton({ kind, title, fields, validate, toPayload, onSave, onImported }) {
   const [open, setOpen] = useState(false);
+  const gate = usePlanGate('photo_import'); // plano sem leitura por foto: o botão ganha o selo e abre a janelinha do plano
   const tt = useMemo(() => {
     const base = photoT(lang);
     return title ? (k, v) => (k === `photo.title.${kind}` ? title : base(k, v)) : base;
   }, [title, kind]);
   return (
     <>
-      <Button variant="ghost" onClick={() => setOpen(true)} data-testid="photo-import-open">📷 {photoT(lang)('photo.button')}</Button>
+      <Button variant="ghost" onClick={() => (gate.locked ? gate.open() : setOpen(true))} data-testid="photo-import-open" data-plan-locked={gate.locked ? gate.minPlan : undefined}>📷 {photoT(lang)('photo.button')}{gate.locked && <PlanBadge gate="photo_import" inherit />}</Button>
       {open && (
         <PhotoImportModal
           Modal={Modal} t={tt} lang={lang} api={photoApi} kind={kind} fields={fields} validate={validate} toPayload={toPayload}

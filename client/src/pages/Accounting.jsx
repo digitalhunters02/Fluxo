@@ -5,7 +5,7 @@ import { addDays, date, money, toCents, today } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad } from '../components/ui.jsx';
 import { SearchBox, useSearch } from '../components/search.jsx';
 import { useAuth } from '../App.jsx';
-import { Gate, Lock } from '../components/plan.jsx';
+import { Gate } from '../components/plan.jsx';
 import { fromCents } from '../format.js';
 
 const TYPES = { asset: t('Asset'), liability: t('Liability'), equity: t('Equity'), income: t('Income§type'), expense: t('Expense') };
@@ -220,7 +220,7 @@ export default function Accounting() {
   return (
     <>
       <PageHeader title={t('Accounting')} subtitle={t('Chart of accounts and double-entry journal. Everything you do in the other screens creates entries here automatically.')} />
-      <Tabs tabs={[['chart', t('Chart of accounts')], ['journal', t('General journal')], ['budgets', <>{t('Budgets')}{!has('budgets') && <Lock />}</>], ['classes', <>{t('Classes')}{!has('classes') && <Lock />}</>]]} value={tab} onChange={setTab} />
+      <Tabs tabs={[['chart', t('Chart of accounts')], ['journal', t('General journal')], ['budgets', t('Budgets'), 'budgets'], ['classes', t('Classes'), 'classes']]} value={tab} onChange={setTab} />
       {tab === 'chart' && <Chart />}{tab === 'journal' && <Journal />}
       {tab === 'budgets' && <Gate feature="budgets"><Budgets /></Gate>}{tab === 'classes' && <Gate feature="classes"><Classes /></Gate>}
     </>

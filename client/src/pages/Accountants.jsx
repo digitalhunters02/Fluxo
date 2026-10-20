@@ -4,6 +4,7 @@ import { t, lang, LANGS, setLang } from '../i18n.jsx';
 import { api, setToken } from '../api.js';
 import { date } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Table, useAction, useLoad } from '../components/ui.jsx';
+import { NextPlanChip } from '../components/plan.jsx';
 
 const STATUS = () => ({ pending: ['draft', t('Waiting for them to accept')], active: ['paid', t('Has access')], expired: ['void', t('Invitation expired')], ended: ['void', t('Access ended')] });
 
@@ -33,7 +34,7 @@ export function AccountantsTab() {
           <Field label={t('Accountant email')}><Input type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
           <Button disabled={busy || !f.email}>{busy ? t('Please wait…') : t('Send invitation')}</Button>
         </form>
-        <p className="mt-2 text-xs text-slate-500">{limit === null ? t('Your plan has no limit on accountants.') : t('Accountants on your plan: {0} of {1} used.', [used, limit])}{full && ` ${t('Upgrade to invite more.')}`}</p>
+        <p className="mt-2 text-xs text-slate-500">{limit === null ? t('Your plan has no limit on accountants.') : t('Accountants on your plan: {0} of {1} used.', [used, limit])}{full && <NextPlanChip limit="accountants" />}</p>
         {!data.mailReady && <p className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800">{t('Email is not set up on this server, so you will get a link to send to your accountant yourself.')}</p>}
         {last && (
           <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900" role="status">

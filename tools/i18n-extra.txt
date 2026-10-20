@@ -1364,3 +1364,5 @@ Too many emails sent in the last hour. Please wait a little and try again. || Mu
 Legal || Legal || Legal
 Back to Fluxo || Voltar ao Fluxo || Volver a Fluxo
 By creating an account you accept our legal terms: || Ao criar a conta você aceita os nossos termos legais: || Al crear la cuenta usted acepta nuestros términos legales:
+Your plan includes {0} user. || Seu plano inclui {0} usuário. || Su plan incluye {0} usuario.
+You are viewing another plan. Go back to your own plan to change the subscription, billing or plan. || Você está vendo outro plano. Volte ao seu plano para mudar a assinatura, a cobrança ou o plano. || Está viendo otro plan. Vuelva a su propio plan para cambiar la suscripción, el cobro o el plan.

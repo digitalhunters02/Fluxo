@@ -2,6 +2,7 @@ import { t } from '../i18n.jsx';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { money, STATUS } from '../format.js';
+import PlanBadge, { usePlanGate } from '../PlanBadge.jsx';
 
 /* ---------- carregamento de dados ---------- */
 export function useLoad(fn, deps = []) {
@@ -162,10 +163,17 @@ export function Modal({ title, onClose, children, wide = false, footer }) {
 export function useConfirm() {
   return (msg) => window.confirm(msg);
 }
+/** Abas. Uma aba pode ter um 3º item: o recurso do plano (ex.: ['budgets', 'Budgets', 'budgets']); se o plano atual não libera,
+ *  a aba ganha o selo do plano e, ao tocar, abre a janelinha "Disponível no plano X" em vez de trocar de aba. */
+function TabButton({ id, label, gate, active, onChange }) {
+  const g = usePlanGate(gate);
+  return (
+    <button onClick={() => (g.locked ? g.open() : onChange(id))} data-tab={id} data-plan-locked={g.locked ? g.minPlan : undefined} aria-haspopup={g.locked ? 'dialog' : undefined}
+      className={`-mb-px inline-flex min-h-[40px] items-center border-b-2 px-3 py-2 text-sm font-medium ${active ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>{label}{gate && <PlanBadge gate={gate} />}</button>
+  );
+}
 export const Tabs = ({ tabs, value, onChange }) => (
   <div className="no-print mb-4 flex gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain whitespace-nowrap border-b border-slate-200 pb-px" style={{ touchAction: 'pan-x pan-y' }}>
-    {tabs.map(([k, label]) => (
-      <button key={k} onClick={() => onChange(k)} className={`-mb-px border-b-2 px-3 py-2 text-sm font-medium ${value === k ? 'border-brand-600 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>{label}</button>
-    ))}
+    {tabs.map(([k, label, gate]) => <TabButton key={k} id={k} label={label} gate={gate} active={value === k} onChange={onChange} />)}
   </div>
 );

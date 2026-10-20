@@ -1887,5 +1887,7 @@ export default {
  "Too many emails sent in the last hour. Please wait a little and try again.": "Muitos e-mails enviados na última hora. Espere um pouco e tente de novo.",
  "Legal": "Legal",
  "Back to Fluxo": "Voltar ao Fluxo",
- "By creating an account you accept our legal terms:": "Ao criar a conta você aceita os nossos termos legais:"
+ "By creating an account you accept our legal terms:": "Ao criar a conta você aceita os nossos termos legais:",
+ "Your plan includes {0} user.": "Seu plano inclui {0} usuário.",
+ "You are viewing another plan. Go back to your own plan to change the subscription, billing or plan.": "Você está vendo outro plano. Volte ao seu plano para mudar a assinatura, a cobrança ou o plano."
 };

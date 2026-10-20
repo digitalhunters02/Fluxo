@@ -1,4 +1,4 @@
-import { t } from '../i18n.jsx';
+import { t, lang } from '../i18n.jsx';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, getToken, downloadFile } from '../api.js';
@@ -6,7 +6,9 @@ import { date } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad, useToast } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
 import { SearchBox, useSearch } from '../components/search.jsx';
-import { Gate, IntervalToggle, Lock, PLAN_LABEL, PlanPrice } from '../components/plan.jsx';
+import { Gate, IntervalToggle, LockedHint, PLAN_LABEL, PlanPrice } from '../components/plan.jsx';
+import PlanBadge, { usePlanGate } from '../PlanBadge.jsx';
+import { planStr, planFill, gateText } from '../planStrings.js';
 import { IntegrationsTab, PaymentsTab, ApprovalsTab, SsoTab, ImportTab, GroupTab, AuditExport } from './GrowthSettings.jsx';
 import { TwoFactorCard, SecurityTab } from './SecurityUI.jsx';
 import SalesTaxSettings from './SalesTaxSettings.jsx';
@@ -50,7 +52,7 @@ function Company({ reload }) {
             if (file.size > 300_000) { alert(t('Logo must be a PNG, JPEG or WebP under 300 KB')); e.target.value = ''; return; }
             const r = new FileReader(); r.onload = () => setF({ ...v, company_logo: r.result }); r.readAsDataURL(file);
           }} />}
-          {brandLocked && <span className="text-xs text-amber-700">{t('Logo and brand color are available from the Starter plan.')}</span>}
+          {brandLocked && <LockedHint gate="branding" className="max-w-sm" />}
           {!ro && !brandLocked && v.company_logo && <button className="text-xs text-rose-600 hover:underline" onClick={() => setF({ ...v, company_logo: '' })}>{t('Remove')}</button>}
         </div>
       </Field>
@@ -86,6 +88,7 @@ function AccessModal({ initial, onClose, onSave, busy }) {
 
 function Users() {
   const { planInfo, has } = useAuth();
+  const userGate = usePlanGate('user_access'); // plano com 1 usuário: o botão ganha o selo e abre a janelinha
   const [q, setQ, search] = useSearch();
   const [access, setAccess] = useState(null); // { user } ao editar um usuário; {} no formulário de novo usuário
   const { data, loading, error, reload } = useLoad(() => api.get('/users'));
@@ -95,11 +98,11 @@ function Users() {
   if (loading) return <Loading />; if (error) return <ErrorBox error={error} />;
   return (
     <>
-      <div className="mb-3 flex items-center justify-between"><p className="text-sm text-slate-500">{planInfo.limits.users ? t('Your plan includes {0} user. Upgrade to add more.', [planInfo.limits.users]) : t('No user limit. Each role has different permissions.')}</p><Button onClick={() => setAdding(true)}>{t('+ Invite user')}</Button></div>
+      <div className="mb-3 flex items-center justify-between"><p className="text-sm text-slate-500">{planInfo.limits.users ? t('Your plan includes {0} user.', [planInfo.limits.users]) : t('No user limit. Each role has different permissions.')}</p><Button data-testid="invite-user" data-plan-locked={userGate.locked ? userGate.minPlan : undefined} onClick={() => (userGate.locked ? userGate.open() : setAdding(true))}>{t('+ Invite user')}{userGate.locked && <PlanBadge gate="user_access" inherit />}</Button></div>
       {data.users.length > 4 && <SearchBox className="mb-3 max-w-sm" value={q} onChange={setQ} placeholder={t('Search users…')} />}
       <Card pad={false}><Table head={[t('Name'), t('Email'), t('Role'), t('Status'), '']}>
         {search(data.users).map((u) => <tr key={u.id}><td className="td font-medium">{u.name}</td><td className="td">{u.email}</td>
-          <td className="td"><Select value={u.custom_perms ? 'perms' : u.custom_role_id ? `custom:${u.custom_role_id}` : u.role} onChange={(e) => { const v = e.target.value; if (v === 'perms') { setAccess({ user: u }); return; } run(async () => { await api.put(`/users/${u.id}`, v.startsWith('custom:') ? { custom_role_id: Number(v.slice(7)) } : { role: v, custom_role_id: null }); reload(); }, t('Role updated')); }} aria-label={t('Role')}>{Object.entries(data.roles).map(([k, l]) => <option key={k} value={k}>{t(l)}</option>)}{data.customRoles.map((r) => <option key={r.id} value={`custom:${r.id}`}>{r.name}</option>)}<option value="perms">{t('Custom access (choose tabs)')}{!has('user_access') ? ' 🔒' : ''}</option></Select>{u.custom_perms && <button className="ml-2 text-xs text-brand-700 hover:underline" onClick={() => setAccess({ user: u })}>{t('Edit access')}</button>}</td>
+          <td className="td"><Select value={u.custom_perms ? 'perms' : u.custom_role_id ? `custom:${u.custom_role_id}` : u.role} onChange={(e) => { const v = e.target.value; if (v === 'perms') { if (userGate.locked) userGate.open(); else setAccess({ user: u }); return; } run(async () => { await api.put(`/users/${u.id}`, v.startsWith('custom:') ? { custom_role_id: Number(v.slice(7)) } : { role: v, custom_role_id: null }); reload(); }, t('Role updated')); }} aria-label={t('Role')}>{Object.entries(data.roles).map(([k, l]) => <option key={k} value={k}>{t(l)}</option>)}{data.customRoles.map((r) => <option key={r.id} value={`custom:${r.id}`}>{r.name}</option>)}<option value="perms">{t('Custom access (choose tabs)')}{userGate.locked ? ` · ${userGate.minName}` : ''}</option></Select>{u.custom_perms && <button className="ml-2 text-xs text-brand-700 hover:underline" onClick={() => setAccess({ user: u })}>{t('Edit access')}</button>}</td>
           <td className="td">{u.active ? <Badge status="paid">{t('Active')}</Badge> : <Badge status="void">{t('Inactive')}</Badge>}</td>
           <td className="td text-right"><button className="text-xs text-brand-700 hover:underline" onClick={() => run(async () => { await api.put(`/users/${u.id}`, { active: !u.active }); reload(); })}>{u.active ? t('Deactivate') : t('Activate')}</button></td></tr>)}
       </Table></Card>
@@ -107,7 +110,7 @@ function Users() {
       {adding && <Modal title={t('New user')} onClose={() => setAdding(false)} footer={<><Button variant="ghost" onClick={() => setAdding(false)}>{t('Cancel')}</Button><Button disabled={busy} onClick={async () => { const r = await run(() => api.post('/users', f), t('User created')); if (r) { setAdding(false); reload(); } }}>{t('Create')}</Button></>}>
         <div className="grid grid-cols-1 gap-3"><Field label={t('Name')}><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field><Field label={t('Email')}><Input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
           <Field label={t('Initial password')} hint={t('At least 8 characters')}><Input type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} /></Field>
-          <Field label={t('Role')}><Select value={f.perms ? 'perms' : f.custom_role_id ? `custom:${f.custom_role_id}` : f.role} onChange={(e) => { const v = e.target.value; setF(v === 'perms' ? { ...f, perms: f.perms || { read: ['sales'], write: [] }, custom_role_id: null } : v.startsWith('custom:') ? { ...f, perms: null, custom_role_id: Number(v.slice(7)) } : { ...f, perms: null, role: v, custom_role_id: null }); }}>{Object.entries(data.roles).map(([k, l]) => <option key={k} value={k}>{t(l)}</option>)}{data.customRoles.map((r) => <option key={r.id} value={`custom:${r.id}`}>{r.name}</option>)}<option value="perms">{t('Custom access (choose tabs)')}{!has('user_access') ? ' 🔒' : ''}</option></Select></Field>
+          <Field label={t('Role')}><Select value={f.perms ? 'perms' : f.custom_role_id ? `custom:${f.custom_role_id}` : f.role} onChange={(e) => { const v = e.target.value; if (v === 'perms' && userGate.locked) { userGate.open(); return; } setF(v === 'perms' ? { ...f, perms: f.perms || { read: ['sales'], write: [] }, custom_role_id: null } : v.startsWith('custom:') ? { ...f, perms: null, custom_role_id: Number(v.slice(7)) } : { ...f, perms: null, role: v, custom_role_id: null }); }}>{Object.entries(data.roles).map(([k, l]) => <option key={k} value={k}>{t(l)}</option>)}{data.customRoles.map((r) => <option key={r.id} value={`custom:${r.id}`}>{r.name}</option>)}<option value="perms">{t('Custom access (choose tabs)')}{userGate.locked ? ` · ${userGate.minName}` : ''}</option></Select></Field>
           {f.perms && <AccessMatrix value={f.perms} onChange={(perms) => setF({ ...f, perms })} />}</div></Modal>}
       {access?.user && <AccessModal busy={busy} initial={access.user.custom_perms} onClose={() => setAccess(null)} onSave={async (perms) => { const r = await run(() => api.put(`/users/${access.user.id}`, { perms }), t('Access updated')); if (r) { setAccess(null); reload(); } }} />}
     </>
@@ -170,7 +173,7 @@ function LockDate() {
   const [run, busy] = useAction();
   const allowed = has('period_lock');
   return (
-    <Card title={<>{t('Close the books')}{!allowed && <Lock />}</>} className="mt-4">
+    <Card title={<>{t('Close the books')}<PlanBadge gate="period_lock" /></>} className="mt-4">
       <p className="mb-3 max-w-2xl text-sm text-slate-500">{t('Nothing can be posted, edited or deleted on or before this date. Use it after your accountant finishes a period.')}</p>
       {allowed ? (
         <div className="flex flex-wrap items-end gap-3">
@@ -178,7 +181,7 @@ function LockDate() {
           {can('accounting', true) && <><Button disabled={busy} onClick={() => run(async () => { await api.put('/lock-date', { date: d }); await refresh(); }, t('Closing date saved'))}>{t('Save')}</Button>
             {planInfo.lockDate && <Button variant="ghost" disabled={busy} onClick={() => run(async () => { await api.put('/lock-date', { date: '' }); setD(''); await refresh(); }, t('Books reopened'))}>{t('Reopen all periods')}</Button>}</>}
         </div>
-      ) : <p className="text-sm text-amber-700">{t('Available from the Plus plan.')}</p>}
+      ) : <LockedHint gate="period_lock" />}
     </Card>
   );
 }
@@ -214,27 +217,23 @@ function AutomationsTab() {
   );
 }
 
-const PLAN_FEATURES = [
-  ['5 invoices per month & unlimited estimates', 'free'], ['Import from QuickBooks & Xero', 'free'], ['Sales tax by state', 'free'], ['Download all your data', 'free'], ['Send by link, email button or PDF', 'free'], ['Expenses, receipts & sales receipts', 'free'], ['Bank CSV import & reconciliation', 'free'], ['Core financial reports', 'free'],
-  ['Unlimited invoices', 'starter'], ['Credit memos', 'starter'], ['Logo & brand color on invoices', 'starter'], ['Unlimited users', 'starter'], ['Invite your accountant (read-only)', 'starter'], ['AI assistant (categorize, collect, explain)', 'essentials'], ['Up to 3 accountants', 'plus'], ['Unlimited accountants', 'advanced'],
-  ['Bills & vendor payments', 'essentials'], ['Automatic bank connection (Plaid)', 'essentials'], ['Recurring invoices', 'essentials'], ['Time tracking', 'essentials'], ['Full report set & audit log', 'essentials'],
-  ['Inventory (average cost)', 'plus'], ['Project profitability', 'plus'], ['Purchase orders', 'plus'], ['Budgets & budget vs actual', 'plus'], ['Classes & P&L by class', 'plus'], ['1099 contractor report', 'plus'], ['Close the books (period lock)', 'plus'],
-  ['Email invoices from Fluxo', 'essentials'], ['Cash forecast', 'plus'],
-  ['Custom roles & permissions', 'advanced'], ['Batch invoicing', 'advanced'], ['API keys & webhooks', 'advanced'], ['Online payments (card and bank) with Stripe', 'advanced'],
-  ['Bill approvals & separation of duties', 'business'], ['Fixed assets & depreciation', 'business'], ['Group of companies & consolidated reports', 'business'], ['Month-end close checklist', 'business'], ['Audit log export', 'business'],
-  ['Single sign-on (SSO)', 'enterprise'],
-];
-const FEATURE_LABEL = {
-  '5 invoices per month & unlimited estimates': t('5 invoices per month & unlimited estimates'), 'Send by link, email button or PDF': t('Send by link, email button or PDF'), 'Unlimited invoices': t('Unlimited invoices'), 'Credit memos': t('Credit memos'), 'Unlimited users': t('Unlimited users'), 'Invite your accountant (read-only)': t('Invite your accountant (read-only)'), 'AI assistant (categorize, collect, explain)': t('AI assistant (categorize, collect, explain)'), 'Up to 3 accountants': t('Up to 3 accountants'), 'Unlimited accountants': t('Unlimited accountants'), 'Import from QuickBooks & Xero': t('Import from QuickBooks & Xero'), 'Sales tax by state': t('Sales tax by state'), 'Download all your data': t('Download all your data'),
-  'Invoices, estimates & credit memos': t('Invoices, estimates & credit memos'), 'Expenses, receipts & sales receipts': t('Expenses, receipts & sales receipts'), 'Bank CSV import & reconciliation': t('Bank CSV import & reconciliation'),
-  'Core financial reports': t('Core financial reports'), 'Logo & brand color on invoices': t('Logo & brand color on invoices'), 'Bills & vendor payments': t('Bills & vendor payments'), 'Automatic bank connection (Plaid)': t('Automatic bank connection (Plaid)'), 'Recurring invoices': t('Recurring invoices'),
-  'Time tracking': t('Time tracking'), 'Full report set & audit log': t('Full report set & audit log'), 'Inventory (average cost)': t('Inventory (average cost)'), 'Project profitability': t('Project profitability'),
-  'Purchase orders': t('Purchase orders'), 'Budgets & budget vs actual': t('Budgets & budget vs actual'), 'Classes & P&L by class': t('Classes & P&L by class'), '1099 contractor report': t('1099 contractor report'),
-  'Close the books (period lock)': t('Close the books (period lock)'), 'Custom roles & permissions': t('Custom roles & permissions'), 'Batch invoicing': t('Batch invoicing'),
-  'Email invoices from Fluxo': t('Email invoices from Fluxo'), 'Cash forecast': t('Cash forecast'), 'API keys & webhooks': t('API keys & webhooks'), 'Online payments (card and bank) with Stripe': t('Online payments (card and bank) with Stripe'),
-  'Bill approvals & separation of duties': t('Bill approvals & separation of duties'), 'Fixed assets & depreciation': t('Fixed assets & depreciation'), 'Group of companies & consolidated reports': t('Group of companies & consolidated reports'),
-  'Month-end close checklist': t('Month-end close checklist'), 'Audit log export': t('Audit log export'), 'Single sign-on (SSO)': t('Single sign-on (SSO)'),
-};
+/** Itens do plano Free (o que todo mundo tem; não são recursos com selo). */
+const FREE_FEATURES = [t('5 invoices per month & unlimited estimates'), t('Import from QuickBooks & Xero'), t('Sales tax by state'), t('Download all your data'), t('Send by link, email button or PDF'), t('Expenses, receipts & sales receipts'), t('Bank CSV import & reconciliation'), t('Core financial reports'), t('Invoices, estimates & credit memos')];
+
+/** O que o plano traz: no Free, o básico; nos demais, "Tudo do plano anterior, mais:" com os recursos que ELE acrescenta (vindos do servidor), cada um com o selo do plano onde entra. */
+function PlanFeatureList({ plan, catalog }) {
+  const i = catalog.findIndex((c) => c.key === plan);
+  const prev = i > 0 ? catalog[i - 1] : null;
+  const adds = (catalog[i]?.adds || []).filter((g) => gateText(g, lang));
+  const ps = planStr(lang);
+  if (!prev) return <ul className="space-y-1.5 text-sm">{FREE_FEATURES.map((f) => <li key={f}>✓ {f}</li>)}</ul>;
+  return (
+    <div data-plan-adds={plan}>
+      <div className="mb-1 text-xs text-slate-500">{planFill(ps.everythingIn, { prev: prev.name })}</div>
+      <ul className="space-y-1.5 text-sm">{adds.map((g) => <li key={g} data-add={g} className="flex flex-wrap items-center"><span className="min-w-0">✓ {gateText(g, lang).name}</span><PlanBadge plan={plan} /></li>)}</ul>
+    </div>
+  );
+}
 
 function PlanTab() {
   const { user, planInfo, refresh } = useAuth();
@@ -244,6 +243,8 @@ function PlanTab() {
   const [withPayroll, setWithPayroll] = useState(planInfo.payroll);
   const [interval, setInterval] = useState('month');
   const owner = user.role === 'owner';
+  const previewing = !!(user.owner && user.previewPlan); // o dono está vendo como outro plano: nada de assinar, trocar ou cobrar
+  const catalog = user.catalog || [];
   const bill = planInfo.billing;
   const rank = (p) => planInfo.order.indexOf(p);
   const stripeOn = bill.configured;
@@ -268,45 +269,44 @@ function PlanTab() {
   const statusBadge = { active: ['paid', t('Active')], trialing: ['sent', t('Trial')], past_due: ['declined', t('Payment failed')], canceled: ['void', t('Canceled')] }[bill.status];
   return (
     <>
+      {previewing && <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800" data-testid="plans-preview-note">{planStr(lang).previewBlocked}</p>}
       <p className="mb-4 max-w-2xl text-sm text-slate-500">{t('Your plan decides which features are available. Paid plans include unlimited users with no per-user fee; Free includes one user.')}</p>
       {stripeOn && bill.managed && (
         <Card title={t('Subscription')} className="mb-4">
           <div className="flex flex-wrap items-center gap-3">
             {statusBadge && <Badge status={statusBadge[0]}>{statusBadge[1]}</Badge>}
             {bill.periodEnd && <span className="text-sm text-slate-600">{bill.cancelAtPeriodEnd ? t('Ends on {0}', [date(bill.periodEnd)]) : t('Renews on {0}', [date(bill.periodEnd)])}</span>}
-            {owner && bill.hasCustomer && <Button variant="ghost" disabled={busy} onClick={portal}>{t('Manage billing')}</Button>}
+            {owner && !previewing && bill.hasCustomer && <Button variant="ghost" disabled={busy} onClick={portal}>{t('Manage billing')}</Button>}
           </div>
           {bill.status === 'past_due' && <p className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{t('Your last payment failed. Update your card in Manage billing to keep your plan.')}</p>}
           <p className="mt-3 text-xs text-slate-400">{t('Upgrades and downgrades are prorated. Update your card, download invoices or cancel in Manage billing.')}</p>
         </Card>
       )}
       {showToggle && <div className="mb-3"><IntervalToggle interval={interval} onChange={setInterval} /></div>}
-      {stripeOn && !bill.managed && owner && <label className="mb-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={withPayroll} onChange={(e) => setWithPayroll(e.target.checked)} /> {interval === 'year' && planInfo.payrollYearlyPrice ? t('Include U.S. payroll (${0}/yr + ${1} per employee/yr)', [planInfo.payrollYearlyPrice.base, planInfo.payrollYearlyPrice.perEmployee]) : t('Include U.S. payroll (${0}/mo + ${1} per employee)', [planInfo.payrollPrice.base, planInfo.payrollPrice.perEmployee])}</label>}
+      {stripeOn && !bill.managed && owner && !previewing && <label className="mb-3 flex items-center gap-2 text-sm"><input type="checkbox" checked={withPayroll} onChange={(e) => setWithPayroll(e.target.checked)} /> {interval === 'year' && planInfo.payrollYearlyPrice ? t('Include U.S. payroll (${0}/yr + ${1} per employee/yr)', [planInfo.payrollYearlyPrice.base, planInfo.payrollYearlyPrice.perEmployee]) : t('Include U.S. payroll (${0}/mo + ${1} per employee)', [planInfo.payrollPrice.base, planInfo.payrollPrice.perEmployee])}</label>}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" data-testid="plan-grid">
         {planInfo.order.map((p) => {
           const current = p === planInfo.plan && (!stripeOn || bill.managed || p === 'free');
           const up = rank(p) > rank(planInfo.plan);
           return (
-            <Card key={p} className={current ? 'ring-2 ring-brand-500' : ''}>
-              <div className="flex items-baseline justify-between"><h3 className="text-lg font-semibold">{PLAN_LABEL[p]}</h3>{current && <Badge status="paid">{t('Current plan')}</Badge>}</div>
+            <div key={p} data-plan-card={p} className="min-w-0"><Card className={`h-full ${current ? 'ring-2 ring-brand-500' : ''}`}>
+              <div className="flex items-baseline justify-between"><h3 className="text-lg font-semibold">{PLAN_LABEL[p]}<PlanBadge plan={p} /></h3>{current && <Badge status="paid">{t('Current plan')}</Badge>}</div>
               <PlanPrice plan={p} prices={planInfo.prices} yearlyPrices={planInfo.yearlyPrices} interval={shownInterval} />
-              <ul className="space-y-1.5 text-sm">
-                {PLAN_FEATURES.map(([f, min]) => <li key={f} className={rank(p) >= rank(min) ? '' : 'text-slate-300 line-through'}>{rank(p) >= rank(min) ? '✓' : '·'} {FEATURE_LABEL[f]}</li>)}
-              </ul>
+              <PlanFeatureList plan={p} catalog={catalog} />
               {p === 'enterprise' && <p className="mt-4 text-sm text-slate-600">{shownInterval === 'year' && planInfo.enterpriseExtraYearly ? t('{0} companies in a group included, then ${1}/year for each extra company', [planInfo.enterpriseIncluded, planInfo.enterpriseExtraYearly]) : t('{0} companies in a group included, then ${1}/month for each extra company', [planInfo.enterpriseIncluded, planInfo.enterpriseExtra])}</p>}
-              {owner && !current && (stripeOn
+              {owner && !current && !previewing && (stripeOn
                 ? (bill.managed
                   ? <Button className="mt-4 w-full" variant={up ? 'primary' : 'ghost'} disabled={busy} onClick={() => confirm(p === 'free' ? t('Switch to Free? Your paid plan keeps running until the end of the period you already paid.') : t('Switch to the {0} plan? The difference is prorated on your next invoice.', [PLAN_LABEL[p]])) && change({ plan: p })}>{up ? t('Upgrade') : t('Downgrade')}</Button>
                   : <Button className="mt-4 w-full" disabled={busy} onClick={() => subscribe(p)}>{t('Subscribe')}</Button>)
                 : <Button className="mt-4 w-full" variant={up ? 'primary' : 'ghost'} disabled={busy} onClick={() => confirm(t('Switch to the {0} plan?', [PLAN_LABEL[p]])) && manual({ plan: p })}>{up ? t('Upgrade') : t('Downgrade')}</Button>)}
-            </Card>
+            </Card></div>
           );
         })}
       </div>
-      <Card title={t('Payroll add-on')} className="mt-4">
+      <Card title={<>{t('Payroll add-on')}<PlanBadge plan="payroll" /></>} className="mt-4">
         <p className="text-sm text-slate-600">{shownInterval === 'year' && planInfo.payrollYearlyPrice ? t('U.S. payroll: ${0}/year + ${1} per employee per year. Calculates and records payroll, pay stubs, W-2 and 941 summaries.', [planInfo.payrollYearlyPrice.base, planInfo.payrollYearlyPrice.perEmployee]) : t('U.S. payroll: ${0}/month + ${1} per employee. Calculates and records payroll, pay stubs, W-2 and 941 summaries.', [planInfo.payrollPrice.base, planInfo.payrollPrice.perEmployee])}</p>
         <div className="mt-3 flex items-center gap-3"><Badge status={planInfo.payroll ? 'paid' : 'void'}>{planInfo.payroll ? t('Active') : t('Inactive')}</Badge>
-          {owner && (!stripeOn || bill.managed) && <Button variant="ghost" disabled={busy} onClick={() => (stripeOn ? change({ payroll: !planInfo.payroll }) : manual({ payroll: !planInfo.payroll }))}>{planInfo.payroll ? t('Turn off') : t('Turn on')}</Button>}</div>
+          {owner && !previewing && (!stripeOn || bill.managed) && <Button variant="ghost" disabled={busy} onClick={() => (stripeOn ? change({ payroll: !planInfo.payroll }) : manual({ payroll: !planInfo.payroll }))}>{planInfo.payroll ? t('Turn off') : t('Turn on')}</Button>}</div>
       </Card>
       {!stripeOn && <p className="mt-4 text-xs text-slate-400">{t('Online billing is not connected yet: the owner switches plans here by hand.')}</p>}
     </>
@@ -361,10 +361,10 @@ export default function Settings({ reloadSettings }) {
   const { tab = 'company' } = useParams();
   const nav = useNavigate();
   const owner = user.role === 'owner';
-  const tabs = [['company', t('Company')], ...(owner ? [['users', t('Users')], ['accountants', <>{t('Accountant')}{!has('accountant_access') && <Lock />}</>]] : []), ...(user.role === 'cpa' ? [] : [['plan', t('Plan')]]), ['account', t('My account')], ...(user.role === 'cpa' ? [] : [['automations', t('Automations')]]),
-    ...(owner ? [['roles', <>{t('Roles')}{!has('custom_roles') && <Lock />}</>], ['audit', <>{t('Audit log')}{!has('audit_log') && <Lock />}</>],
-      ['sales-tax', t('Sales tax')], ['import', t('Import')], ['integrations', <>{t('Integrations')}{!has('api') && <Lock />}</>], ['payments', <>{t('Online payments')}{!has('online_payments') && <Lock />}</>],
-      ['approvals', <>{t('Approvals')}{!has('approvals') && <Lock />}</>], ['security', t('Security')], ...(user.tenant ? [['group', <>{t('Group')}{!has('multi_company') && <Lock />}</>]] : []), ['sso', <>{t('Single sign-on')}{!has('sso') && <Lock />}</>]] : [])];
+  const tabs = [['company', t('Company')], ...(owner ? [['users', t('Users')], ['accountants', t('Accountant'), 'accountant_access']] : []), ...(user.role === 'cpa' ? [] : [['plan', t('Plan')]]), ['account', t('My account')], ...(user.role === 'cpa' ? [] : [['automations', t('Automations')]]),
+    ...(owner ? [['roles', t('Roles'), 'custom_roles'], ['audit', t('Audit log'), 'audit_log'],
+      ['sales-tax', t('Sales tax')], ['import', t('Import')], ['integrations', t('Integrations'), 'api'], ['payments', t('Online payments'), 'online_payments'],
+      ['approvals', t('Approvals'), 'approvals'], ['security', t('Security')], ...(user.tenant ? [['group', t('Group'), 'multi_company']] : []), ['sso', t('Single sign-on'), 'sso']] : [])];
   return (<><PageHeader title={t('Settings')} /><Tabs tabs={tabs} value={tab} onChange={(k) => nav(`/settings/${k}`)} />
     {tab === 'company' && <><Company reload={reloadSettings} /><LockDate />{owner && <ExportAll />}</>}{tab === 'plan' && <PlanTab />}{tab === 'automations' && <AutomationsTab />}{tab === 'account' && <Account />}{tab === 'users' && owner && <Users />}{tab === 'accountants' && owner && <Gate feature="accountant_access"><AccountantsTab /></Gate>}
     {tab === 'roles' && owner && <Gate feature="custom_roles"><RolesTab /></Gate>}{tab === 'audit' && owner && <Gate feature="audit_log"><AuditExport /><Audit /></Gate>}

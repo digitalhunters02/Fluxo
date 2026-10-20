@@ -55,3 +55,8 @@ html, body { max-width: 100%; overscroll-behavior-x: none; }
 @supports (overflow: clip) { html, body { overflow-x: clip; } }
 /* Itens de grade e cartões podem encolher até a tela; tabela larga rola por dentro dela. */
 .grid > *, .card { min-width: 0; }
+
+/* "Ver como plano" (só o dono da plataforma): a faixa amarela fica fixa acima do app.
+   Celular: o app rola dentro da área abaixo da faixa. Computador: a barra lateral começa embaixo da faixa (não por trás dela). */
+@media (max-width: 760px) { .plan-preview-on > div:not(.plan-previewbar) { overflow-y: auto; overscroll-behavior: contain; } }
+@media (min-width: 768px) { .plan-preview-on #sidebar { top: var(--plan-bar, 53px); height: calc(100vh - var(--plan-bar, 53px)); } }

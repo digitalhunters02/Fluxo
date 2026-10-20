@@ -26,7 +26,7 @@ import { reportLead } from './harborLead.js';
 import { registerGrowth, registerGrowthPublic } from './growth.js';
 import { createV1Router } from './integrations.js';
 import * as agency from './agencyTemplate.js';
-import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, limitFor, publicGates, publicCatalog, publicAddons, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE, ENTERPRISE_FROM, ENTERPRISE_INCLUDED_COMPANIES, ENTERPRISE_EXTRA_COMPANY } from './plans.js';
+import { assertFeature, requireFeature, hasFeature, featureMap, currentPlan, hasAddon, setPlan, limitFor, nextPlanWithMore, realPlan, publicGates, publicCatalog, publicAddons, FEATURES, PLAN_ORDER, PLAN_PRICES, PAYROLL_ADDON_PRICE, ENTERPRISE_FROM, ENTERPRISE_INCLUDED_COMPANIES, ENTERPRISE_EXTRA_COMPANY } from './plans.js';
 import { registerAccountants, registerAccountantsPublic } from './accountants.js';
 import { cleanPerms, authenticate, requireAuth, can, audit, MODULES, effectivePerms, hashPassword, verifyPassword, createSession, endSession, publicUser, ROLES, rateLimitLogin, clearAttempts, listUsers } from './auth.js';
 import * as twofa from './twofa.js';
@@ -398,14 +398,14 @@ twofa.registerTwoFactor(api, { wrap, ok, can, audit, listUsers });
 registerGrowth(api, { wrap, ok, can, requireFeature, audit, id, withSlug, multi });
 registerAccountants(api, { wrap, ok, twofa, id, multi });
 api.post('/logout', wrap((req, res) => { endSession(req.headers.authorization.slice(7)); ok(res, {}); }));
-const planInfo = () => ({ enterpriseFrom: ENTERPRISE_FROM, enterpriseIncluded: ENTERPRISE_INCLUDED_COMPANIES, enterpriseExtra: ENTERPRISE_EXTRA_COMPANY, plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, yearlyPrices: yearlyPrices(), payrollYearlyPrice: payrollYearly(), annualDiscount: billing.ANNUAL_DISCOUNT, enterpriseExtraYearly: billing.priceFor(ENTERPRISE_EXTRA_COMPANY, 'year'), lockDate: getSetting('lock_date', ''), billing: billing.billingState(), limits: { bank_connections: limitFor('bank_connections'), invoices_per_month: limitFor('invoices_per_month'), users: limitFor('users'), invoices_used: invoicesThisMonth() } });
+const planInfo = () => ({ enterpriseFrom: ENTERPRISE_FROM, enterpriseIncluded: ENTERPRISE_INCLUDED_COMPANIES, enterpriseExtra: ENTERPRISE_EXTRA_COMPANY, plan: currentPlan(), payroll: hasAddon('payroll'), features: featureMap(), minimum: FEATURES, order: PLAN_ORDER, prices: PLAN_PRICES, payrollPrice: PAYROLL_ADDON_PRICE, yearlyPrices: yearlyPrices(), payrollYearlyPrice: payrollYearly(), annualDiscount: billing.ANNUAL_DISCOUNT, enterpriseExtraYearly: billing.priceFor(ENTERPRISE_EXTRA_COMPANY, 'year'), lockDate: getSetting('lock_date', ''), billing: billing.billingState(), limits: { bank_connections: limitFor('bank_connections'), invoices_per_month: limitFor('invoices_per_month'), users: limitFor('users'), invoices_used: invoicesThisMonth() }, nextPlan: Object.fromEntries(['bank_connections', 'invoices_per_month', 'users', 'accountants', 'group_companies'].map((n) => [n, nextPlanWithMore(n)])) });
 api.post('/me/email/resend', wrap(async (req, res) => {
   if (req.user.email_verified_at) return ok(res, { confirmed: true });
   rateLimitLogin(`resend|${req.user.id}|${req.ip}`);
   await emailConfirm.sendConfirmation(req.user, { slug: multi() ? tenants.currentSlug() : '', lang: getSetting('lang', 'en') });
   ok(res, { sentTo: req.user.email });
 }));
-api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), emailConfirm: emailConfirm.stateFor(req.user), tenant: multi() ? tenants.currentSlug() : '', planInfo: planInfo(), owner: isPlatformOwner(req.user), previewPlan: req.previewPlan || null, catalog: publicCatalog(yearlyPrices()), gates: publicGates(currentPlan()), addons: publicAddons(payrollYearly()), twofa: twofa.twofaState(req.user), reauthOn: twofa.reauthOn() })));
+api.get('/me', wrap((req, res) => ok(res, { ...publicUser(req.user), emailConfirm: emailConfirm.stateFor(req.user), tenant: multi() ? tenants.currentSlug() : '', planInfo: planInfo(), owner: isPlatformOwner(req.user), previewPlan: req.previewPlan || null, realPlan: realPlan(), catalog: publicCatalog(yearlyPrices()), gates: publicGates(currentPlan()), addons: publicAddons(payrollYearly()), twofa: twofa.twofaState(req.user), reauthOn: twofa.reauthOn() })));
 api.get('/plan', wrap((_req, res) => ok(res, planInfo())));
 api.put('/plan', can('users', true), blockInPreview, wrap((req, res) => {
   if (getSetting('billing_managed', '0') === '1' && process.env.FLUXO_ALLOW_MANUAL_PLAN !== '1') throw new HttpError(403, 'Your plan is managed by your subscription. Use Upgrade or Manage billing.');

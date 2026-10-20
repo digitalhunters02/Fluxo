@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { api } from '../api.js';
 import { Button, Field, Input, Modal, useAction, useToast } from './ui.jsx';
 import { useAuth } from '../App.jsx';
+import { LockedButton } from '../components/plan.jsx';
 
 /** Faixa pequena com o que sobrou da franquia do mês. */
 export function AiLeft({ status }) {
@@ -18,7 +19,7 @@ export function AiCollectionButton({ docId, email, tenant, variant = 'ghost' }) 
   const [open, setOpen] = useState(false);
   const [d, setD] = useState(null);
   const [tone, setTone] = useState('friendly');
-  if (!has('ai_assistant')) return null;
+  if (!has('ai_assistant')) return <LockedButton gate="ai_assistant" variant={variant} data-testid="ai-collection">{t('Write with AI')}</LockedButton>;
   const link = async () => { try { const doc = await api.get(`/doc/${docId}`); return `${location.origin}/p/${tenant ? `${tenant}.` : ''}${doc.share_token}`; } catch { return ''; } };
   const write = async (tn = tone) => { const r = await run(() => api.post('/ai/collection', { doc_id: docId, tone: tn, lang })); if (r) { const l = await link(); setD({ ...r, body: l ? r.body.replace('{link}', l) : r.body.replace('{link}', '').trim() }); } };
   const final = d ? d.body : '';
@@ -47,7 +48,7 @@ export function AiExplain({ from, to }) {
   const { has } = useAuth();
   const [run, busy] = useAction();
   const [r, setR] = useState(null);
-  if (!has('ai_assistant')) return null;
+  if (!has('ai_assistant')) return <div className="no-print border-b border-slate-100 p-3"><LockedButton gate="ai_assistant" data-testid="ai-explain-locked">{t('Explain in plain words')}</LockedButton></div>;
   return (
     <div className="no-print border-b border-slate-100 p-3" data-testid="ai-explain">
       <Button variant="ghost" disabled={busy} onClick={async () => { const x = await run(() => api.post('/ai/explain', { from, to, lang })); if (x) setR(x); }}>{busy ? t('Writing…') : t('Explain in plain words')}</Button>

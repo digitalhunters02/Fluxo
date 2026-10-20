@@ -6,6 +6,7 @@ import { api } from '../api.js';
 import { date, money } from '../format.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, useAction, useLoad } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
+import { LockedHint } from '../components/plan.jsx';
 import PhotoImportButton from '../components/PhotoImportButton.jsx';
 
 function ContactModal({ c, kind, onClose, onSaved }) {
@@ -34,6 +35,7 @@ function ContactModal({ c, kind, onClose, onSaved }) {
             <label className="col-span-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={!!f.tax_exempt} onChange={(e) => setF({ ...f, tax_exempt: e.target.checked ? 1 : 0 })} data-testid="contact-tax-exempt" />{' '}{t('Tax-exempt customer (no sales tax on invoices)')}</label>
             {!!f.tax_exempt && <Field label={t('Exemption certificate / reason')} className="col-span-2"><Input value={f.tax_exempt_note || ''} onChange={set('tax_exempt_note')} placeholder={t('Resale certificate number')} /></Field>}
           </div>)}
+        {f.kind !== 'customer' && !has('contractors_1099') && <LockedHint gate="contractors_1099" className="col-span-2" />}
         {f.kind !== 'customer' && has('contractors_1099') && <label className="col-span-2 flex items-center gap-2 text-sm"><input type="checkbox" checked={!!f.is_1099} onChange={(e) => setF({ ...f, is_1099: e.target.checked ? 1 : 0 })} />{' '}{t('Independent contractor (will receive Form 1099)')}</label>}
         <Field label={t('Notes')} className="col-span-2"><textarea className="field h-20" value={f.notes} onChange={set('notes')} /></Field>
       </div>

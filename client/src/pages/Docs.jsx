@@ -6,6 +6,7 @@ import { date, money, statusLabel, today, toCents } from '../format.js';
 import { download } from '../csv.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Stat, Table, useAction, useLoad } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
+import { LockedButton } from '../components/plan.jsx';
 
 const TITLES = { invoice: [t('Invoices'), t('New invoice'), t('Customer')], estimate: [t('Estimates'), t('New estimate'), t('Customer')], bill: [t('Bills'), t('New bill'), t('Vendor')], credit: [t('Credit memos'), t('New credit memo'), t('Customer')], po: [t('Purchase orders'), t('New purchase order'), t('Vendor')] };
 
@@ -71,7 +72,7 @@ export default function Docs({ type }) {
     <>
       <PageHeader title={title}>
         <Button variant="ghost" onClick={() => download(`${type}s.csv`, [[t('Number'), who, t('Issued'), t('Due'), t('Status'), t('Total'), t('Paid§m'), t('Balance')], ...rows.map((d) => [d.number, d.contact_name, d.issue_date, d.due_date, d.status, d.total / 100, d.paid / 100, d.balance / 100])])}>{t('Export CSV')}</Button>
-        {type === 'invoice' && can('sales', true) && has('batch_invoices') && <Button variant="ghost" onClick={() => setBatch(true)}>{t('Batch invoices')}</Button>}
+        {type === 'invoice' && can('sales', true) && (has('batch_invoices') ? <Button variant="ghost" onClick={() => setBatch(true)}>{t('Batch invoices')}</Button> : <LockedButton gate="batch_invoices" data-testid="batch-locked">{t('Batch invoices')}</LockedButton>)}
         {can(mod, true) && <Button onClick={() => nav(`/document/${type}/new`)}>+ {newLabel}</Button>}
       </PageHeader>
       {type === 'invoice' && planInfo.limits.invoices_per_month != null && (

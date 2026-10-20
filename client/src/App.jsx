@@ -27,7 +27,11 @@ import GlobalSearch from './components/GlobalSearch.jsx';
 import Reminders, { useReminderCount } from './pages/Reminders.jsx';
 import PublicDoc from './pages/PublicDoc.jsx';
 import { AccountantInvitePage } from './pages/Accountants.jsx';
-import { Gate, Lock } from './components/plan.jsx';
+import { Gate } from './components/plan.jsx';
+import PlanBadge, { usePlanGate } from './PlanBadge.jsx';
+import PlanPreview, { PlanPreviewBar, PlanPreviewFrame } from './PlanPreview.jsx';
+import { AppPlanProvider, usePlanTheme } from './components/planBridge.jsx';
+import { NAV_GATES } from './planConfig.js';
 import Connections from './pages/Connections.jsx';
 import { Pricing, Welcome } from './pages/Pricing.jsx';
 import { ReauthModal, ForceSetup } from './pages/SecurityUI.jsx';
@@ -108,13 +112,25 @@ function AuthScreen({ status, onAuth, ssoError }) {
   );
 }
 
+/** Item do menu. Se o recurso da página exige plano acima do atual, o item continua aí, ganha o SELO do plano e abre a janelinha. */
+function NavItem({ to, label, linkClass }) {
+  const gate = NAV_GATES[to];
+  const g = usePlanGate(gate);
+  return (
+    <NavLink to={to} className={linkClass} data-nav={to} data-plan-locked={g.locked ? g.minPlan : undefined} aria-haspopup={g.locked ? 'dialog' : undefined}
+      onClick={g.locked ? (e) => { e.preventDefault(); g.open(); } : undefined}>
+      {label}{g.locked && <PlanBadge gate={gate} inherit />}
+    </NavLink>
+  );
+}
+
 const NAV = [
   { to: '/', label: t('Dashboard'), icon: '◧', read: 'reports', end: true },
   { to: '/reminders', label: t('Reminders'), icon: '◔', read: 'settings', bell: true },
-  { group: t('Sales'), items: [['/invoices', t('Invoices'), 'sales'], ['/estimates', t('Estimates'), 'sales'], ['/credit-memos', t('Credit memos'), 'sales', 'credit_memos'], ['/recurring', t('Recurring'), 'sales', 'recurring'], ['/customers', t('Customers'), 'sales']] },
-  { group: t('Purchases'), items: [['/bills', t('Bills'), 'purchases', 'bills'], ['/purchase-orders', t('Purchase orders'), 'purchases', 'purchase_orders'], ['/expenses', t('Expenses'), 'purchases'], ['/vendors', t('Vendors'), 'sales']] },
-  { group: t('Banking'), items: [['/connections', t('Connected banks'), 'banking', 'bank_feeds'], ['/banking', t('Transactions & reconciliation'), 'banking']] },
-  { group: t('Management'), items: [['/products', t('Products & inventory'), 'inventory'], ['/projects', t('Projects & time'), 'projects', 'time_tracking'], ['/payroll', t('Payroll'), 'payroll', 'payroll'], ['/reports', t('Reports'), 'reports'], ['/accounting', t('Accounting'), 'accounting'], ['/assets', t('Fixed assets'), 'accounting', 'fixed_assets'], ['/close', t('Month-end close'), 'accounting', 'close_checklist']] },
+  { group: t('Sales'), items: [['/invoices', t('Invoices'), 'sales'], ['/estimates', t('Estimates'), 'sales'], ['/credit-memos', t('Credit memos'), 'sales'], ['/recurring', t('Recurring'), 'sales'], ['/customers', t('Customers'), 'sales']] },
+  { group: t('Purchases'), items: [['/bills', t('Bills'), 'purchases'], ['/purchase-orders', t('Purchase orders'), 'purchases'], ['/expenses', t('Expenses'), 'purchases'], ['/vendors', t('Vendors'), 'sales']] },
+  { group: t('Banking'), items: [['/connections', t('Connected banks'), 'banking'], ['/banking', t('Transactions & reconciliation'), 'banking']] },
+  { group: t('Management'), items: [['/products', t('Products & inventory'), 'inventory'], ['/projects', t('Projects & time'), 'projects'], ['/payroll', t('Payroll'), 'payroll'], ['/reports', t('Reports'), 'reports'], ['/accounting', t('Accounting'), 'accounting'], ['/assets', t('Fixed assets'), 'accounting'], ['/close', t('Month-end close'), 'accounting']] },
   { to: '/settings', label: t('Settings'), icon: '⚙', read: 'settings' },
 ];
 
@@ -132,7 +148,7 @@ function ConfirmEmailBanner({ user }) {
 }
 
 function Shell({ user, settings, logout }) {
-  const { has } = useAuth();
+  const planTheme = usePlanTheme();
   const [open, setOpen] = useState(false);
   const loc = useLocation();
   useEffect(() => setOpen(false), [loc.pathname]);
@@ -143,7 +159,7 @@ function Shell({ user, settings, logout }) {
     return () => { window.removeEventListener('keydown', esc); document.body.style.overflow = ''; };
   }, [open]);
   const can = (m) => user.permissions.read.includes(m);
-  const link = ({ isActive }) => `block rounded-lg px-3 py-2 text-sm md:py-1.5 ${isActive ? 'bg-white/15 font-medium text-white' : 'text-indigo-100 hover:bg-white/10'}`;
+  const link = ({ isActive }) => `block rounded-lg px-3 py-2.5 text-sm md:py-1.5 ${isActive ? 'bg-white/15 font-medium text-white' : 'text-indigo-100 hover:bg-white/10'}`;
   const [searching, setSearching] = useState(false);
   useEffect(() => { // atalhos: barra (/) ou Ctrl/Cmd+K abrem a busca
     const k = (e) => {
@@ -175,7 +191,7 @@ function Shell({ user, settings, logout }) {
           {NAV.map((n, i) => n.group ? (
             <div key={i}>
               {n.items.some(([, , m]) => can(m)) && <div className="mb-1 px-3 text-[11px] font-semibold uppercase tracking-wider text-indigo-300">{n.group}</div>}
-              {n.items.filter(([, , m]) => can(m)).map(([to, label, , feat]) => <NavLink key={to} to={to} className={link}>{label}{feat && !has(feat) && <Lock />}</NavLink>)}
+              {n.items.filter(([, , m]) => can(m)).map(([to, label]) => <NavItem key={to} to={to} label={label} linkClass={link} />)}
             </div>
           ) : can(n.read) && <NavLink key={n.to} to={n.to} end={n.end} className={link}>{n.label}{n.bell && reminders > 0 && <span className="ml-2 rounded-full bg-rose-500 px-1.5 py-0.5 text-[11px] font-semibold text-white" aria-label={t('{0} open reminders', [reminders])}>{reminders}</span>}</NavLink>)}
         </nav>
@@ -187,6 +203,7 @@ function Shell({ user, settings, logout }) {
       </aside>
       {searching && <GlobalSearch onClose={() => setSearching(false)} />}
       <main className="min-w-0 flex-1 p-4 md:p-8">
+        <PlanPreview theme={planTheme} langKey={lang} me={user} />
         {user.role === 'cpa' && <div className="no-print mb-4 rounded-lg bg-sky-50 p-3 text-sm text-sky-800" role="status">{t('You are viewing {0} as an accountant. This access is read-only: you can look at everything, but nothing can be changed.', [settings.company_name])}</div>}
         {user.role === 'owner' && user.emailConfirm?.limited && <ConfirmEmailBanner user={user} />}
         {user.planInfo.billing?.status === 'past_due' && <div className="no-print mb-4 rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{t('Your last payment failed.')} <NavLink to="/settings/plan" className="font-semibold underline">{t('Update your payment method')}</NavLink></div>}
@@ -272,9 +289,13 @@ export default function App() {
       {!user || !settings
         ? <AuthScreen status={status} onAuth={boot} ssoError={ssoError} />
         : <AuthCtx.Provider value={{ user, settings, planInfo: user.planInfo, has: (f) => !!user.planInfo.features[f], refresh: boot, can: (m, w) => user.permissions[w ? 'write' : 'read'].includes(m) }}>
-            {user.twofa?.mustSetup
-              ? <ForceSetup onDone={boot} logout={logout} />
-              : <Shell user={user} settings={{ ...settings, reload: async () => { const s = await api.get('/settings'); setFormat(s); setSettings(s); } }} logout={logout} />}
+            <AppPlanProvider me={user}>
+              <PlanPreviewFrame active={!!(user.owner && user.previewPlan)} bar={<PlanPreviewBar me={user} langKey={lang} />}>
+                {user.twofa?.mustSetup
+                  ? <ForceSetup onDone={boot} logout={logout} />
+                  : <Shell user={user} settings={{ ...settings, reload: async () => { const s = await api.get('/settings'); setFormat(s); setSettings(s); } }} logout={logout} />}
+              </PlanPreviewFrame>
+            </AppPlanProvider>
             {reauth && <ReauthModal onResult={(okay) => { reauth.resolve(okay); setReauth(null); }} />}
           </AuthCtx.Provider>}
     </ToastProvider>

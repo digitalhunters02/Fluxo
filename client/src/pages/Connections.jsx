@@ -5,6 +5,8 @@ import { api, qs } from '../api.js';
 import { addDays, date, money, moneyShort, monthLabel, today } from '../format.js';
 import { Badge, Button, Card, Empty, ErrorBox, Field, Input, Loading, PageHeader, Select, Stat, Table, Tabs, useAction, useLoad } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
+import PlanBadge from '../PlanBadge.jsx';
+import { planStr } from '../planStrings.js';
 
 export const CATEGORY = {
   INCOME: t('Income§cat'), TRANSFER_IN: t('Transfers in'), TRANSFER_OUT: t('Transfers out'), LOAN_PAYMENTS: t('Loan payments'), BANK_FEES: t('Bank fees'), ENTERTAINMENT: t('Entertainment'),
@@ -125,6 +127,8 @@ function AccountRow({ a, bankAccounts, onChange }) {
 
 function Banks({ overview, reload, canWrite }) {
   const [act, busy] = useAction();
+  const { planInfo, user } = useAuth();
+  const nav = useNavigate();
   const { data: accounts } = useLoad(() => api.get('/banking/accounts'));
   const mode = overview.mode;
   const connectLive = async (existingItem) => {
@@ -143,7 +147,7 @@ function Banks({ overview, reload, canWrite }) {
         <p className="text-sm text-slate-500">{t('{0} of {1} bank connections used on your plan.', [used, overview.limit])}</p>
         {canWrite && mode !== 'off' && <div className="flex gap-2">
           {used > 0 && <Button variant="ghost" disabled={busy} onClick={() => act(async () => { await api.post('/plaid/sync', {}); reload(); }, t('Synced'))}>{t('Sync now')}</Button>}
-          <Button disabled={busy || full} title={full ? t('Upgrade your plan to connect more banks') : ''} onClick={connect}>{mode === 'live' ? t('Connect a bank') : t('Connect demo bank')}</Button></div>}
+          <Button disabled={busy} data-testid="connect-bank" data-plan-locked={full ? planInfo.nextPlan?.bank_connections || undefined : undefined} onClick={full ? () => (user.role === 'owner' && planInfo.nextPlan?.bank_connections ? nav('/settings/plan') : null) : connect}>{mode === 'live' ? t('Connect a bank') : t('Connect demo bank')}{full && planInfo.nextPlan?.bank_connections && <PlanBadge plan={planInfo.nextPlan.bank_connections} inherit />}</Button></div>}
       </div>
       {mode === 'demo' && <p className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{t('Demo mode: no Plaid keys are configured on this server, so the connection below uses made-up sample data.')}</p>}
       {mode === 'off' && <p className="mb-4 rounded-lg bg-slate-100 p-3 text-sm text-slate-600">{t('Bank connections are not configured on this server. Add your Plaid keys to turn them on.')}</p>}

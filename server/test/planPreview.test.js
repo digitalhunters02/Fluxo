@@ -73,6 +73,7 @@ test('dono vê o produto como cada plano sem mudar a conta', async () => {
     const v = await call('/me', { token: owner, preview: plan });
     assert.equal(v.body.previewPlan, plan, plan);
     assert.equal(v.body.planInfo.plan, plan);
+    assert.equal(v.body.realPlan, 'enterprise', 'o plano de verdade aparece à parte');
     for (const [gate, info] of Object.entries(v.body.gates)) {
       if (info.addon) assert.equal(info.locked, true, 'sem complemento na prévia'); // o cliente do plano visto não tem a folha
       else assert.equal(info.locked, ORDER.indexOf(plan) < ORDER.indexOf(info.minPlan), `${plan}/${gate}`);

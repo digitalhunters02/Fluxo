@@ -6,6 +6,7 @@ import { parseCsv, parseDate } from '../csv.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad, useToast } from '../components/ui.jsx';
 import { SearchBox, useSearch } from '../components/search.jsx';
 import { useAuth } from '../App.jsx';
+import { LockedButton } from '../components/plan.jsx';
 
 /* ---------- importação de extrato (CSV) ---------- */
 function ImportModal({ accounts, initial, onClose, onDone }) {
@@ -109,6 +110,7 @@ function Feed({ accounts, accountId }) {
       <div className="no-print mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-2">{[['pending', t('To review')], ['categorized', t('Categorized')], ['matched', t('Matched')], ['ignored', t('Ignored')]].map(([k, l]) => <button key={k} onClick={() => setStatus(k)} className={`rounded-full px-3 py-1 text-sm ${status === k ? 'bg-brand-600 text-white' : 'bg-white text-slate-600 ring-1 ring-slate-200'}`}>{l}</button>)}</div>
         {w && <div className="flex gap-2">
+          {status === 'pending' && !has('ai_assistant') && <LockedButton gate="ai_assistant" data-testid="ai-categorize-locked">{t('Suggest with AI')}</LockedButton>}
           {status === 'pending' && has('ai_assistant') && <Button variant="ghost" disabled={busy} data-testid="ai-categorize" onClick={() => run(async () => { const r = await api.post('/ai/categorize', {}); reload(); toast(r.considered === 0 ? t('Nothing left to suggest.') : t('{0} suggestions added. Check them before you accept.', [r.suggested])); return r; })}>{t('Suggest with AI')}</Button>}
           {status === 'pending' && aiSugg > 0 && <Button variant="ghost" disabled={busy} data-testid="ai-accept" onClick={() => run(async () => { const r = await api.post('/banking/accept-all', { account_id: accountId || undefined, ai: true }); reload(); return r; }, t('Suggestions accepted'))}>{t('✓ Accept')}{' '}{aiSugg}{' '}{t('AI suggestion(s)')}</Button>}
           {status === 'pending' && sugg > 0 && <Button variant="ghost" disabled={busy} onClick={() => run(async () => { const r = await api.post('/banking/accept-all', { account_id: accountId || undefined }); reload(); return r; }, t('Suggestions accepted'))}>{t('✓ Accept')}{' '}{sugg}{' '}{t('suggestion(s)')}</Button>}
