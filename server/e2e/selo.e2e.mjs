@@ -28,6 +28,7 @@ const expectedNav = (plan, payroll) => ({
   ...Object.fromEntries(Object.entries(NAV_MIN).filter(([, m]) => ORDER.indexOf(m) > ORDER.indexOf(plan))),
   ...(payroll ? {} : { "/payroll": "payroll" }),
 });
+// aba Configurações > Folha (folha "Plano B"): selo do complemento de folha sempre que o complemento está desligado (como o item /payroll do menu)
 const SETTINGS_TABS_MIN = { accountants: "starter", roles: "advanced", audit: "essentials", integrations: "advanced", payments: "advanced", approvals: "business", sso: "enterprise" };
 const ACCOUNTING_TABS_MIN = { budgets: "plus", classes: "plus" };
 const lockedBy = (table, plan) => Object.fromEntries(Object.entries(table).filter(([, m]) => ORDER.indexOf(m) > ORDER.indexOf(plan)));
@@ -154,7 +155,7 @@ try {
       await setPlan(plan, false);
       const p = await newPage(comum); await openApp(p, "/settings/company");
       await p.waitForSelector('button[data-tab="company"]');
-      assert.deepEqual(await lockedTabs(p), lockedBy(SETTINGS_TABS_MIN, plan));
+      assert.deepEqual(await lockedTabs(p), { ...lockedBy(SETTINGS_TABS_MIN, plan), payroll: "payroll" });
       await p.goto(BASE + "/accounting"); await p.waitForSelector('button[data-tab="chart"]');
       assert.deepEqual(await lockedTabs(p), lockedBy(ACCOUNTING_TABS_MIN, plan));
       if (plan === "free") {
@@ -285,7 +286,7 @@ try {
       assert.deepEqual(await lockedNav(p), expectedNav(plan, false), "menu na prévia (sem complemento de folha)");
       // limites e abas seguem o plano visto
       await p.goto(BASE + "/settings/company"); await p.waitForSelector('button[data-tab="company"]');
-      assert.deepEqual(await lockedTabs(p), lockedBy(SETTINGS_TABS_MIN, plan));
+      assert.deepEqual(await lockedTabs(p), { ...lockedBy(SETTINGS_TABS_MIN, plan), payroll: "payroll" });
       const rp = await realPlan(); assert.equal(rp.plan, "enterprise"); assert.equal(rp.payroll, true);
       // a faixa fica fixa ao rolar e a barra lateral cabe abaixo dela
       await p.evaluate(() => window.scrollTo(0, 400)); await p.waitForTimeout(150);

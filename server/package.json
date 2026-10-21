@@ -14,7 +14,8 @@
     "test:e2e:annual": "node e2e/billingUi.e2e.mjs",
     "backup": "node --no-warnings src/backupCli.js backup",
     "restore": "node --no-warnings src/backupCli.js restore",
-    "backup:verify": "node --no-warnings src/backupCli.js verify"
+    "backup:verify": "node --no-warnings src/backupCli.js verify",
+    "test:e2e:planb": "node e2e/payrollPlanB.e2e.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
