@@ -1,6 +1,6 @@
 # Fluxo — tarefas
 
-Última atualização: 2026-10-19. Marque `[x]` quando concluir (e anote a data). Quem faz: **Eu** (Claude), **Você**, ou **Juntos**.
+Última atualização: 2026-10-21. Marque `[x]` quando concluir (e anote a data). Quem faz: **Eu** (Claude), **Você**, ou **Juntos**.
 
 ## Pendentes
 
@@ -17,10 +17,16 @@
 - [ ] **Juntos** — Monitoramento simples: o `/healthz` já responde versão, banco ok, e-mail e idade do último backup (503 se o banco não responder). **Falta você:** apontar um monitor (UptimeRobot, Uptime Kuma ou o da Coolify) para `https://<domínio>/healthz` com aviso por e-mail/WhatsApp; e a rotação de logs (Docker/Coolify).
 
 ### Produto
-- [ ] **Você decide** — Folha de pagamento completa (depósito direto e envio de impostos): escolher parceiro (Zeal, Check, Gusto Embedded) e preço do plano.
+- [ ] **Você** — Folha "Plano B": **antes do primeiro W-2 de verdade**, conferir o arquivo EFW2 na ferramenta gratuita **AccuWage** do SSA (Business Services Online). O formato foi montado pela Publicação 42-007 sem acesso à edição 2026 (irs.gov/ssa.gov bloqueados aqui).
+- [ ] **Você** — Folha "Plano B": o **CSV do IRIS (1099-NEC) está em beta**: baixe o modelo atual no portal IRIS e compare as colunas antes do primeiro envio; me mande o modelo e eu tiro o "beta".
+- [ ] **Eu** (quando houver acesso a irs.gov) — trocar as planilhas pelos **PDFs oficiais preenchidos** (941, 940, Schedule B, W-2, 1099-NEC): baixar o PDF do ano, listar os campos (`node server/src/payrollPdf.js fields`), preencher `IRS_FIELD_MAPS` e testar. Passo a passo no README.
+- [ ] **Você** — **Advogado**: revisar a nova seção 9 dos Termos (folha: o Fluxo calcula e gera; a empresa confere, paga e envia, e é responsável) e o **limite de responsabilidade** (mensalidades dos últimos 12 meses), em EN/PT/ES.
+- [ ] **Você (cliente)** — O contrato de ACH com o banco é de cada empresa: o banco precisa liberar o envio de arquivos NACHA (alguns pedem arquivo balanceado — é uma opção em Configurações > Folha).
+- [ ] **Juntos** — Configurar `HARBOR_API_URL` (+ o `ADMIN_SUMMARY_KEY` que já existe) no Coolify para o vigia das tabelas criar a tarefa no Harbor; `OWNER_EMAILS` para o e-mail do aviso.
+- [ ] **Você decide** — Próximos passos da folha: impostos/arquivos estaduais (hoje só calculados), 1099-MISC, tabela de 2025 (folhas de 2025 não podem mais ser finalizadas sem ela).
 - [ ] **Você decide** — Pagar contas e receber pagamentos de clientes (ACH/cartão): parceiro (Stripe Connect/Treasury, Dwolla…).
 - [ ] **Você decide** — Acesso por aba para funcionários: hoje no Starter+; "papéis com nome" no Advanced. Manter?
-- [ ] **Eu** — Tabelas de impostos de 2027: as de 2026 estão em `server/src/payroll.js` (`US_2026`). Só dá para atualizar depois que o IRS publicar a Pub. 15-T de 2027 (normalmente em dezembro); atualizo em janeiro.
+- [ ] **Eu** — Tabelas de impostos de 2027: as de 2026 estão em `server/src/payroll.js` (`TABLES`). Só dá para atualizar depois que o IRS publicar a Pub. 15-T de 2027 (normalmente em dezembro). Agora o **vigia** avisa (faixa, e-mail e tarefa no Harbor) e o Fluxo **bloqueia** finalizar folha de 2027 até a tabela entrar — não usa mais 2026 em silêncio.
 - [ ] **Você** — Conferir com um contador as datas do calendário de impostos (lembretes) e as tabelas de 2026.
 - [ ] **Você decide** — Contas Free **criadas antes de 2026-10-19** nasceram com o complemento de folha de pagamento ligado (erro corrigido só para contas novas). Desligar nas antigas (elas perdem a tela de folha; os dados ficam)? Posso fazer com um comando único.
 - [ ] **Juntos** — Ligar a limpeza de contas Free paradas (`FLUXO_CLEANUP=1`) só depois do e-mail funcionando e dos Termos revisados; antes, olhar a prévia em `/admin` → "Unused free accounts".
@@ -29,6 +35,7 @@
 - [ ] **Eu** — Escala: mais de uma máquina exigiria banco compartilhado (só se o volume pedir).
 
 ## Concluídas
+- [x] 2026-10-21 — **Folha "Plano B"** (aprovado pelo Jadson: "o cliente que se vira com toda parte de banco"): conta bancária do funcionário cifrada (só o dono vê), **arquivo NACHA** do depósito direto, **calendário de depósitos federais** (mensal/semiweekly, feriados, regra dos US$ 100 mil, FUTA) com "marcar como pago" no livro e lembretes, **941/940/Schedule B**, **W-2/W-3**, **EFW2** (SSA), **1099-NEC** (PDF + CSV do IRIS beta), **vigia das tabelas** (faixa, e-mail, tarefa no Harbor), confirmação "conferi" e auditoria de todo arquivo, Termos atualizados (rascunho). O Fluxo nunca movimenta dinheiro nem envia nada ao governo.
 - [x] 2026-10-19 — **Confirmação de e-mail no cadastro Free**: link de 3 dias, reenvio (1/min, 5/dia), faixa no app, conta não confirmada cria até 3 faturas; quem paga, quem já existia e quem o dono cria nunca são limitados; sem e-mail configurado nada trava e o app avisa (cadastro, Minha conta e `/admin`).
 - [x] 2026-10-19 — **Limpeza de contas Free abandonadas**: 12 meses sem uso + sem plano pago/folha/banco/grupo + sem lançamento dos últimos 24 meses → aviso por e-mail (EN/PT/ES) e 30 dias; entrar cancela; só então apaga e grava o registro (empresa, e-mail mascarado, contagens). Nunca apaga sem poder avisar. Desligada por padrão (`FLUXO_CLEANUP=1`), com prévia e "rodar agora" em `/admin`.
 - [x] 2026-10-19 — **Enviar fatura por e-mail pelo Fluxo** (Essentials+): janela com assunto e texto editáveis, PDF anexo (feito dentro do Fluxo, sem biblioteca), baixar o PDF, histórico de envios na fatura (enviado/não enviado), mensagem amigável nos planos menores e aviso "e-mail ainda não configurado" (nunca finge que enviou).

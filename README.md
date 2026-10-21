@@ -28,17 +28,47 @@ Environment: `PORT`, `FLUXO_DB` (SQLite file path, default `server/data/fluxo.db
 | **Banking** | CSV statement import (U.S. date and number formats), auto-categorization (rules + learning), matching with existing entries, reconciliation, transfers, credit cards |
 | **Connected banks (Plaid)** | Connect bank accounts with Plaid Link: live balances, history, who paid you, spending by category and top merchants; linked accounts feed the reconciliation queue with category suggestions; webhooks keep everything in sync |
 | **Accounting** | Real double-entry: every document posts balanced entries; editable chart of accounts, general journal, ledger by account, budgets, classes, closing date (period lock) |
-| **Payroll (U.S.)** | Employees (W-4 status, credits, state rate, deductions), pay runs with live preview, overtime, bonuses at the 22% supplemental rate, pay stubs, payroll liabilities and tax payments, Form 941 quarterly summary, W-2 box summary, payroll summary |
+| **Payroll (U.S.)** | Employees (W-4 status, credits, state rate, deductions, direct deposit account), pay runs with live preview, overtime, bonuses at the 22% supplemental rate, pay stubs, payroll liabilities, NACHA direct-deposit file, federal deposit calendar with reminders, Form 941/940, W-2/W-3, EFW2 and 1099-NEC files (the business uploads, pays and files) |
 | **Inventory** | Average-cost products, automatic COGS on sale, adjustments, low-stock alerts |
 | **Projects** | Billable time, one-click invoicing, profit per project |
 | **Reports** | P&L (with prior period), P&L by class, budget vs actual, balance sheet, cash flow, A/R and A/P aging, sales by customer, expenses by category/vendor, sales tax, inventory valuation, trial balance. CSV and PDF |
 | **Security** | scrypt passwords, four built-in roles plus custom roles, read-only accountant invitations (link by email, end access instantly), audit trail, full JSON backup |
 
 ### Payroll scope (be aware)
-Fluxo **calculates and records** payroll using the 2026 IRS tables (Pub. 15-T percentage method for single / married filing jointly,
-Social Security 6.2% up to $184,500, Medicare 1.45% + 0.9% additional, FUTA 0.6% on the first $7,000, flat state rate, SUTA from your state notice).
-It does **not** e-file returns, make tax deposits or run direct deposit. Head-of-household withholding, local taxes and benefits
-(Section 125) are not modelled. Tax tables live in `server/src/payroll.js` (`US_2026`) and must be reviewed every January.
+**Rule approved by the owner (2026-10-21): Fluxo never moves money and never submits anything to a government agency.** It CALCULATES and
+GENERATES ready files, forms and reminders; the business reviews them, uploads the bank file to its own bank, pays taxes at EFTPS.gov and files
+its returns itself (paper or its e-file provider).
+
+Fluxo calculates payroll with the IRS tables kept in `server/src/payroll.js` (`TABLES`, today only `2026`: Pub. 15-T percentage method for
+single / married filing jointly, Social Security 6.2% up to $184,500, Medicare 1.45% + 0.9% additional, FUTA 0.6% on the first $7,000, flat state
+rate, SUTA from your state notice). **A pay run dated in a year that has no table cannot be finalized** (clear message; drafts and previews show a
+warning) — Fluxo no longer silently uses the 2026 numbers. Head-of-household withholding, local taxes, benefits (Section 125), credit-reduction
+states and **state** filings/deposits are not modelled: state taxes are calculated for your records only (the screens say "Federal only in this version").
+
+What the payroll add-on generates (all behind the add-on gate, HTTP 402 without it):
+
+| Piece | Where | Notes |
+|---|---|---|
+| **Direct deposit account** per employee | Payroll › Employees › Edit | Routing number with ABA check digit, account number (4–17 digits) **encrypted at rest** (AES-256-GCM, `FLUXO_ENCRYPTION_KEY`, same helper as SSNs), checking/savings. The API only returns `****1234`; **only the owner** sees or changes it. Employees without an account are "pay by check". |
+| **NACHA file** (ACH, PPD credits) for a **finalized** pay run | Payroll › Pay runs › Bank file | 94-character records, batch/file control totals and entry hash, padding to blocking factor 10. Unbalanced (credits only, class 220) by default; balanced (class 200, offset debit to the company account) as a setting. Company name/ID (prefix `1`+EIN configurable), immediate origin/destination, bank name and entry description in **Settings › Payroll › Bank file**. Effective date = pay date (editable). Download as `.ach` or `.txt`. Owner only. Text: *"Upload this file to your bank's ACH/Direct deposit portal. Fluxo does not send money."* The ACH origination agreement with the bank is the business's. |
+| **Federal tax deposit calendar** | Payroll › Tax deposits | Lookback rule (≤ $50,000 → monthly, more → semiweekly, new employer → monthly; manual override and a lookback amount for payroll done elsewhere), monthly = 15th of next month, semiweekly = Wed/Thu/Fri paydays → next Wednesday, Sat–Tue → next Friday (3 business days, each legal holiday adds a day; a period crossing a quarter becomes two deposits), $100,000 next-day rule (switches to semiweekly), quarter under $2,500 flagged as "may pay with Form 941", FUTA quarterly when over $500 (last day of the following month). Weekends and federal holidays (incl. D.C. Emancipation Day) roll forward. **Mark as paid** with date, optional EFTPS confirmation number and receipt; it posts Debit Payroll Liabilities / Credit bank (undo available). Bell reminders 3 days before and on the due date, and an email to the company owners if email is configured. Text: *"Pay at EFTPS.gov — Fluxo does not pay taxes for you."* |
+| **Form 941** (lines 1–15, Part 2, Schedule B when semiweekly) and **Form 940** (lines 1–17, Part 5) | Payroll › Tax forms | Line values tie to the finalized pay runs (line 7 absorbs fractions of cents so line 12 = the real liability = Part 2/Schedule B total). PDF download. |
+| **W-2 / W-3** | Payroll › Tax forms | Boxes 1–6, 12 (code D/E/G/AA/BB for the pre-tax deduction, chosen per employee), 13, 15–17. Employee copies (masked SSN) + W-3 totals in one PDF. |
+| **EFW2 file** for SSA Business Services Online | Payroll › Tax forms | RA, RE, RW, optional RS, RT, RF records of 512 characters + CR/LF, built field by field from a layout table (`EFW2_LAYOUT` in `server/src/payrollForms.js`, tests check every position). Needs employer EIN/address, **BSO User ID** and contact in Settings › Payroll. Owner only (full SSNs). **Validate the file with SSA's free AccuWage tool before the first real use** — the layout was written from Publication 42-007 without access to the 2026 edition from this environment. |
+| **1099-NEC** | Payroll › Tax forms | Year-aware threshold (`form1099Threshold`: $600 through 2025, $2,000 from 2026). Recipient-copy PDF and a CSV for the **IRS IRIS Taxpayer Portal** — **beta: verify against the current IRIS template before uploading** (the official template could not be downloaded from here; the columns are in `IRIS_NEC_COLUMNS`). Owner only (full TINs). 1099-MISC is not generated (payments are not classified into MISC boxes yet). |
+| **Tax-table watcher** | banner on Payroll for owners; Settings › Payroll › IRS tax tables | From October to January, once a day, fetches the IRS Pub. 15-T PDF and the SSA wage-base page (`TAXWATCH_IRS_URL`, `TAXWATCH_SSA_URL`), stores SHA-256 + Last-Modified. When a page changes (or the current year has no table) it shows *"New IRS tables published for 2027 — Fluxo must be updated before the first 2027 payroll"*, emails `OWNER_EMAILS`/`FLUXO_ADMIN_EMAIL` (if email is configured) and creates a task in **Harbor** (`POST {HARBOR_API_URL}/api/public/product-alerts`, header `X-Product-Key: ADMIN_SUMMARY_KEY`, dedupe keys `fluxo-irs-tables-<year>`, `fluxo-ssa-wagebase-<year>`, `fluxo-missing-table-<year>`, Portuguese title, due Dec 15 of the previous year or today + 3 days; 10 s timeout, 3 retries, never blocks, no customer data). "Check now" button for the owner. **It never changes tax numbers.** |
+| **Protections** | everywhere | Every generator requires the "I reviewed the amounts" checkbox (`reviewed: true`, otherwise HTTP 400 `review_required`) and is logged (user, time, file type, reference, totals, SHA-256) in **Payroll › Audit: payroll files** and in the audit log. Terms of Use have a new section 9 (what Fluxo does and does not do with payroll) and a limitation of liability (fees paid in the last 12 months) — **both marked for lawyer review**. |
+
+#### Switching to the official IRS PDFs (what remains)
+The official fillable PDFs (`f941.pdf`, `f940.pdf`, `f941sb.pdf`, `fw2.pdf`, `f1099nec.pdf`) **could not be downloaded from the build environment
+(irs.gov blocked)**, so Fluxo generates clearly titled worksheets ("Form 941 worksheet (transcribe to the official form)"), never an imitation of
+the form. The switch is prepared (`server/src/payrollPdf.js`, pdf-lib dependency, AcroForm filler tested with a generated form):
+1. Download the year's PDF from irs.gov and save it as `<FLUXO_IRS_FORMS_DIR>/f941-2026.pdf` (same for `f940`, `f941sb`).
+2. List its fields: `node server/src/payrollPdf.js fields <file.pdf>`.
+3. Fill `IRS_FIELD_MAPS['f941-2026']` with Fluxo line → field name (lines are the keys of `form941Lines().lines`), and add a test that fills the real PDF.
+4. With file + map present the download uses the official PDF automatically (`official: true` in the API); the screen text changes by itself.
+Same idea for the W-2 (Copy B/C/2 substitutes) and 1099-NEC recipient copies. For the IRIS CSV: download the current 1099-NEC template from the IRIS
+portal, compare it with `IRIS_NEC_COLUMNS` and remove the "beta" labels.
 
 ## Plans (feature gating)
 Every feature has a minimum plan, enforced on the server (HTTP 402) and in the UI (lock icons and an upgrade notice). Paid plans include unlimited users; the Free plan includes one user.
@@ -50,7 +80,7 @@ Every feature has a minimum plan, enforced on the server (HTTP 402) and in the U
 | Essentials | $65 | Bills, recurring invoices, time tracking, full report set, audit log, connected banks (2), AI assistant (30 uses/month) |
 | Plus | $109 | Inventory, project profitability, purchase orders, budgets, classes, 1099 report, period lock, connected banks (5), AI assistant (100/month), up to 3 accountants |
 | Advanced | $269 | Custom roles and permissions, batch invoicing, online payments with card and bank (ACH), unlimited accountants, AI assistant (300/month), connected banks (15) |
-| Payroll add-on | $35 + $5/employee | U.S. payroll (calculation and records) |
+| Payroll add-on | $35 + $5/employee | U.S. payroll (calculation, records, bank file, deposit calendar and tax-form files; Fluxo never moves money or files) |
 
 QuickBooks Online list prices for comparison: $38 / $85 / $140 / $340; payroll Core $50 + $6.50. Feature map: `server/src/plans.js`.
 
@@ -74,8 +104,8 @@ made-up data lets you try the whole experience. Connections per plan: Essentials
 landing page needs tenant isolation (a database per customer behind subdomains) — that is the next architectural step, not built yet.
 
 ## Deliberately not built (needs a partner, license or contract)
-Online card/ACH payments from customers (Stripe Connect), paying bills by ACH or check, payroll direct deposit and tax e-filing,
-1099 e-filing, automatic sales-tax rates, multi-currency, email delivery of invoices and reminders (needs an email provider).
+Online card/ACH payments from customers (Stripe Connect), paying bills by ACH or check, **sending** payroll direct deposits and tax payments or e-filing
+returns (Fluxo generates the files; the business uploads/pays/files), automatic sales-tax rates, multi-currency, email delivery of invoices and reminders (needs an email provider).
 
 ## Languages
 UI strings use English keys (`t('Invoices')`). Portuguese and Spanish live in `client/src/locales/` and are generated from
@@ -166,7 +196,7 @@ New plans: **Business** ($599/month, Stripe checkout) and **Enterprise** (from $
 Environment: `STRIPE_CONNECT_WEBHOOK_SECRET` (webhook endpoint `POST /api/stripe/connect-webhook` for connected accounts, events `checkout.session.completed` and `account.updated`), `CONNECT_FEE_PCT`, `FLUXO_SALES_EMAIL`, `SSO_STATE_SECRET` (optional), `WEBHOOK_ALLOW_INSECURE=1` only for local tests.
 SSO: register `<APP_URL>/api/sso/callback` as the redirect address at the identity provider; users must already exist in Fluxo.
 
-Deliberately not built yet (needs a partner, contract or a large change): Postgres/shared database, SOC 2, multi-currency, revenue recognition, payroll tax filing and direct deposit (payroll partner), paying bills by ACH or check, automatic sales tax rates, open-invoice import.
+Deliberately not built yet (needs a partner, contract or a large change): Postgres/shared database, SOC 2, multi-currency, revenue recognition, payroll tax e-filing and money movement for direct deposit (Fluxo only generates the files), paying bills by ACH or check, automatic sales tax rates, open-invoice import.
 
 ## Security: two-step verification, password re-confirmation, hashed sessions
 
