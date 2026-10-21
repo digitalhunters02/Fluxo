@@ -15,6 +15,9 @@ import * as bank from './banking.js';
 import * as rep from './reports.js';
 import * as pay from './payroll.js';
 import * as taxid from './taxid.js';
+import { publicBank } from './payrollBank.js';
+import { registerPayrollPlanB, sendDepositEmails } from './payrollPlanB.js';
+import * as taxWatcher from './taxWatcher.js';
 import * as importer from './importer.js';
 import * as stax from './salestax.js';
 import * as connectMod from './connect.js';
@@ -37,7 +40,7 @@ import * as backup from './backup.js';
 
 const { HttpError, today, isDate, cents } = acc;
 /** Versão dos textos legais (Termos e Privacidade) mostrados no cadastro; muda quando o advogado revisar. */
-const LEGAL_VERSION = 'draft-2026-10-19';
+const LEGAL_VERSION = 'draft-2026-10-21';
 const bad = (m) => new HttpError(400, m);
 export const app = express();
 app.disable('x-powered-by');
@@ -830,23 +833,30 @@ const empFields = (b, cur) => {
   if (!['single', 'married'].includes(b.filing_status)) throw bad('Invalid filing status');
   const rate = cents(b.pay_rate); if (rate <= 0) throw bad('Enter a pay rate');
   const pct = Number(b.state_pct || 0); if (!(pct >= 0 && pct <= 20)) throw bad('State withholding must be between 0% and 20%');
+  const st = String(b.state ?? cur?.state ?? '').trim().toUpperCase(), zip = String(b.zip ?? cur?.zip ?? '').trim();
+  if (st && !/^[A-Z]{2}$/.test(st)) throw bad('State must be the 2-letter abbreviation');
+  if (zip && !/^\d{5}(-?\d{4})?$/.test(zip)) throw bad('Invalid ZIP code');
+  const box12 = b.w2_box12_code ?? cur?.w2_box12_code ?? 'D';
+  if (!['', 'D', 'E', 'G', 'AA', 'BB'].includes(box12)) throw bad('Invalid W-2 box 12 code');
   return [b.name.trim(), b.email || '', taxid.prepareTaxId(b.tax_id, cur?.tax_id, { strict: true }), b.position || '', b.hire_date, b.pay_basis, rate, b.frequency, b.filing_status, cents(b.credits || 0), cents(b.extra_withholding || 0), pct,
-    cents(b.pretax_deduction || 0), cents(b.other_deduction || 0), b.other_deduction_label || ''];
+    cents(b.pretax_deduction || 0), cents(b.other_deduction || 0), b.other_deduction_label || '', String(b.address ?? cur?.address ?? '').trim().slice(0, 120), String(b.city ?? cur?.city ?? '').trim().slice(0, 60), st, zip, box12];
 };
-api.get('/payroll/employees', can('payroll'), wrap((_req, res) => ok(res, all('SELECT * FROM employees ORDER BY active DESC, name').map(taxid.publicTaxId))));
+/** Funcionário para a API: SSN mascarado; conta bancária nunca sai (só "tem conta" e, para o dono, o final). */
+const publicEmp = (req) => (e) => publicBank(taxid.publicTaxId(e), req.user?.role === 'owner');
+api.get('/payroll/employees', can('payroll'), wrap((req, res) => ok(res, all('SELECT * FROM employees ORDER BY active DESC, name').map(publicEmp(req)))));
 api.get('/payroll/employees/:id/tax-id', can('payroll'), wrap((req, res) => {
   if (req.user?.role !== 'owner') throw new HttpError(403, 'Only the owner can view full SSN/EIN numbers');
   const eid = id(req); const e = get('SELECT name, tax_id FROM employees WHERE id=?', eid); if (!e) throw new HttpError(404, 'Employee not found');
   audit(req, 'reveal', 'tax_id', eid, e.name); res.set('Cache-Control', 'no-store'); ok(res, { tax_id: taxid.open(e.tax_id) });
 }));
 api.post('/payroll/employees', can('payroll', true), wrap((req, res) => {
-  const nid = insert('INSERT INTO employees(name,email,tax_id,position,hire_date,pay_basis,pay_rate,frequency,filing_status,credits,extra_withholding,state_pct,pretax_deduction,other_deduction,other_deduction_label) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', ...empFields(req.body));
-  audit(req, 'create', 'employee', nid, req.body.name); billing.syncPayrollSeats().catch((e) => console.error('billing seats', e.message)); ok(res, taxid.publicTaxId(get('SELECT * FROM employees WHERE id=?', nid)));
+  const nid = insert('INSERT INTO employees(name,email,tax_id,position,hire_date,pay_basis,pay_rate,frequency,filing_status,credits,extra_withholding,state_pct,pretax_deduction,other_deduction,other_deduction_label,address,city,state,zip,w2_box12_code) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', ...empFields(req.body));
+  audit(req, 'create', 'employee', nid, req.body.name); billing.syncPayrollSeats().catch((e) => console.error('billing seats', e.message)); ok(res, publicEmp(req)(get('SELECT * FROM employees WHERE id=?', nid)));
 }));
 api.put('/payroll/employees/:id', can('payroll', true), wrap((req, res) => {
   const eid = id(req); const curEmp = get('SELECT * FROM employees WHERE id=?', eid); if (!curEmp) throw new HttpError(404, 'Employee not found');
-  run('UPDATE employees SET name=?,email=?,tax_id=?,position=?,hire_date=?,pay_basis=?,pay_rate=?,frequency=?,filing_status=?,credits=?,extra_withholding=?,state_pct=?,pretax_deduction=?,other_deduction=?,other_deduction_label=?,active=? WHERE id=?', ...empFields(req.body, curEmp), req.body.active === false ? 0 : 1, eid);
-  audit(req, 'update', 'employee', eid); billing.syncPayrollSeats().catch((e) => console.error('billing seats', e.message)); ok(res, taxid.publicTaxId(get('SELECT * FROM employees WHERE id=?', eid)));
+  run('UPDATE employees SET name=?,email=?,tax_id=?,position=?,hire_date=?,pay_basis=?,pay_rate=?,frequency=?,filing_status=?,credits=?,extra_withholding=?,state_pct=?,pretax_deduction=?,other_deduction=?,other_deduction_label=?,address=?,city=?,state=?,zip=?,w2_box12_code=?,active=? WHERE id=?', ...empFields(req.body, curEmp), req.body.active === false ? 0 : 1, eid);
+  audit(req, 'update', 'employee', eid); billing.syncPayrollSeats().catch((e) => console.error('billing seats', e.message)); ok(res, publicEmp(req)(get('SELECT * FROM employees WHERE id=?', eid)));
 }));
 api.get('/payroll/runs', can('payroll'), wrap((_req, res) => ok(res, all('SELECT * FROM pay_runs ORDER BY pay_date DESC, id DESC LIMIT 200'))));
 api.get('/payroll/runs/:id', can('payroll'), wrap((req, res) => { const r = pay.loadRun(id(req)); if (!r) throw new HttpError(404, 'Pay run not found'); ok(res, r); }));
@@ -861,6 +871,7 @@ api.post('/payroll/remit', can('payroll', true), wrap((req, res) => { const r = 
 api.get('/payroll/reports/summary', can('payroll'), wrap((req, res) => { const [f, t] = range(req); ok(res, pay.payrollSummary(f, t)); }));
 api.get('/payroll/reports/941', can('payroll'), wrap((req, res) => ok(res, pay.form941(Number(req.query.year) || new Date().getFullYear(), Number(req.query.quarter) || 1))));
 api.get('/payroll/reports/w2', can('payroll'), wrap((req, res) => ok(res, pay.w2Summary(Number(req.query.year) || new Date().getFullYear()))));
+registerPayrollPlanB(api, { wrap, ok, can, audit, id }); // depósito direto (NACHA), depósitos federais, 941/940, W-2/EFW2, 1099, vigia das tabelas
 api.get('/reports/1099', can('reports'), requireFeature('contractors_1099'), wrap((req, res) => ok(res, pay.report1099(Number(req.query.year) || new Date().getFullYear()))));
 
 /* ------------------- orçamento, classes, papéis, fechamento -------------------- */
@@ -1050,8 +1061,11 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
   try { bootstrapOwner(); } catch (e) { console.error('bootstrap owner failed:', e.message); } // banco já aberto; antes de aceitar conexões
   try { const n = taxid.sealLegacyTaxIds(); if (n) console.log(`SSN/EIN: ${n} registro(s) antigo(s) em texto puro foram cifrados`); } catch (e) { console.error('SSN/EIN: não foi possível cifrar registros antigos:', e.message); }
   app.listen(port, () => console.log(`Fluxo rodando em http://localhost:${port}`));
-  const tick = () => { const job = () => { try { const n = hasFeature('recurring') ? acc.runRecurring().length : 0; if (n) console.log(`${n} fatura(s) recorrente(s) geradas`); auto.generate(); auto.dailyBackup(); } catch (e) { console.error(e); } }; return multi() ? tenants.eachTenant(job) : job(); };
+  const tick = () => { const job = () => { try { const n = hasFeature('recurring') ? acc.runRecurring().length : 0; if (n) console.log(`${n} fatura(s) recorrente(s) geradas`); auto.generate(); auto.dailyBackup(); if (hasFeature('payroll')) sendDepositEmails().catch((e) => console.error('deposit emails', e.message)); } catch (e) { console.error(e); } }; return multi() ? tenants.eachTenant(job) : job(); };
   tick(); setInterval(tick, 60 * 60 * 1000).unref();
+  // vigia das tabelas do IRS/SSA: out–jan, uma vez por dia (só avisa; nunca muda número de imposto)
+  const watch = () => taxWatcher.scheduledCheck().catch((e) => console.error('tax watcher', e.message));
+  setTimeout(watch, 3 * 60 * 1000).unref(); setInterval(watch, 6 * 60 * 60 * 1000).unref();
   const bankTick = () => { const job = () => (get('SELECT 1 FROM plaid_items LIMIT 1') ? plaidSvc.syncAll().catch((e) => console.error('bank sync', e.message)) : undefined); return multi() ? tenants.eachTenant(job) : job(); };
   setInterval(bankTick, 60 * 60 * 1000).unref();
   if (backup.dailyEnabled()) { // backup diário de todos os bancos (.zip em FLUXO_BACKUP_DIR/_platform, guarda os 7 mais novos)
