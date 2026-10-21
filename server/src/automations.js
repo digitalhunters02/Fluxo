@@ -8,6 +8,7 @@ import { all, get, run, insert, tx, getSetting, setSetting, dataDir } from './db
 import { currentSlug } from './tenants.js';
 import { HttpError, today, addDays } from './accounting.js';
 import { hasFeature } from './plans.js';
+import { depositNotices } from './payrollDeposits.js';
 
 export const AUTOMATION_KEYS = {
   auto_overdue: 'bool', overdue_days: 'days', auto_bills: 'bool', bills_days: 'days', auto_estimates: 'bool', estimate_days: 'days',
@@ -87,10 +88,19 @@ export function generate() {
       if (d.date >= t && d.date <= addDays(t, 14)) want('tax', { ref_key: `tax:${d.key}`, title: d.title, detail: 'Dates can move when they fall on a weekend or holiday. Confirm with the IRS.', link: '', due_date: d.date, data: {} });
     }
   }
+  // depósito federal da folha: 3 dias antes e no dia (sempre ligado com o complemento de folha; some quando é marcado como pago)
+  const payrollOn = hasFeature('payroll');
+  if (payrollOn) {
+    for (const d of depositNotices(t)) {
+      const label = `$${(d.amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · ${d.period}`;
+      const title = d.due_date < t ? 'Federal tax deposit is overdue: {0}' : d.stage === 'due' ? 'Federal tax deposit due today: {0}' : 'Federal tax deposit due soon: {0}';
+      want('deposit', { ref_key: `deposit:${d.key}:${d.stage}`, title, detail: 'Pay at EFTPS.gov — Fluxo does not pay taxes for you.', link: '/payroll/deposits', due_date: d.due_date, data: { label, key: d.key } });
+    }
+  }
   tx(() => {
-    for (const kind of ['overdue', 'bill', 'estimate', 'stock', 'bank', 'tax', 'recurring', 'nexus']) {
+    for (const kind of ['overdue', 'bill', 'estimate', 'stock', 'bank', 'tax', 'recurring', 'nexus', 'deposit']) {
       const keys = (wanted[kind] || []).map((r) => r.ref_key);
-      const enabled = { overdue: cfg.auto_overdue, bill: cfg.auto_bills, estimate: cfg.auto_estimates, stock: cfg.auto_lowstock, bank: cfg.auto_bank, tax: cfg.auto_tax_calendar, recurring: true, nexus: true }[kind];
+      const enabled = { overdue: cfg.auto_overdue, bill: cfg.auto_bills, estimate: cfg.auto_estimates, stock: cfg.auto_lowstock, bank: cfg.auto_bank, tax: cfg.auto_tax_calendar, recurring: true, nexus: true, deposit: payrollOn }[kind];
       // abertos que não valem mais (ou automação desligada) somem; os dispensados ficam como marcador
       for (const r of all('SELECT id, ref_key FROM reminders WHERE manual=0 AND kind=? AND done_at IS NULL', kind)) if (!enabled || !keys.includes(r.ref_key)) run('DELETE FROM reminders WHERE id=?', r.id);
       for (const r of wanted[kind] || []) run('INSERT OR IGNORE INTO reminders(kind,ref_key,title,detail,link,data,due_date) VALUES(?,?,?,?,?,?,?)', r.kind, r.ref_key, r.title, r.detail, r.link, JSON.stringify(r.data), r.due_date);
