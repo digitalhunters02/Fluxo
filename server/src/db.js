@@ -225,6 +225,16 @@ CREATE INDEX IF NOT EXISTS idx_docs_type_date ON docs(type, issue_date);
 CREATE INDEX IF NOT EXISTS idx_bank_txns_entry ON bank_txns(entry_id);
 CREATE INDEX IF NOT EXISTS idx_bank_txns_acct ON bank_txns(account_id, status, date);
 CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
+CREATE TABLE IF NOT EXISTS tax_deposits (
+  id INTEGER PRIMARY KEY, dkey TEXT NOT NULL UNIQUE, kind TEXT NOT NULL, amount INTEGER NOT NULL, due_date TEXT NOT NULL, paid_date TEXT NOT NULL,
+  account_id INTEGER REFERENCES accounts(id), eftps_confirmation TEXT NOT NULL DEFAULT '', receipt TEXT, receipt_name TEXT NOT NULL DEFAULT '',
+  remit_ids TEXT NOT NULL DEFAULT '[]', user_id INTEGER, user_name TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS payroll_file_log (
+  id INTEGER PRIMARY KEY, at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, user_id INTEGER, user_name TEXT NOT NULL DEFAULT '',
+  kind TEXT NOT NULL, ref TEXT NOT NULL DEFAULT '', file_name TEXT NOT NULL DEFAULT '', totals TEXT NOT NULL DEFAULT '{}', sha256 TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS payroll_notices (key TEXT PRIMARY KEY, sent_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS reminders (
   id INTEGER PRIMARY KEY, kind TEXT NOT NULL, ref_key TEXT NOT NULL UNIQUE, title TEXT NOT NULL, detail TEXT DEFAULT '', link TEXT DEFAULT '', data TEXT DEFAULT '',
   due_date TEXT, snoozed_until TEXT, done_at TEXT, repeat TEXT NOT NULL DEFAULT '', manual INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -272,6 +282,17 @@ export function openDb(file) {
   d.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_external ON contacts(external_id) WHERE external_id IS NOT NULL');
   addColumn('journal_entries', 'external_id', 'TEXT');                // lançamento de custódia enviado pelo sistema da agência (reenviar não duplica)
   d.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_je_external ON journal_entries(external_id) WHERE external_id IS NOT NULL');
+  // Folha "Plano B": depósito direto (conta cifrada), endereço para W-2 e código do quadro 12; recolhimento ligado ao depósito federal
+  addColumn('employees', 'bank_routing', "TEXT NOT NULL DEFAULT ''");
+  addColumn('employees', 'bank_account_enc', "TEXT NOT NULL DEFAULT ''");   // número da conta cifrado (AES-256-GCM, secure.js)
+  addColumn('employees', 'bank_account_last4', "TEXT NOT NULL DEFAULT ''");
+  addColumn('employees', 'bank_account_type', "TEXT NOT NULL DEFAULT 'checking'");
+  addColumn('employees', 'address', "TEXT NOT NULL DEFAULT ''");
+  addColumn('employees', 'city', "TEXT NOT NULL DEFAULT ''");
+  addColumn('employees', 'state', "TEXT NOT NULL DEFAULT ''");
+  addColumn('employees', 'zip', "TEXT NOT NULL DEFAULT ''");
+  addColumn('employees', 'w2_box12_code', "TEXT NOT NULL DEFAULT 'D'");
+  addColumn('payroll_remittances', 'deposit_id', 'INTEGER');
   ensurePhotoSchema(d);
   als.run({ db: d }, ensureDefaults);
   return d;

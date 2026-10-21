@@ -24,6 +24,16 @@ export const US_2026 = {
   },
 };
 
+/** Tabelas por ano. Ano sem tabela aqui = o Fluxo ainda não foi atualizado para aquele ano (finalizar folha fica bloqueado). */
+export const TABLES = { 2026: US_2026 };
+export const LATEST_TABLE_YEAR = Math.max(...Object.keys(TABLES).map(Number));
+export const hasTable = (year) => !!TABLES[Number(year)];
+/** Tabela do ano; sem tabela, a mais recente (só para rascunho/prévia: finalizar exige a do ano). */
+export const tableFor = (year) => TABLES[Number(year)] || TABLES[LATEST_TABLE_YEAR];
+export const missingTableMessage = (year) => `Fluxo does not have the IRS payroll tax tables for ${year} yet. Payroll dated in ${year} cannot be finalized until Fluxo is updated.`;
+/** Limite do 1099-NEC/MISC por ano: US$ 600 até 2025; US$ 2.000 a partir de 2026 (One Big Beautiful Bill Act). */
+export const form1099Threshold = (year) => (Number(year) >= 2026 ? US_2026.form1099Threshold : 60_000);
+
 export function bracketTax(taxable, brackets) {
   let tax = 0, lower = 0;
   for (const [upper, rate] of brackets) {
@@ -42,7 +52,7 @@ export const ytdFor = (employee_id, year, excludeRunId = 0) => {
 
 /** Calcula uma linha do holerite. Tudo em centavos inteiros. */
 export function computeLine(emp, inp = {}, { type = 'regular', ytdGross = 0, suta = { rate: 0, base: 0 }, year = US_2026.year } = {}) {
-  const P = US_2026;
+  const P = tableFor(year);
   const ppy = PERIODS[emp.frequency];
   const hours = Number(inp.hours ?? 0), otHours = Number(inp.overtime_hours ?? 0);
   const bonus = cents(inp.bonus ?? 0), other = cents(inp.other_earnings ?? 0);
@@ -126,7 +136,8 @@ const totals = (lines) => ({
 
 export function previewRun(input, runId = 0) {
   const lines = buildLines(input, runId);
-  return { lines, totals: totals(lines) };
+  const year = yearOf(input.pay_date);
+  return { lines, totals: totals(lines), ...(hasTable(year) ? {} : { tableMissing: year, tableMessage: missingTableMessage(year) }) };
 }
 
 export function loadRun(id) {
@@ -170,6 +181,7 @@ export function finalizeRun(id, paid_from_id, user) {
     const r = loadRun(id);
     if (!r) throw new HttpError(404, 'Pay run not found');
     if (r.status !== 'draft') throw bad('This pay run is already finalized');
+    if (!hasTable(yearOf(r.pay_date))) throw bad(missingTableMessage(yearOf(r.pay_date)));
     const bank = get("SELECT * FROM accounts WHERE id=? AND type='asset' AND subtype='bank'", paid_from_id);
     if (!bank) throw bad('Choose the bank account the payroll is paid from');
     // recalcula: o acumulado do ano pode ter mudado desde o rascunho
@@ -218,7 +230,7 @@ export function liabilities() {
     .filter((x) => x.accrued || x.remitted);
 }
 
-export function remit({ items, date, account_id, memo = '' }, user) {
+export function remit({ items, date, account_id, memo = '', deposit_id = null }, user) {
   if (!isDate(date)) throw bad('Invalid date');
   if (!Array.isArray(items) || !items.length) throw bad('Choose what to pay');
   const bank = get("SELECT * FROM accounts WHERE id=? AND type='asset' AND subtype='bank'", account_id);
@@ -233,11 +245,11 @@ export function remit({ items, date, account_id, memo = '' }, user) {
       if (amt > (open[it.component] || 0)) throw bad('Amount is larger than what is owed');
       total += amt;
     }
-    const rid = insert('INSERT INTO payroll_remittances(component,amount,date,account_id,memo) VALUES(?,?,?,?,?)', items[0].component, cents(items[0].amount), date, bank.id, memo);
-    for (const it of items.slice(1)) insert('INSERT INTO payroll_remittances(component,amount,date,account_id,memo) VALUES(?,?,?,?,?)', it.component, cents(it.amount), date, bank.id, memo);
-    postEntry({ date, memo: memo || memoText('payroll_tax'), source_type: 'payroll_remit', source_id: rid, user_id: user?.id,
+    const ids = items.map((it) => insert('INSERT INTO payroll_remittances(component,amount,date,account_id,memo,deposit_id) VALUES(?,?,?,?,?,?)', it.component, cents(it.amount), date, bank.id, memo, deposit_id));
+    const rid = ids[0];
+    const entry_id = postEntry({ date, memo: memo || memoText('payroll_tax'), source_type: 'payroll_remit', source_id: rid, user_id: user?.id,
       lines: [{ account_id: sysAccount('payroll_liab').id, debit: total }, { account_id: bank.id, credit: total }] });
-    return { total };
+    return { total, ids, entry_id };
   });
 }
 
@@ -306,7 +318,7 @@ export function report1099(year) {
       FROM journal_lines jl JOIN journal_entries je ON je.id=jl.entry_id JOIN accounts x ON x.id=jl.account_id
       WHERE je.source_type='bank' AND x.type='expense' AND jl.contact_id IS NOT NULL AND je.date>=? AND je.date<=?`, from, to),
   ];
-  const threshold = year >= 2026 ? US_2026.form1099Threshold : 60_000;
+  const threshold = form1099Threshold(year);
   const out = rows.map((r) => {
     let paid = 0, platform = 0, unknown = 0;
     for (const o of outflows) {
