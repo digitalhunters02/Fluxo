@@ -38,5 +38,19 @@ export async function downloadFile(path, fallbackName, retried = false) {
   const url = URL.createObjectURL(await res.blob());
   const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
 }
+/** Gera um arquivo por POST (com corpo, ex.: { reviewed: true }) e baixa. Erros chegam traduzidos, com err.data (ex.: missing). */
+export async function downloadPost(path, body, fallbackName, retried = false) {
+  const res = await fetch(API_URL + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) }, body: JSON.stringify(body || {}) });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401 && getToken()) onUnauthorized();
+    if (res.status === 403 && data.code === 'reauth_required' && askReauth && !retried && (await askReauth())) return downloadPost(path, body, fallbackName, true);
+    const err = new Error(data.error ? tr(data.error) : t('Error {0}', [res.status])); err.data = data; throw err;
+  }
+  const name = /filename="?([^";]+)"?/.exec(res.headers.get('content-disposition') || '')?.[1] || fallbackName;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  return name;
+}
 export const api = { get: (p) => req('GET', p), post: (p, b = {}) => req('POST', p, b), put: (p, b = {}) => req('PUT', p, b), del: (p) => req('DELETE', p) };
 export const qs = (o) => { const p = new URLSearchParams(Object.entries(o).filter(([, v]) => v !== undefined && v !== '' && v !== null)); const s = p.toString(); return s ? `?${s}` : ''; };

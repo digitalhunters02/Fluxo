@@ -20,7 +20,8 @@ export const EMPLOYER_KEYS = ['employer_ein', 'employer_name', 'employer_trade_n
   'employer_kind', 'w2_bso_user_id', 'w2_contact_name', 'w2_contact_phone', 'w2_contact_email', 'w2_include_rs', 'w2_state_code'];
 export function employerSettings() {
   const s = Object.fromEntries(EMPLOYER_KEYS.map((k) => [k, getSetting(k, '')]));
-  s.employer_ein ||= String(getSetting('company_tax_id', '')).replace(/\D/g, '').length === 9 ? String(getSetting('company_tax_id', '')).replace(/\D/g, '') : '';
+  const companyEin = String(getSetting('company_tax_id', '')).replace(/\D/g, '');
+  s.employer_ein ||= getSetting('nacha_ein', '') || (companyEin.length === 9 ? companyEin : ''); // mesmo EIN já digitado no arquivo do banco ou na empresa
   s.employer_name ||= getSetting('company_name', '');
   s.employer_kind ||= 'N';
   s.w2_contact_email ||= getSetting('company_email', '');

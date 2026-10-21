@@ -8,6 +8,7 @@ import { download } from '../csv.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Table, Tabs, useAction, useLoad } from '../components/ui.jsx';
 import { SearchBox, useSearch } from '../components/search.jsx';
 import { useAuth } from '../App.jsx';
+import { Deposits, EmployeeBankCard, EmployeeExtraFields, FilesAudit, NachaModal, TaxForms, TaxTableBanner } from './PayrollPlanB.jsx';
 
 const COMPONENT = {
   fit: t('Federal income tax'), ss_ee: t('Social Security (employee)'), ss_er: t('Social Security (employer)'), med_ee: t('Medicare (employee)'),
@@ -21,10 +22,10 @@ const DEFAULT_HOURS = { weekly: 40, biweekly: 80, semimonthly: 86.67, monthly: 1
 const errMsg = (e) => e.message;
 
 /* ------------------------------- funcionários ------------------------------ */
-function EmployeeModal({ emp, onClose, onSaved }) {
+function EmployeeModal({ emp, onClose, onSaved, onBankChanged }) {
   const [run, busy] = useAction();
   const [f, setF] = useState({ name: '', email: '', tax_id: '', position: '', hire_date: today(), pay_basis: 'year', pay_rate: '', frequency: 'biweekly', filing_status: 'single', credits: '0',
-    extra_withholding: '0', state_pct: '0', pretax_deduction: '0', other_deduction: '0', other_deduction_label: '', active: true,
+    extra_withholding: '0', state_pct: '0', pretax_deduction: '0', other_deduction: '0', other_deduction_label: '', active: true, address: '', city: '', state: '', zip: '', w2_box12_code: 'D',
     ...(emp ? { ...emp, pay_rate: fromCents(emp.pay_rate), credits: fromCents(emp.credits), extra_withholding: fromCents(emp.extra_withholding), pretax_deduction: fromCents(emp.pretax_deduction), other_deduction: fromCents(emp.other_deduction), active: !!emp.active } : {}) });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   const save = async () => {
@@ -51,7 +52,9 @@ function EmployeeModal({ emp, onClose, onSaved }) {
         <Field label={t('Pre-tax deduction per paycheck')} hint={t('e.g. 401(k): lowers income tax only')}><Input inputMode="decimal" value={f.pretax_deduction} onChange={set('pretax_deduction')} /></Field>
         <Field label={t('After-tax deduction per paycheck')}><Input inputMode="decimal" value={f.other_deduction} onChange={set('other_deduction')} /></Field>
         <Field label={t('After-tax deduction label')}><Input value={f.other_deduction_label} onChange={set('other_deduction_label')} placeholder={t('e.g. Health plan')} /></Field>
+        <EmployeeExtraFields f={f} set={set} />
         {emp && <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={f.active} onChange={set('active')} /> {t('Active employee')}</label>}
+        <EmployeeBankCard emp={emp} onChanged={onBankChanged} />
       </div>
     </Modal>
   );
@@ -68,18 +71,18 @@ function Employees() {
     <>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><SearchBox className="w-full max-w-sm" value={q} onChange={setQ} placeholder={t('Search employees…')} />{can('payroll', true) && <Button onClick={() => setEdit({})}>{t('+ New employee')}</Button>}</div>
       <Card pad={false}>
-        <Table head={[t('Name'), t('Job title'), t('Pay'), t('Frequency'), t('Filing status'), t('Status'), '']} empty={t('No employees yet.')}>
+        <Table head={[t('Name'), t('Job title'), t('Pay'), t('Frequency'), t('Filing status'), t('Paid by'), t('Status'), '']} empty={t('No employees yet.')}>
           {search(data).map((e) => (
             <tr key={e.id} className={e.active ? 'hover:bg-slate-50' : 'opacity-50'}>
               <td className="td font-medium">{e.name}</td><td className="td">{e.position}</td>
               <td className="td num">{money(e.pay_rate)}{e.pay_basis === 'hour' ? t('/hour') : t('/year')}</td><td className="td">{FREQ[e.frequency]}</td>
-              <td className="td">{e.filing_status === 'married' ? t('Married jointly') : t('Single')}</td><td className="td">{e.active ? <Badge status="paid">{t("Active employee")}</Badge> : <Badge status="void">{t('Inactive')}</Badge>}</td>
+              <td className="td">{e.filing_status === 'married' ? t('Married jointly') : t('Single')}</td><td className="td">{e.has_bank ? <span>{t('Direct deposit')}{e.bank_account_mask && <span className="ml-1 text-xs text-slate-500">{e.bank_account_mask}</span>}</span> : <span className="text-slate-500">{t('Check')}</span>}</td><td className="td">{e.active ? <Badge status="paid">{t("Active employee")}</Badge> : <Badge status="void">{t('Inactive')}</Badge>}</td>
               <td className="td text-right">{can('payroll', true) && <button className="text-xs text-brand-700 hover:underline" onClick={() => setEdit(e)}>{t('Edit')}</button>}</td>
             </tr>
           ))}
         </Table>
       </Card>
-      {edit && <EmployeeModal emp={edit.id ? edit : null} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); reload(); }} />}
+      {edit && <EmployeeModal emp={edit.id ? edit : null} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); reload(); }} onBankChanged={reload} />}
     </>
   );
 }
@@ -116,7 +119,7 @@ function RunEditor({ employees, banks, run: existing, onClose, onSaved }) {
     <Modal wide title={existing ? t('Edit pay run') : t('New pay run')} onClose={onClose} footer={<>
       <Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
       <Button variant="ghost" disabled={busy || !preview} onClick={() => save(false)}>{t('Save draft')}</Button>
-      <Button disabled={busy || !preview || !bank} onClick={() => confirm(t('Finalize this payroll? It posts the accounting entries and cannot be edited afterwards.')) && save(true)}>{t('Finalize payroll')}</Button></>}>
+      <Button disabled={busy || !preview || !bank || !!preview?.tableMissing} onClick={() => confirm(t('Finalize this payroll? It posts the accounting entries and cannot be edited afterwards.')) && save(true)}>{t('Finalize payroll')}</Button></>}>
       <div className="grid gap-3 md:grid-cols-5">
         <Field label={t('Type')}><Select value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })}><option value="regular">{t('Regular§run')}</option><option value="bonus">{t('Bonus (supplemental)')}</option></Select></Field>
         <Field label={t('Period start')}><Input type="date" value={f.period_start} onChange={(e) => setF({ ...f, period_start: e.target.value })} /></Field>
@@ -145,6 +148,7 @@ function RunEditor({ employees, banks, run: existing, onClose, onSaved }) {
         </table>
       </div>
       {perr && <div className="mt-3"><ErrorBox error={perr} /></div>}
+      {preview?.tableMissing && <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900" role="alert" data-testid="table-missing">{t('Fluxo does not have the {0} IRS payroll tax tables yet. Payroll dated in {0} cannot be finalized until Fluxo is updated.', [preview.tableMissing])}</p>}
       {preview && (
         <dl className="mt-4 grid max-w-xl gap-x-8 gap-y-1 text-sm sm:grid-cols-2">
           <div className="flex justify-between"><dt className="text-slate-500">{t('Gross pay')}</dt><dd className="num font-medium">{money(preview.totals.gross)}</dd></div>
@@ -206,7 +210,9 @@ function Runs() {
   });
   const [editor, setEditor] = useState(null);
   const [viewId, setViewId] = useState(null);
+  const [nachaId, setNachaId] = useState(null);
   const [act] = useAction();
+  const owner = useAuth().user.role === 'owner';
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} retry={reload} />;
   const openEditor = async (id) => { if (!id) return setEditor({}); const r = await act(() => api.get(`/payroll/runs/${id}`)); if (r) setEditor({ run: r }); };
@@ -223,12 +229,14 @@ function Runs() {
               <td className="td whitespace-nowrap text-right"><button className="text-xs text-brand-700 hover:underline" onClick={() => setViewId(r.id)}>{t('View')}</button>
                 {can('payroll', true) && r.status === 'draft' && <><button className="ml-3 text-xs text-brand-700 hover:underline" onClick={() => openEditor(r.id)}>{t('Edit')}</button>
                   <button className="ml-3 text-xs text-rose-600 hover:underline" onClick={() => confirm(t('Delete this draft?')) && act(async () => { await api.del(`/payroll/runs/${r.id}`); reload(); }, t('Deleted'))}>{t('Delete')}</button></>}
+                {owner && r.status === 'final' && <button className="ml-3 text-xs text-brand-700 hover:underline" data-testid={`nacha-${r.id}`} onClick={() => setNachaId(r.id)}>{t('Bank file')}</button>}
                 {can('payroll', true) && r.status === 'final' && <button className="ml-3 text-xs text-rose-600 hover:underline" onClick={() => confirm(t('Void this payroll? Its accounting entries will be reversed.')) && act(async () => { await api.post(`/payroll/runs/${r.id}/void`); reload(); }, t('Payroll voided'))}>{t('Void')}</button>}</td></tr>
           ))}
         </Table>
       </Card>
       {editor && <RunEditor employees={data.employees} banks={data.banks} run={editor.run} onClose={() => setEditor(null)} onSaved={() => { setEditor(null); reload(); }} />}
       {viewId && <RunView runId={viewId} onClose={() => setViewId(null)} />}
+      {nachaId && <NachaModal runId={nachaId} onClose={() => setNachaId(null)} />}
     </>
   );
 }
@@ -269,7 +277,7 @@ function Liabilities() {
           <Field label={t('Pay from')}><Select value={bank || data.banks[0]?.id || ''} onChange={(e) => setBank(e.target.value)}>{data.banks.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}</Select></Field>
           <Field label={t('Date')}><Input type="date" value={when} onChange={(e) => setWhen(e.target.value)} /></Field>
           <Button disabled={busy || total <= 0} onClick={() => act(async () => { await api.post('/payroll/remit', { account_id: Number(bank || data.banks[0]?.id), date: when, items: open.filter((l) => sel.has(l.component)).map((l) => ({ component: l.component, amount: l.outstanding })) }); setSel(new Set()); reload(); }, t('Tax payment recorded'))}>{t('Record payment')} {total > 0 && `· ${money(total)}`}</Button>
-        </div><p className="mt-2 text-xs text-slate-400">{t('This records the payment in your books. Make the actual deposit on EFTPS or your state portal.')}</p></Card>
+        </div><p className="mt-2 text-xs text-slate-400">{t('This records the payment in your books. Make the actual deposit on EFTPS or your state portal.')} {t('For federal deposits, use the Tax deposits tab: it shows each due date and marks the deposit as paid.')}</p></Card>
       )}
       {can('payroll', true) && (
         <Card title={t('State unemployment (SUTA)')} className="mt-4"><div className="flex flex-wrap items-end gap-3">
@@ -335,9 +343,10 @@ export default function Payroll() {
   const nav = useNavigate();
   return (
     <>
-      <PageHeader title={t('Payroll')} subtitle={t('U.S. payroll: pay runs, withholding, employer taxes, W-2 and 941 summaries')} />
-      <Tabs tabs={[['runs', t('Pay runs')], ['employees', t('Employees')], ['taxes', t('Taxes owed')], ['reports', t('Reports')]]} value={tab} onChange={(k) => nav(`/payroll/${k}`)} />
-      {tab === 'runs' && <Runs />}{tab === 'employees' && <Employees />}{tab === 'taxes' && <Liabilities />}{tab === 'reports' && <Reports />}
+      <PageHeader title={t('Payroll')} subtitle={t('U.S. payroll: Fluxo calculates and prepares the files; you pay, upload and file. Fluxo never moves money.')} />
+      <TaxTableBanner />
+      <Tabs tabs={[['runs', t('Pay runs')], ['employees', t('Employees')], ['taxes', t('Taxes owed')], ['deposits', t('Tax deposits')], ['forms', t('Tax forms')], ['reports', t('Reports')], ['files', t('Audit: payroll files')]]} value={tab} onChange={(k) => nav(`/payroll/${k}`)} />
+      {tab === 'runs' && <Runs />}{tab === 'employees' && <Employees />}{tab === 'taxes' && <Liabilities />}{tab === 'deposits' && <Deposits />}{tab === 'forms' && <TaxForms />}{tab === 'reports' && <Reports />}{tab === 'files' && <FilesAudit />}
     </>
   );
 }

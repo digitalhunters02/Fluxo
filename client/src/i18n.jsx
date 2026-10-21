@@ -57,6 +57,10 @@ const PATTERNS = [
   [/^Books are closed through (.+)$/, 'Books are closed through {0}'],
   [/^Deductions exceed gross pay for (.+)$/, 'Deductions exceed gross pay for {0}'],
   [/^(.+) appears twice in this pay run$/, '{0} appears twice in this pay run'],
+  [/^Fluxo does not have the IRS payroll tax tables for (\d{4}) yet\. Payroll dated in \d{4} cannot be finalized until Fluxo is updated\.$/, 'Fluxo does not have the {0} IRS payroll tax tables yet. Payroll dated in {0} cannot be finalized until Fluxo is updated.'],
+  [/^Complete before generating: (.+)$/, 'Complete before generating: {0}'],
+  [/^Invalid routing number for (.+)$/, 'Invalid routing number for {0}'],
+  [/^Invalid account number for (.+)$/, 'Invalid account number for {0}'],
 ];
 export function tr(message) {
   if (typeof message !== 'string' || lang === 'en') return message;

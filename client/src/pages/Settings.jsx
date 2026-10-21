@@ -13,6 +13,7 @@ import { IntegrationsTab, PaymentsTab, ApprovalsTab, SsoTab, ImportTab, GroupTab
 import { TwoFactorCard, SecurityTab } from './SecurityUI.jsx';
 import SalesTaxSettings from './SalesTaxSettings.jsx';
 import { AccountantsTab } from './Accountants.jsx';
+import { PayrollSettingsTab } from './PayrollPlanB.jsx';
 
 /** "Levar tudo": ZIP com os dados da empresa em CSV; só o dono, em qualquer plano. */
 function ExportAll() {
@@ -362,11 +363,13 @@ export default function Settings({ reloadSettings }) {
   const nav = useNavigate();
   const owner = user.role === 'owner';
   const tabs = [['company', t('Company')], ...(owner ? [['users', t('Users')], ['accountants', t('Accountant'), 'accountant_access']] : []), ...(user.role === 'cpa' ? [] : [['plan', t('Plan')]]), ['account', t('My account')], ...(user.role === 'cpa' ? [] : [['automations', t('Automations')]]),
+    ...(user.role !== 'cpa' && user.permissions.read.includes('payroll') ? [['payroll', t('Payroll'), 'payroll']] : []),
     ...(owner ? [['roles', t('Roles'), 'custom_roles'], ['audit', t('Audit log'), 'audit_log'],
       ['sales-tax', t('Sales tax')], ['import', t('Import')], ['integrations', t('Integrations'), 'api'], ['payments', t('Online payments'), 'online_payments'],
       ['approvals', t('Approvals'), 'approvals'], ['security', t('Security')], ...(user.tenant ? [['group', t('Group'), 'multi_company']] : []), ['sso', t('Single sign-on'), 'sso']] : [])];
   return (<><PageHeader title={t('Settings')} /><Tabs tabs={tabs} value={tab} onChange={(k) => nav(`/settings/${k}`)} />
     {tab === 'company' && <><Company reload={reloadSettings} /><LockDate />{owner && <ExportAll />}</>}{tab === 'plan' && <PlanTab />}{tab === 'automations' && <AutomationsTab />}{tab === 'account' && <Account />}{tab === 'users' && owner && <Users />}{tab === 'accountants' && owner && <Gate feature="accountant_access"><AccountantsTab /></Gate>}
     {tab === 'roles' && owner && <Gate feature="custom_roles"><RolesTab /></Gate>}{tab === 'audit' && owner && <Gate feature="audit_log"><AuditExport /><Audit /></Gate>}
-    {tab === 'sales-tax' && owner && <SalesTaxSettings />}{tab === 'import' && owner && <ImportTab />}{tab === 'integrations' && owner && <IntegrationsTab />}{tab === 'payments' && owner && <PaymentsTab />}{tab === 'approvals' && owner && <ApprovalsTab />}{tab === 'group' && owner && user.tenant && <GroupTab />}{tab === 'sso' && owner && <SsoTab />}{tab === 'security' && owner && <SecurityTab />}</>);
+    {tab === 'sales-tax' && owner && <SalesTaxSettings />}{tab === 'import' && owner && <ImportTab />}{tab === 'integrations' && owner && <IntegrationsTab />}{tab === 'payments' && owner && <PaymentsTab />}{tab === 'approvals' && owner && <ApprovalsTab />}{tab === 'group' && owner && user.tenant && <GroupTab />}{tab === 'sso' && owner && <SsoTab />}{tab === 'security' && owner && <SecurityTab />}
+    {tab === 'payroll' && user.permissions.read.includes('payroll') && <Gate feature="payroll"><PayrollSettingsTab /></Gate>}</>);
 }

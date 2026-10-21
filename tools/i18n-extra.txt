@@ -1366,3 +1366,252 @@ Back to Fluxo || Voltar ao Fluxo || Volver a Fluxo
 By creating an account you accept our legal terms: || Ao criar a conta você aceita os nossos termos legais: || Al crear la cuenta usted acepta nuestros términos legales:
 Your plan includes {0} user. || Seu plano inclui {0} usuário. || Su plan incluye {0} usuario.
 You are viewing another plan. Go back to your own plan to change the subscription, billing or plan. || Você está vendo outro plano. Volte ao seu plano para mudar a assinatura, a cobrança ou o plano. || Está viendo otro plan. Vuelva a su propio plan para cambiar la suscripción, el cobro o el plan.
+Paid by || Pago por || Pagado por
+Direct deposit || Depósito direto || Depósito directo
+Fluxo does not have the {0} IRS payroll tax tables yet. Payroll dated in {0} cannot be finalized until Fluxo is updated. || O Fluxo ainda não tem as tabelas de impostos de {0} do IRS. Folhas com data em {0} não podem ser finalizadas até o Fluxo ser atualizado. || Fluxo todavía no tiene las tablas de impuestos de {0} del IRS. Las nóminas con fecha en {0} no se pueden finalizar hasta que Fluxo se actualice.
+Bank file || Arquivo do banco || Archivo del banco
+For federal deposits, use the Tax deposits tab: it shows each due date and marks the deposit as paid. || Para os depósitos federais, use a aba Depósitos de impostos: ela mostra cada vencimento e marca o depósito como pago. || Para los depósitos federales, use la pestaña Depósitos de impuestos: muestra cada vencimiento y marca el depósito como pagado.
+U.S. payroll: Fluxo calculates and prepares the files; you pay, upload and file. Fluxo never moves money. || Folha dos EUA: o Fluxo calcula e prepara os arquivos; você paga, sobe e envia. O Fluxo nunca movimenta dinheiro. || Nómina de EE. UU.: Fluxo calcula y prepara los archivos; usted paga, sube y presenta. Fluxo nunca mueve dinero.
+Tax deposits || Depósitos de impostos || Depósitos de impuestos
+Tax forms || Formulários fiscais || Formularios fiscales
+Audit: payroll files || Auditoria: arquivos da folha || Auditoría: archivos de nómina
+Federal only in this version: state payroll taxes are calculated for your records, but Fluxo does not create state files or deposits. || Só federal nesta versão: os impostos estaduais da folha são calculados para os seus registros, mas o Fluxo não gera arquivos nem depósitos estaduais. || Solo federal en esta versión: los impuestos estatales de nómina se calculan para sus registros, pero Fluxo no genera archivos ni depósitos estatales.
+Complete this first: || Complete isto antes: || Complete esto primero:
+Open Settings > Payroll || Abrir Configurações > Folha de pagamento || Abrir Configuración > Nómina
+I reviewed the amounts and I am responsible for them. || Conferi os valores e sou responsável por eles. || Revisé los montos y soy responsable de ellos.
+New IRS tables published for {0} — Fluxo must be updated before the first {0} payroll. || Novas tabelas do IRS publicadas para {0} — o Fluxo precisa ser atualizado antes da primeira folha de {0}. || Nuevas tablas del IRS publicadas para {0}: Fluxo debe actualizarse antes de la primera nómina de {0}.
+Fluxo never changes tax numbers by itself; the update is reviewed and published by the Fluxo team. || O Fluxo nunca muda os números de impostos sozinho; a atualização é conferida e publicada pela equipe do Fluxo. || Fluxo nunca cambia los números de impuestos por sí solo; el equipo de Fluxo revisa y publica la actualización.
+D — 401(k) || D — 401(k) || D — 401(k)
+E — 403(b) || E — 403(b) || E — 403(b)
+G — 457(b) || G — 457(b) || G — 457(b)
+AA — Roth 401(k) || AA — Roth 401(k) || AA — Roth 401(k)
+BB — Roth 403(b) || BB — Roth 403(b) || BB — Roth 403(b)
+None (not a retirement plan) || Nenhum (não é plano de aposentadoria) || Ninguno (no es un plan de jubilación)
+Street address || Endereço (rua e número) || Dirección (calle y número)
+Needed for the W-2 || Necessário para o W-2 || Necesario para el W-2
+City || Cidade || Ciudad
+State (2 letters) || Estado (2 letras) || Estado (2 letras)
+ZIP code || CEP (ZIP code) || Código postal (ZIP)
+W-2 box 12 code for the pre-tax deduction || Código do quadro 12 do W-2 para o desconto antes do imposto || Código de la casilla 12 del W-2 para la deducción antes de impuestos
+Save the employee first, then add the direct deposit account. || Salve o funcionário primeiro e depois acrescente a conta do depósito direto. || Guarde primero al empleado y después agregue la cuenta del depósito directo.
+Direct deposit account on file. || Conta de depósito direto cadastrada. || Cuenta de depósito directo registrada.
+No direct deposit account: this employee is paid by check. || Sem conta de depósito direto: este funcionário recebe em cheque. || Sin cuenta de depósito directo: este empleado cobra con cheque.
+Only the account owner can see or change bank details. || Só o dono da conta pode ver ou mudar os dados bancários. || Solo el dueño de la cuenta puede ver o cambiar los datos bancarios.
+Bank details saved || Dados bancários salvos || Datos bancarios guardados
+Remove the direct deposit account? This employee will be paid by check. || Remover a conta de depósito direto? Este funcionário passará a receber em cheque. || ¿Quitar la cuenta de depósito directo? Este empleado cobrará con cheque.
+Direct deposit account || Conta de depósito direto || Cuenta de depósito directo
+Routing number (9 digits) || Routing number (9 dígitos) || Número de ruta (9 dígitos)
+Account number || Número da conta || Número de cuenta
+Saved encrypted. Type a new number only to change it. || Guardado com criptografia. Digite um número novo só para trocar. || Guardado cifrado. Escriba un número nuevo solo para cambiarlo.
+Saved encrypted. Only the last 4 digits are shown. || Guardado com criptografia. Só os 4 últimos dígitos aparecem. || Guardado cifrado. Solo se muestran los 4 últimos dígitos.
+Account type || Tipo de conta || Tipo de cuenta
+Checking || Corrente (checking) || Corriente (checking)
+Savings || Poupança (savings) || Ahorros (savings)
+Save bank details || Salvar dados bancários || Guardar datos bancarios
+Remove account || Remover conta || Quitar cuenta
+Bank file downloaded || Arquivo do banco baixado || Archivo del banco descargado
+Direct deposit file (NACHA) || Arquivo de depósito direto (NACHA) || Archivo de depósito directo (NACHA)
+Download bank file || Baixar arquivo do banco || Descargar archivo del banco
+Upload this file to your bank's ACH/Direct deposit portal. Fluxo does not send money. || Suba este arquivo no portal de ACH/depósito direto do seu banco. O Fluxo não envia dinheiro. || Suba este archivo al portal de ACH/depósito directo de su banco. Fluxo no envía dinero.
+Bank file settings (company EIN and your bank routing number) || Configurações do arquivo do banco (EIN da empresa e routing number do seu banco) || Configuración del archivo del banco (EIN de la empresa y número de ruta de su banco)
+How || Como || Cómo
+Pay by check || Pagar com cheque || Pagar con cheque
+In the bank file || No arquivo do banco || En el archivo del banco
+Pay by check (not in the file) || Pagar com cheque (fora do arquivo) || Pagar con cheque (fuera del archivo)
+Effective entry date (pay date) || Data efetiva (dia do pagamento) || Fecha efectiva (día de pago)
+The day the money should reach the employees. Most banks need the file 1–2 business days before. || O dia em que o dinheiro deve chegar aos funcionários. A maioria dos bancos precisa do arquivo 1–2 dias úteis antes. || El día en que el dinero debe llegar a los empleados. La mayoría de los bancos necesita el archivo 1–2 días hábiles antes.
+File type || Tipo de arquivo || Tipo de archivo
+I reviewed the amounts. I will upload this file to my bank myself. || Conferi os valores. Eu mesmo vou subir este arquivo no meu banco. || Revisé los montos. Yo mismo subiré este archivo a mi banco.
+Balanced file: it includes the matching debit from your company account. || Arquivo balanceado: inclui o débito correspondente na conta da empresa. || Archivo balanceado: incluye el débito correspondiente en la cuenta de la empresa.
+Unbalanced file (credits only): your bank takes the money from your account. You can change this in Settings > Payroll. || Arquivo não balanceado (só créditos): o seu banco tira o dinheiro da sua conta. Você pode mudar isso em Configurações > Folha de pagamento. || Archivo no balanceado (solo créditos): su banco toma el dinero de su cuenta. Puede cambiarlo en Configuración > Nómina.
+Only the account owner can generate the bank file, because it contains account numbers. || Só o dono da conta pode gerar o arquivo do banco, porque ele tem números de conta. || Solo el dueño de la cuenta puede generar el archivo del banco, porque contiene números de cuenta.
+New employer (no payroll in the lookback period): monthly. || Empregador novo (sem folha no período de referência): mensal. || Empleador nuevo (sin nómina en el período de referencia): mensual.
+Lookback period tax: {0} ({1} to {2}). Up to $50,000 = monthly; more = semiweekly. || Imposto no período de referência: {0} ({1} a {2}). Até US$ 50.000 = mensal; acima = quinzenal (semiweekly). || Impuesto en el período de referencia: {0} ({1} a {2}). Hasta US$ 50.000 = mensual; más = bisemanal (semiweekly).
+Lookback period tax entered in Settings: {0}. Up to $50,000 = monthly; more = semiweekly. || Imposto do período de referência informado nas Configurações: {0}. Até US$ 50.000 = mensal; acima = quinzenal (semiweekly). || Impuesto del período de referencia ingresado en Configuración: {0}. Hasta US$ 50.000 = mensual; más = bisemanal (semiweekly).
+Chosen in Settings > Payroll. || Escolhido em Configurações > Folha de pagamento. || Elegido en Configuración > Nómina.
+Semiweekly || Quinzenal (semiweekly) || Bisemanal (semiweekly)
+Next business day ($100,000 rule) || Próximo dia útil (regra dos US$ 100.000) || Siguiente día hábil (regla de US$ 100.000)
+The receipt must be a PNG, JPEG, WebP or PDF under 2 MB || O comprovante deve ser PNG, JPEG, WebP ou PDF com menos de 2 MB || El comprobante debe ser PNG, JPEG, WebP o PDF de menos de 2 MB
+Deposit marked as paid || Depósito marcado como pago || Depósito marcado como pagado
+Mark as paid || Marcar como pago || Marcar como pagado
+FUTA deposit || Depósito do FUTA || Depósito del FUTA
+Federal tax deposit (Form 941) || Depósito de imposto federal (Form 941) || Depósito de impuesto federal (Form 941)
+Date you paid on EFTPS || Data em que você pagou no EFTPS || Fecha en que pagó en EFTPS
+Paid from || Pago com a conta || Pagado desde
+EFTPS confirmation number (optional) || Número de confirmação do EFTPS (opcional) || Número de confirmación de EFTPS (opcional)
+Receipt (optional: PDF or image, up to 2 MB) || Comprovante (opcional: PDF ou imagem, até 2 MB) || Comprobante (opcional: PDF o imagen, hasta 2 MB)
+Receipt || Comprovante || Comprobante
+This records the payment in your books (it lowers Payroll Liabilities). It does not pay anything. || Isto registra o pagamento nos seus livros (baixa as Obrigações da Folha). Não paga nada. || Esto registra el pago en sus libros (reduce los Pasivos de nómina). No paga nada.
+Pay at EFTPS.gov — Fluxo does not pay taxes for you. || Pague no EFTPS.gov — o Fluxo não paga impostos por você. || Pague en EFTPS.gov: Fluxo no paga impuestos por usted.
+Amounts: federal income tax withheld + Social Security and Medicare (employee and employer). Reminders appear in the bell 3 days before and on the due date. || Valores: imposto de renda federal retido + Social Security e Medicare (funcionário e empregador). Os lembretes aparecem no sino 3 dias antes e no dia do vencimento. || Montos: impuesto federal retenido + Social Security y Medicare (empleado y empleador). Los recordatorios aparecen en la campana 3 días antes y el día del vencimiento.
+Deposit schedule || Calendário de depósitos || Calendario de depósitos
+If you used another payroll provider before Fluxo, enter the lookback amount in Settings > Payroll so the schedule is right. || Se você usava outro sistema de folha antes do Fluxo, informe o valor do período de referência em Configurações > Folha de pagamento para o calendário ficar certo. || Si usaba otro sistema de nómina antes de Fluxo, ingrese el monto del período de referencia en Configuración > Nómina para que el calendario sea correcto.
+No deposits yet. Finalize a pay run first. || Nenhum depósito ainda. Finalize uma folha primeiro. || Aún no hay depósitos. Finalice una nómina primero.
+$100,000 rule: deposit by the next business day. You are now a semiweekly depositor. || Regra dos US$ 100.000: deposite até o próximo dia útil. A partir de agora você deposita no calendário quinzenal (semiweekly). || Regla de US$ 100.000: deposite a más tardar el siguiente día hábil. Desde ahora usted deposita en el calendario bisemanal (semiweekly).
+Quarter under $2,500: you may pay this with Form 941 instead of depositing. || Trimestre abaixo de US$ 2.500: você pode pagar isto junto com o Form 941 em vez de depositar. || Trimestre por debajo de US$ 2.500: puede pagar esto con el Form 941 en lugar de depositar.
+$500 or less: you may pay this with Form 940. || US$ 500 ou menos: você pode pagar isto junto com o Form 940. || US$ 500 o menos: puede pagar esto con el Form 940.
+Quarter still open: the amount can grow. || Trimestre ainda aberto: o valor pode aumentar. || Trimestre aún abierto: el monto puede aumentar.
+The amount changed after it was marked as paid ({0}). Check it. || O valor mudou depois de marcado como pago ({0}). Confira. || El monto cambió después de marcarlo como pagado ({0}). Revíselo.
+Due soon || Vence em breve || Vence pronto
+Pending || Pendente || Pendiente
+Paid§deposit || Pago || Pagado
+Overdue§deposit || Vencido || Vencido
+Undo this payment? The accounting entry is removed. || Desfazer este pagamento? O lançamento contábil é removido. || ¿Deshacer este pago? Se quita el asiento contable.
+Payment removed || Pagamento removido || Pago quitado
+Review, sign and file it yourself (paper or your e-file provider). || Confira, assine e envie você mesmo (em papel ou pelo seu provedor de envio eletrônico). || Revise, firme y presente usted mismo (en papel o con su proveedor de presentación electrónica).
+Worksheet PDF: the official IRS fillable PDF is not built into Fluxo yet, so this PDF lists each line number of the official form with its amount for you to transcribe. || PDF de planilha: o PDF preenchível oficial do IRS ainda não está no Fluxo, então este PDF lista cada linha do formulário oficial com o valor para você transcrever. || PDF de hoja de trabajo: el PDF rellenable oficial del IRS aún no está en Fluxo, así que este PDF lista cada línea del formulario oficial con su monto para que usted lo transcriba.
+Box 1: less than $2,500 this quarter || Quadro 1: menos de US$ 2.500 neste trimestre || Casilla 1: menos de US$ 2.500 este trimestre
+Box 2: monthly depositor || Quadro 2: depósito mensal || Casilla 2: depósito mensual
+Box 3: semiweekly depositor (Schedule B attached) || Quadro 3: depósito quinzenal/semiweekly (com Schedule B) || Casilla 3: depósito bisemanal/semiweekly (con Schedule B)
+Form 941 — quarterly federal tax return || Form 941 — declaração federal trimestral || Form 941 — declaración federal trimestral
+Employees paid (pay period including the 12th) || Funcionários pagos (período que inclui o dia 12) || Empleados pagados (período que incluye el día 12)
+Wages, tips and other compensation || Salários, gorjetas e outras remunerações || Salarios, propinas y otras compensaciones
+Federal income tax withheld || Imposto de renda federal retido || Impuesto federal sobre la renta retenido
+Social Security wages × 12.4% || Salários do Social Security × 12,4% || Salarios del Social Security × 12,4%
+Medicare wages × 2.9% || Salários do Medicare × 2,9% || Salarios del Medicare × 2,9%
+Additional Medicare wages × 0.9% || Salários do Medicare adicional × 0,9% || Salarios del Medicare adicional × 0,9%
+Total Social Security and Medicare || Total de Social Security e Medicare || Total de Social Security y Medicare
+Adjustment for fractions of cents || Ajuste de frações de centavo || Ajuste por fracciones de centavo
+Total taxes after adjustments || Total de impostos após ajustes || Total de impuestos después de ajustes
+Total taxes after credits || Total de impostos após créditos || Total de impuestos después de créditos
+Deposits recorded in Fluxo || Depósitos registrados no Fluxo || Depósitos registrados en Fluxo
+Overpayment || Pagamento a maior || Pago en exceso
+Part 2 || Parte 2 || Parte 2
+Month 1 || Mês 1 || Mes 1
+Month 2 || Mês 2 || Mes 2
+Month 3 || Mês 3 || Mes 3
+Uses the official IRS fillable PDF. || Usa o PDF preenchível oficial do IRS. || Usa el PDF rellenable oficial del IRS.
+Download Form 941 PDF || Baixar PDF do Form 941 || Descargar PDF del Form 941
+Downloaded || Baixado || Descargado
+Form 940 — annual federal unemployment (FUTA) return || Form 940 — declaração anual do seguro-desemprego federal (FUTA) || Form 940 — declaración anual del desempleo federal (FUTA)
+State where you paid state unemployment tax || Estado onde você pagou o seguro-desemprego estadual || Estado donde pagó el impuesto de desempleo estatal
+Total payments to all employees || Total pago a todos os funcionários || Total pagado a todos los empleados
+Payments above $7,000 per employee || Pagamentos acima de US$ 7.000 por funcionário || Pagos por encima de US$ 7.000 por empleado
+Taxable FUTA wages || Salários tributáveis do FUTA || Salarios sujetos al FUTA
+FUTA tax (0.6%) || Imposto FUTA (0,6%) || Impuesto FUTA (0,6%)
+Total FUTA tax after adjustments || Total do FUTA após ajustes || Total del FUTA después de ajustes
+FUTA deposits recorded in Fluxo || Depósitos do FUTA registrados no Fluxo || Depósitos del FUTA registrados en Fluxo
+Total for the year (must equal line 12) || Total do ano (deve ser igual à linha 12) || Total del año (debe ser igual a la línea 12)
+Credit-reduction states (Schedule A) are not modeled: check the IRS list. || Estados com redução de crédito (Schedule A) não são calculados: confira a lista do IRS. || Los estados con reducción de crédito (Schedule A) no se calculan: revise la lista del IRS.
+Download Form 940 PDF || Baixar PDF do Form 940 || Descargar PDF del Form 940
+W-2 and W-3 || W-2 e W-3 || W-2 y W-3
+Box 12 || Quadro 12 || Casilla 12
+Employee copies are worksheets (the official W-2 must be issued on the official form or an approved substitute). The W-3 totals are on the last page. || As cópias dos funcionários são planilhas (o W-2 oficial deve ser emitido no formulário oficial ou num substituto aprovado). Os totais do W-3 ficam na última página. || Las copias de los empleados son hojas de trabajo (el W-2 oficial debe emitirse en el formulario oficial o un sustituto aprobado). Los totales del W-3 están en la última página.
+Download W-2 / W-3 PDF || Baixar PDF do W-2 / W-3 || Descargar PDF del W-2 / W-3
+EFW2 file for SSA Business Services Online || Arquivo EFW2 para o SSA Business Services Online || Archivo EFW2 para SSA Business Services Online
+Upload it yourself at the SSA Business Services Online (BSO) website. Before the first real use, check the file with the free SSA AccuWage tool. || Suba você mesmo no site SSA Business Services Online (BSO). Antes do primeiro uso real, confira o arquivo com a ferramenta gratuita AccuWage do SSA. || Súbalo usted mismo en el sitio SSA Business Services Online (BSO). Antes del primer uso real, revise el archivo con la herramienta gratuita AccuWage de la SSA.
+Download EFW2 file || Baixar arquivo EFW2 || Descargar archivo EFW2
+Only the account owner can generate this file, because it contains full Social Security numbers. || Só o dono da conta pode gerar este arquivo, porque ele tem os números de Social Security completos. || Solo el dueño de la cuenta puede generar este archivo, porque contiene los números de Social Security completos.
+1099-NEC for contractors || 1099-NEC dos prestadores || 1099-NEC de contratistas
+Contractors paid at least {0} in {1} (bank transfer, check or cash). || Prestadores que receberam pelo menos {0} em {1} (transferência, cheque ou dinheiro). || Contratistas que recibieron al menos {0} en {1} (transferencia, cheque o efectivo).
+Box 1 Nonemployee compensation || Quadro 1 Remuneração de não empregado || Casilla 1 Compensación de no empleado
+No contractor reached the 1099 threshold this year. || Nenhum prestador atingiu o limite do 1099 neste ano. || Ningún contratista alcanzó el límite del 1099 este año.
+1099-MISC (rents, royalties, other income) is not generated: Fluxo does not classify those payments yet. || O 1099-MISC (aluguéis, royalties, outras rendas) não é gerado: o Fluxo ainda não classifica esses pagamentos. || El 1099-MISC (alquileres, regalías, otros ingresos) no se genera: Fluxo aún no clasifica esos pagos.
+Download recipient copies (PDF) || Baixar cópias dos prestadores (PDF) || Descargar copias de los contratistas (PDF)
+CSV for the IRS IRIS Taxpayer Portal || CSV para o portal IRIS do IRS (Taxpayer Portal) || CSV para el portal IRIS del IRS (Taxpayer Portal)
+beta — verify against the current IRIS template before uploading || beta — confira com o modelo atual do IRIS antes de subir || beta: verifique con la plantilla actual de IRIS antes de subir
+Upload and file it yourself in the IRIS Taxpayer Portal. Compare the columns with the template you download from IRIS first. || Suba e envie você mesmo no portal IRIS. Antes, compare as colunas com o modelo que você baixa do IRIS. || Súbalo y preséntelo usted mismo en el portal IRIS. Antes, compare las columnas con la plantilla que descarga de IRIS.
+Download IRIS CSV (beta) || Baixar CSV do IRIS (beta) || Descargar CSV de IRIS (beta)
+Only the account owner can generate this file, because it contains full taxpayer ID numbers. || Só o dono da conta pode gerar este arquivo, porque ele tem os números fiscais completos. || Solo el dueño de la cuenta puede generar este archivo, porque contiene los números fiscales completos.
+Fluxo fills in the numbers; it never files anything with the IRS or the SSA. Every file asks you to confirm that you reviewed it, and is listed in Audit: payroll files. || O Fluxo preenche os números; ele nunca envia nada ao IRS nem ao SSA. Todo arquivo pede a sua confirmação de que você conferiu e fica listado em Auditoria: arquivos da folha. || Fluxo completa los números; nunca presenta nada ante el IRS ni la SSA. Cada archivo le pide confirmar que lo revisó y queda en Auditoría: archivos de nómina.
+EFW2 file (SSA) || Arquivo EFW2 (SSA) || Archivo EFW2 (SSA)
+1099-NEC recipient copies || Cópias do 1099-NEC dos prestadores || Copias del 1099-NEC de los contratistas
+IRIS CSV (1099-NEC) || CSV do IRIS (1099-NEC) || CSV de IRIS (1099-NEC)
+{0} deposits · {1} || {0} depósitos · {1} || {0} depósitos · {1}
+Line 12 || Linha 12 || Línea 12
+File || Arquivo || Archivo
+No payroll files generated yet. || Nenhum arquivo da folha gerado ainda. || Aún no se generaron archivos de nómina.
+Only the account owner can change these settings. || Só o dono da conta pode mudar estas configurações. || Solo el dueño de la cuenta puede cambiar esta configuración.
+Bank file (NACHA direct deposit) || Arquivo do banco (depósito direto NACHA) || Archivo del banco (depósito directo NACHA)
+Your bank gives you these numbers when it sets up ACH origination for your business. The agreement with the bank is yours; Fluxo only creates the file. || O seu banco passa estes números quando libera o envio de ACH para a sua empresa. O contrato com o banco é seu; o Fluxo só cria o arquivo. || Su banco le da estos números cuando habilita el envío de ACH para su empresa. El contrato con el banco es suyo; Fluxo solo crea el archivo.
+Company name (as the bank knows it, 16 characters) || Nome da empresa (como o banco conhece, 16 caracteres) || Nombre de la empresa (como lo conoce el banco, 16 caracteres)
+Company EIN || EIN da empresa || EIN de la empresa
+Company ID prefix || Prefixo do ID da empresa || Prefijo del ID de la empresa
+Most banks use 1 + EIN. Ask your bank. || A maioria dos bancos usa 1 + EIN. Pergunte ao seu banco. || La mayoría de los bancos usa 1 + EIN. Consulte a su banco.
+Space || Espaço || Espacio
+None || Nenhum || Ninguno
+Your bank routing number (immediate destination) || Routing number do seu banco (immediate destination) || Número de ruta de su banco (immediate destination)
+Bank name || Nome do banco || Nombre del banco
+Immediate origin (optional) || Immediate origin (opcional) || Immediate origin (opcional)
+Leave empty to use the company ID. Some banks ask for their routing number here. || Deixe vazio para usar o ID da empresa. Alguns bancos pedem o routing number deles aqui. || Déjelo vacío para usar el ID de la empresa. Algunos bancos piden su número de ruta aquí.
+Entry description || Descrição do lançamento || Descripción del movimiento
+Shows on the employee bank statement (10 characters). || Aparece no extrato do funcionário (10 caracteres). || Aparece en el estado de cuenta del empleado (10 caracteres).
+Balanced file (adds the debit from your company account). Leave off unless your bank asks: many banks require unbalanced files. || Arquivo balanceado (acrescenta o débito na conta da empresa). Deixe desligado a não ser que o banco peça: muitos bancos exigem arquivo não balanceado. || Archivo balanceado (agrega el débito en la cuenta de la empresa). Déjelo apagado salvo que su banco lo pida: muchos bancos exigen archivos no balanceados.
+Company account number (for the balancing debit) || Número da conta da empresa (para o débito de balanceamento) || Número de cuenta de la empresa (para el débito de balance)
+Employer details for tax forms (941, 940, W-2, EFW2, 1099) || Dados do empregador para os formulários (941, 940, W-2, EFW2, 1099) || Datos del empleador para los formularios (941, 940, W-2, EFW2, 1099)
+Employer EIN || EIN do empregador || EIN del empleador
+Legal name || Razão social || Razón social
+State employer ID (W-2 box 15) || ID estadual do empregador (quadro 15 do W-2) || ID estatal del empleador (casilla 15 del W-2)
+Kind of employer || Tipo de empregador || Tipo de empleador
+None of these apply (most businesses) || Nenhum destes (a maioria das empresas) || Ninguno de estos (la mayoría de las empresas)
+501(c) non-government || 501(c) não governamental || 501(c) no gubernamental
+State/local non-501(c) || Estadual/local não 501(c) || Estatal/local no 501(c)
+State/local 501(c) || Estadual/local 501(c) || Estatal/local 501(c)
+Federal government || Governo federal || Gobierno federal
+SSA BSO User ID (8 characters) || User ID do SSA BSO (8 caracteres) || User ID de SSA BSO (8 caracteres)
+Your login at SSA Business Services Online; needed for the EFW2 file. || O seu login no SSA Business Services Online; necessário para o arquivo EFW2. || Su usuario en SSA Business Services Online; necesario para el archivo EFW2.
+Contact name || Nome do contato || Nombre del contacto
+Contact phone || Telefone do contato || Teléfono del contacto
+Contact email || E-mail do contato || Correo del contacto
+Include optional state (RS) records in the EFW2 file || Incluir os registros estaduais opcionais (RS) no arquivo EFW2 || Incluir los registros estatales opcionales (RS) en el archivo EFW2
+Federal deposit schedule || Calendário de depósitos federais || Calendario de depósitos federales
+Schedule || Calendário || Calendario
+Automatic (lookback period rule) || Automático (regra do período de referência) || Automático (regla del período de referencia)
+Form 941 tax in the lookback period (optional) || Imposto do Form 941 no período de referência (opcional) || Impuesto del Form 941 en el período de referencia (opcional)
+Only if part of the lookback period was paid outside Fluxo. Leave empty to use Fluxo records. || Só se parte do período de referência foi paga fora do Fluxo. Deixe vazio para usar os registros do Fluxo. || Solo si parte del período de referencia se pagó fuera de Fluxo. Déjelo vacío para usar los registros de Fluxo.
+IRS tax tables || Tabelas de impostos do IRS || Tablas de impuestos del IRS
+Fluxo has tax tables for: {0}. || O Fluxo tem tabelas de impostos de: {0}. || Fluxo tiene tablas de impuestos de: {0}.
+Last check of the IRS and SSA pages: {0}. || Última verificação das páginas do IRS e do SSA: {0}. || Última revisión de las páginas del IRS y la SSA: {0}.
+The IRS and SSA pages have not been checked yet. || As páginas do IRS e do SSA ainda não foram verificadas. || Las páginas del IRS y la SSA aún no se revisaron.
+From October to January Fluxo checks the IRS Publication 15-T and the SSA wage base page every day and warns when they change. It never changes tax numbers by itself. || De outubro a janeiro, o Fluxo olha todo dia a Publicação 15-T do IRS e a página do teto do SSA e avisa quando mudam. Ele nunca muda números de impostos sozinho. || De octubre a enero, Fluxo revisa cada día la Publicación 15-T del IRS y la página del tope de la SSA y avisa cuando cambian. Nunca cambia números de impuestos por sí solo.
+Some pages could not be reached on the last check. || Algumas páginas não puderam ser acessadas na última verificação. || Algunas páginas no se pudieron abrir en la última revisión.
+Checked || Verificado || Revisado
+Check now || Verificar agora || Revisar ahora
+SSN of {0} || SSN de {0} || SSN de {0}
+Address of {0} || Endereço de {0} || Dirección de {0}
+Address of {0} (use "street, city, ST 12345") || Endereço de {0} (use "rua, cidade, UF 12345") || Dirección de {0} (use "calle, ciudad, ST 12345")
+TIN of {0} || TIN (número fiscal) de {0} || TIN (número fiscal) de {0}
+Employer EIN || EIN do empregador || EIN del empleador
+Employer name || Nome do empregador || Nombre del empleador
+Employer address || Endereço do empregador || Dirección del empleador
+BSO User ID || User ID do BSO || User ID de BSO
+Contact name, phone and email || Nome, telefone e e-mail do contato || Nombre, teléfono y correo del contacto
+Payer EIN || EIN do pagador || EIN del pagador
+Payer address || Endereço do pagador || Dirección del pagador
+No finalized payroll in this year || Nenhuma folha finalizada neste ano || Ninguna nómina finalizada en este año
+No contractor reached the 1099 threshold this year || Nenhum prestador atingiu o limite do 1099 neste ano || Ningún contratista alcanzó el límite del 1099 este año
+Complete before generating: {0} || Complete antes de gerar: {0} || Complete antes de generar: {0}
+Invalid routing number for {0} || Routing number inválido de {0} || Número de ruta inválido de {0}
+Invalid account number for {0} || Número de conta inválido de {0} || Número de cuenta inválido de {0}
+Invalid routing number (it must have 9 digits and a valid check digit) || Routing number inválido (precisa ter 9 dígitos e dígito verificador válido) || Número de ruta inválido (debe tener 9 dígitos y un dígito verificador válido)
+Invalid account number (4 to 17 digits) || Número de conta inválido (4 a 17 dígitos) || Número de cuenta inválido (4 a 17 dígitos)
+Enter the account number || Digite o número da conta || Escriba el número de cuenta
+Account type must be checking or savings || O tipo de conta deve ser corrente ou poupança || El tipo de cuenta debe ser corriente o de ahorros
+Only the account owner can do this || Só o dono da conta pode fazer isso || Solo el dueño de la cuenta puede hacer esto
+Confirm that you reviewed the amounts before generating the file || Confirme que conferiu os valores antes de gerar o arquivo || Confirme que revisó los montos antes de generar el archivo
+Only finalized pay runs can generate a bank file || Só folhas finalizadas podem gerar o arquivo do banco || Solo las nóminas finalizadas pueden generar el archivo del banco
+No employee in this pay run has direct deposit information || Nenhum funcionário desta folha tem dados de depósito direto || Ningún empleado de esta nómina tiene datos de depósito directo
+Set your bank's routing number in Settings > Payroll > Bank file || Informe o routing number do seu banco em Configurações > Folha de pagamento > Arquivo do banco || Ingrese el número de ruta de su banco en Configuración > Nómina > Archivo del banco
+Set the company EIN in Settings > Payroll > Bank file || Informe o EIN da empresa em Configurações > Folha de pagamento > Arquivo do banco || Ingrese el EIN de la empresa en Configuración > Nómina > Archivo del banco
+Set the company name in Settings > Payroll > Bank file || Informe o nome da empresa em Configurações > Folha de pagamento > Arquivo do banco || Ingrese el nombre de la empresa en Configuración > Nómina > Archivo del banco
+A balanced file needs your company account number in Settings > Payroll > Bank file || O arquivo balanceado precisa do número da conta da empresa em Configurações > Folha de pagamento > Arquivo do banco || El archivo balanceado necesita el número de cuenta de la empresa en Configuración > Nómina > Archivo del banco
+EIN must have 9 digits || O EIN precisa ter 9 dígitos || El EIN debe tener 9 dígitos
+Company ID prefix must be 1, 9, a space or nothing || O prefixo do ID da empresa deve ser 1, 9, espaço ou nada || El prefijo del ID de la empresa debe ser 1, 9, espacio o nada
+Immediate origin has at most 10 characters || O immediate origin tem no máximo 10 caracteres || El immediate origin tiene como máximo 10 caracteres
+State must be the 2-letter abbreviation || O estado deve ser a sigla de 2 letras || El estado debe ser la abreviatura de 2 letras
+Invalid ZIP code || CEP (ZIP) inválido || Código postal (ZIP) inválido
+The BSO User ID has 8 letters or numbers || O User ID do BSO tem 8 letras ou números || El User ID de BSO tiene 8 letras o números
+Invalid kind of employer || Tipo de empregador inválido || Tipo de empleador inválido
+Invalid W-2 box 12 code || Código do quadro 12 do W-2 inválido || Código de la casilla 12 del W-2 inválido
+Invalid deposit schedule || Calendário de depósito inválido || Calendario de depósito inválido
+The payment date cannot be in the future || A data do pagamento não pode estar no futuro || La fecha del pago no puede estar en el futuro
+The EFTPS confirmation number is too long || O número de confirmação do EFTPS é longo demais || El número de confirmación de EFTPS es demasiado largo
+Deposit not found || Depósito não encontrado || Depósito no encontrado
+This deposit is already marked as paid || Este depósito já está marcado como pago || Este depósito ya está marcado como pagado
+No receipt || Sem comprovante || Sin comprobante
+Invalid year || Ano inválido || Año inválido
+Amount too large for the bank file || Valor grande demais para o arquivo do banco || Monto demasiado grande para el archivo del banco
+Amount too large for the EFW2 file || Valor grande demais para o arquivo EFW2 || Monto demasiado grande para el archivo EFW2
+Federal tax deposit is overdue: {0} || Depósito de imposto federal vencido: {0} || Depósito de impuesto federal vencido: {0}
+Federal tax deposit due today: {0} || Depósito de imposto federal vence hoje: {0} || Depósito de impuesto federal vence hoy: {0}
+Federal tax deposit due soon: {0} || Depósito de imposto federal vence em breve: {0} || Depósito de impuesto federal vence pronto: {0}
