@@ -95,7 +95,7 @@ test('Essentials lê: normaliza, não guarda a imagem, pacote de migração e is
   const r = await photo(A.token);
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.records.length, 1); assert.equal(r.body.records[0].name, 'Maria Silva'); assert.equal(r.body.records[0].email, 'maria@email.com');
-  assert.equal(aiSeen.at(-1).key, 'sk-test-key'); assert.deepEqual(aiSeen.at(-1).body.tool_choice, { type: 'tool', name: 'record_import' });
+  assert.equal(aiSeen.at(-1).key, 'sk-test-key'); assert.deepEqual(aiSeen.at(-1).body.tool_choice, { type: "auto" });
   const row = tenants.inTenant(A.slug, () => dbm.get('SELECT * FROM photo_imports'));
   assert.equal(row.records, 1); assert.ok(!Object.keys(row).some((k) => /image|text|content/.test(k)));
   assert.equal((await status(A.token)).used, 1); assert.equal((await status(B.token)).used, 0, 'o uso da clínica A não aparece na B');

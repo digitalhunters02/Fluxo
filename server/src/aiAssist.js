@@ -44,7 +44,7 @@ const record = (kind, usage) => insert('INSERT INTO ai_usage(ym,kind,input_token
 async function callTool({ system, tool, content, maxTokens = 2048 }) {
   let resp;
   try {
-    resp = await client().messages.create({ model: MODEL(), max_tokens: maxTokens, system, tools: [tool], tool_choice: { type: 'tool', name: tool.name }, messages: [{ role: 'user', content }] });
+    resp = await client().messages.create({ model: MODEL(), max_tokens: maxTokens, system: system + `\nAlways answer by calling the ${tool.name} tool.`, tools: [tool], tool_choice: { type: 'auto' }, messages: [{ role: 'user', content }] });
   } catch (e) { throw new HttpError(502, 'The AI assistant could not answer right now. Try again in a moment.', { code: 'ai_failed', upstream: e?.status }); }
   const block = resp.content?.find((b) => b.type === 'tool_use' && b.name === tool.name);
   if (!block || typeof block.input !== 'object') throw new HttpError(502, 'The AI assistant could not answer right now. Try again in a moment.', { code: 'ai_failed' });
