@@ -309,7 +309,7 @@ api.get('/public/signup', wrap(async (req, res) => {
 
 // Invisível para o cliente — lido só pelo Harbor (admin interno) para saber como está a empresa que veio de um
 // código de afiliado, protegido por uma chave compartilhada em vez de login (mesmo contrato usado por
-// Binder/Parcel/Ledger/Rex/BuildFlow/CoolFlow nos seus respectivos /api/billing/admin-summary).
+// Binder/Parcel/Booknest/Rex/BuildFlow/CoolFlow nos seus respectivos /api/billing/admin-summary).
 api.get('/affiliate/tenant-summary', wrap(async (req, res) => {
   const adminKey = process.env.ADMIN_SUMMARY_KEY;
   if (!adminKey || req.headers['x-admin-key'] !== adminKey) return res.status(401).json({ error: 'Not authorized.' });

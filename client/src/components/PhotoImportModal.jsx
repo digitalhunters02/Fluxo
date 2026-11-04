@@ -1,4 +1,4 @@
-// PhotoImportModal.tailwind.jsx — "Importar de foto" para CRMs em Tailwind (Binder, Parcel, Harbor, Fluxo, Ledger, Anvil...).
+// PhotoImportModal.tailwind.jsx — "Importar de foto" para CRMs em Tailwind (Binder, Parcel, Harbor, Fluxo, Booknest, Anvil...).
 // SEM dependência de UI do produto além do <Modal> dele: tudo entra por props, então o mesmo arquivo serve a todos.
 //   <PhotoImportModal Modal={Modal} t={t} lang={language} api={photoApi} kind="clients" fields={[...]} validate toPayload onSave onClose onImported cls={...} />
 //   photoApi = { status(), read(file, kind, lang), setCredit(body) }  (3 fetchs para /ai/photo-import — ver README)
