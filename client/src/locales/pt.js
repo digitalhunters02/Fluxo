@@ -2138,5 +2138,11 @@ export default {
  "Federal tax deposit due today: {0}": "Depósito de imposto federal vence hoje: {0}",
  "Federal tax deposit due soon: {0}": "Depósito de imposto federal vence em breve: {0}",
  "Install app": "Instalar app",
- "To install: tap the Share button, then “Add to Home Screen”.": "Para instalar: toque em Compartilhar e depois em “Adicionar à Tela de Início”."
+ "To install: tap the Share button, then “Add to Home Screen”.": "Para instalar: toque em Compartilhar e depois em “Adicionar à Tela de Início”.",
+ "Need help?": "Precisa de ajuda?",
+ "Help and support": "Ajuda e suporte",
+ "Questions, a problem, or an idea? Write to us and we reply by email.": "Dúvida, problema ou ideia? Escreva para nós e respondemos por e-mail.",
+ "Write to support": "Escrever para o suporte",
+ "Copy address": "Copiar endereço",
+ "Tip: tell us what you were doing and what you expected to see.": "Dica: conte o que você estava fazendo e o que esperava ver."
 };

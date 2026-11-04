@@ -1,11 +1,13 @@
 // Planos e permissões por função: cada recurso exige um plano mínimo (como o QuickBooks Online).
-import { getSetting, setSetting } from './db.js';
+import { get, getSetting, setSetting } from './db.js';
 import { HttpError } from './accounting.js';
 import { makeGates } from './planGates.js';
-import { previewPlanNow } from './owner.js';
+import { previewPlanNow, ownerEmails } from './owner.js';
 
 export const PLAN_ORDER = ['free', 'starter', 'essentials', 'plus', 'advanced', 'business', 'enterprise'];
 /** Planos com assinatura no Stripe (o plano free não tem preço nem cobrança). */
+/** Plano mais alto, CALCULADO da lista (um degrau novo acima entra sozinho). */
+export const topPlan = () => PLAN_ORDER[PLAN_ORDER.length - 1];
 export const PAID_PLANS = PLAN_ORDER.filter((p) => p !== 'free');
 export const PLAN_PRICES = { free: 0, starter: 29, essentials: 65, plus: 109, advanced: 269, business: 599, enterprise: 900 };
 /** Enterprise: US$ 900/mês, assinatura mensal no Stripe. Inclui 10 empresas no grupo; cada empresa a mais soma US$ 100 por mês (item de quantidade). */
@@ -49,13 +51,23 @@ export function nextPlanWithMore(name) {
 export const currentPlan = () => {
   const view = previewPlanNow();
   if (view && PLAN_ORDER.includes(view)) return view;
-  const p = getSetting('plan', 'advanced'); return PLAN_ORDER.includes(p) ? p : 'advanced';
+  return realPlan();
+};
+/** A empresa do DONO da plataforma (dono confirmado da empresa com e-mail em OWNER_EMAILS) fica sempre no plano mais alto, sem assinatura nem cobrança. */
+export const isOwnerCompany = () => {
+  const owners = ownerEmails();
+  if (!owners.size) return false;
+  const row = get("SELECT email FROM users WHERE role='owner' AND email_verified_at IS NOT NULL ORDER BY id LIMIT 1");
+  return !!row && owners.has(String(row.email || '').trim().toLowerCase());
 };
 /** Plano de VERDADE da empresa (nunca o da prévia do dono). */
-export const realPlan = () => { const p = getSetting('plan', 'advanced'); return PLAN_ORDER.includes(p) ? p : 'advanced'; };
+export const realPlan = () => {
+  if (isOwnerCompany()) return topPlan();
+  const p = getSetting('plan', 'advanced'); return PLAN_ORDER.includes(p) ? p : 'advanced';
+};
 /** Plano de uma empresa específica (usado pela consolidação do grupo, que lê várias empresas). */
 export const planRank = (name) => PLAN_ORDER.indexOf(name);
-export const hasAddon = (a) => (previewPlanNow() ? false : getSetting(`addon_${a}`, '0') === '1'); // na prévia o cliente do plano visto não tem complemento
+export const hasAddon = (a) => (previewPlanNow() ? false : (isOwnerCompany() || getSetting(`addon_${a}`, '0') === '1')); // na prévia o cliente do plano visto não tem complemento
 export function hasFeature(f) {
   if (ADDON_FEATURES.includes(f)) return hasAddon(f);
   const min = FEATURES[f];

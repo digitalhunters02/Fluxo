@@ -36,6 +36,7 @@ import Connections from './pages/Connections.jsx';
 import { Pricing, Welcome } from './pages/Pricing.jsx';
 import { ReauthModal, ForceSetup } from './pages/SecurityUI.jsx';
 import Legal, { LegalLinks } from './pages/Legal.jsx';
+import { SupportLine, SupportNavLink } from './components/Support.jsx';
 import InstallApp from './components/InstallApp.jsx';
 
 const AuthCtx = createContext(null);
@@ -109,6 +110,7 @@ function AuthScreen({ status, onAuth, ssoError }) {
         <div className="mt-4 flex justify-center text-center"><InstallApp /></div>
         {!status.needsSetup && <a href="/forgot" className="mt-3 block text-center text-sm text-brand-700 hover:underline">{t('Forgot your password?')}</a>}
         <LegalLinks className="mt-4 text-center text-slate-500" />
+        <SupportLine className="mt-2 text-slate-500" />
       </form>
     </div>
   );
@@ -202,6 +204,7 @@ function Shell({ user, settings, logout }) {
           <div className="mt-3"><LangSwitch dark /></div>
           <button onClick={logout} className="mt-3 block underline hover:text-white">{t('Sign out')}</button>
           <InstallApp dark className="mt-3" />
+          <SupportNavLink />
         </div>
       </aside>
       {searching && <GlobalSearch onClose={() => setSearching(false)} />}

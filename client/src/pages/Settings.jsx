@@ -1,4 +1,5 @@
 import { t, lang } from '../i18n.jsx';
+import { SupportCard } from '../components/Support.jsx';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { api, getToken, downloadFile } from '../api.js';
@@ -367,7 +368,7 @@ export default function Settings({ reloadSettings }) {
     ...(owner ? [['roles', t('Roles'), 'custom_roles'], ['audit', t('Audit log'), 'audit_log'],
       ['sales-tax', t('Sales tax')], ['import', t('Import')], ['integrations', t('Integrations'), 'api'], ['payments', t('Online payments'), 'online_payments'],
       ['approvals', t('Approvals'), 'approvals'], ['security', t('Security')], ...(user.tenant ? [['group', t('Group'), 'multi_company']] : []), ['sso', t('Single sign-on'), 'sso']] : [])];
-  return (<><PageHeader title={t('Settings')} /><Tabs tabs={tabs} value={tab} onChange={(k) => nav(`/settings/${k}`)} />
+  return (<><PageHeader title={t('Settings')} /><SupportCard /><Tabs tabs={tabs} value={tab} onChange={(k) => nav(`/settings/${k}`)} />
     {tab === 'company' && <><Company reload={reloadSettings} /><LockDate />{owner && <ExportAll />}</>}{tab === 'plan' && <PlanTab />}{tab === 'automations' && <AutomationsTab />}{tab === 'account' && <Account />}{tab === 'users' && owner && <Users />}{tab === 'accountants' && owner && <Gate feature="accountant_access"><AccountantsTab /></Gate>}
     {tab === 'roles' && owner && <Gate feature="custom_roles"><RolesTab /></Gate>}{tab === 'audit' && owner && <Gate feature="audit_log"><AuditExport /><Audit /></Gate>}
     {tab === 'sales-tax' && owner && <SalesTaxSettings />}{tab === 'import' && owner && <ImportTab />}{tab === 'integrations' && owner && <IntegrationsTab />}{tab === 'payments' && owner && <PaymentsTab />}{tab === 'approvals' && owner && <ApprovalsTab />}{tab === 'group' && owner && user.tenant && <GroupTab />}{tab === 'sso' && owner && <SsoTab />}{tab === 'security' && owner && <SecurityTab />}
