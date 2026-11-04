@@ -2136,5 +2136,7 @@ export default {
  "Amount too large for the EFW2 file": "Valor grande demais para o arquivo EFW2",
  "Federal tax deposit is overdue: {0}": "Depósito de imposto federal vencido: {0}",
  "Federal tax deposit due today: {0}": "Depósito de imposto federal vence hoje: {0}",
- "Federal tax deposit due soon: {0}": "Depósito de imposto federal vence em breve: {0}"
+ "Federal tax deposit due soon: {0}": "Depósito de imposto federal vence em breve: {0}",
+ "Install app": "Instalar app",
+ "To install: tap the Share button, then “Add to Home Screen”.": "Para instalar: toque em Compartilhar e depois em “Adicionar à Tela de Início”."
 };

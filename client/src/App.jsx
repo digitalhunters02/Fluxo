@@ -36,6 +36,7 @@ import Connections from './pages/Connections.jsx';
 import { Pricing, Welcome } from './pages/Pricing.jsx';
 import { ReauthModal, ForceSetup } from './pages/SecurityUI.jsx';
 import Legal, { LegalLinks } from './pages/Legal.jsx';
+import InstallApp from './components/InstallApp.jsx';
 
 const AuthCtx = createContext(null);
 export const useAuth = () => useContext(AuthCtx);
@@ -105,6 +106,7 @@ function AuthScreen({ status, onAuth, ssoError }) {
         <Button className="mt-5 w-full" disabled={busy}>{busy ? t('Please wait…') : status.needsSetup ? t('Get started') : t('Sign in')}</Button>
         {ssoError && <p className="mt-3 rounded-lg bg-rose-50 p-3 text-sm text-rose-700" data-testid="sso-error">{tr(ssoError)}</p>}
         {!status.needsSetup && <button type="button" data-testid="sso-button" className="btn btn-ghost mt-3 w-full" onClick={() => (f.email ? (window.location.href = `/api/sso/start?email=${encodeURIComponent(f.email)}`) : alert(t('Type your email first, then choose single sign-on.')))}>{t('Sign in with single sign-on')}</button>}
+        <div className="mt-4 flex justify-center text-center"><InstallApp /></div>
         {!status.needsSetup && <a href="/forgot" className="mt-3 block text-center text-sm text-brand-700 hover:underline">{t('Forgot your password?')}</a>}
         <LegalLinks className="mt-4 text-center text-slate-500" />
       </form>
@@ -199,6 +201,7 @@ function Shell({ user, settings, logout }) {
           <div className="font-medium text-white">{user.name}</div><div>{user.email}</div>
           <div className="mt-3"><LangSwitch dark /></div>
           <button onClick={logout} className="mt-3 block underline hover:text-white">{t('Sign out')}</button>
+          <InstallApp dark className="mt-3" />
         </div>
       </aside>
       {searching && <GlobalSearch onClose={() => setSearching(false)} />}
