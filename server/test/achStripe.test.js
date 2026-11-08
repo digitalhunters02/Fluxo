@@ -43,7 +43,7 @@ test('ligar o ACH: pede a capacidade ao Stripe e só oferece "banco" quando ela 
   assert.equal(sess.params.payment_method_types, undefined, 'sem ACH: link só como antes');
   const on = await call('/connect/ach', 'PUT', { enabled: true });
   assert.equal(on.status, 200); assert.deepEqual(on.body.ach, { enabled: true, ready: false });
-  assert.equal(S.accounts[acct].lastUpdate.capabilities.us_bank_account_ach_payments.requested, 'true');
+  assert.equal(S.accounts[acct].lastUpdate.configuration.merchant.capabilities.ach_debit_payments.requested, true, 'pediu a capacidade no formato Accounts v2');
   await call(`/public/doc/${tokenOf(inv.id)}/pay`, 'POST', {}, '');
   assert.equal(Object.values(S.sessions).at(-1).params.payment_method_types, undefined, 'ligado, mas o Stripe ainda não ativou: sem banco');
   // o Stripe ativa a capacidade e avisa

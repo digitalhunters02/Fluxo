@@ -1624,3 +1624,9 @@ Write to support || Escrever para o suporte || Escribir a soporte
 Copy address || Copiar endereço || Copiar dirección
 Copied || Copiado || Copiado
 Tip: tell us what you were doing and what you expected to see. || Dica: conte o que você estava fazendo e o que esperava ver. || Consejo: cuéntanos qué estabas haciendo y qué esperabas ver.
+Stripe refunded or disputed a payment that is not linked to an invoice: check it by hand || O Stripe reembolsou ou contestou um pagamento que não está ligado a uma fatura: confira à mão || Stripe reembolsó o disputó un pago que no está vinculado a una factura: revísalo a mano
+Stripe refunded invoice {0} in full: the payment was removed || O Stripe reembolsou a fatura {0} por inteiro: o pagamento foi removido || Stripe reembolsó la factura {0} por completo: se quitó el pago
+Stripe refunded part of invoice {0}: the payment was reduced || O Stripe reembolsou parte da fatura {0}: o pagamento foi reduzido || Stripe reembolsó parte de la factura {0}: se redujo el pago
+Card dispute on invoice {0}: send your evidence in Stripe before the deadline || Contestação de cartão na fatura {0}: envie as provas no Stripe antes do prazo || Disputa de tarjeta en la factura {0}: envía tus pruebas en Stripe antes del plazo
+Dispute lost on invoice {0}: the payment was removed || Contestação perdida na fatura {0}: o pagamento foi removido || Disputa perdida en la factura {0}: se quitó el pago
+Dispute won on invoice {0}: the money stays with you || Contestação ganha na fatura {0}: o dinheiro fica com você || Disputa ganada en la factura {0}: el dinero se queda contigo

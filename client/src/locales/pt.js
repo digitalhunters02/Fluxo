@@ -2144,5 +2144,11 @@ export default {
  "Questions, a problem, or an idea? Write to us and we reply by email.": "Dúvida, problema ou ideia? Escreva para nós e respondemos por e-mail.",
  "Write to support": "Escrever para o suporte",
  "Copy address": "Copiar endereço",
- "Tip: tell us what you were doing and what you expected to see.": "Dica: conte o que você estava fazendo e o que esperava ver."
+ "Tip: tell us what you were doing and what you expected to see.": "Dica: conte o que você estava fazendo e o que esperava ver.",
+ "Stripe refunded or disputed a payment that is not linked to an invoice: check it by hand": "O Stripe reembolsou ou contestou um pagamento que não está ligado a uma fatura: confira à mão",
+ "Stripe refunded invoice {0} in full: the payment was removed": "O Stripe reembolsou a fatura {0} por inteiro: o pagamento foi removido",
+ "Stripe refunded part of invoice {0}: the payment was reduced": "O Stripe reembolsou parte da fatura {0}: o pagamento foi reduzido",
+ "Card dispute on invoice {0}: send your evidence in Stripe before the deadline": "Contestação de cartão na fatura {0}: envie as provas no Stripe antes do prazo",
+ "Dispute lost on invoice {0}: the payment was removed": "Contestação perdida na fatura {0}: o pagamento foi removido",
+ "Dispute won on invoice {0}: the money stays with you": "Contestação ganha na fatura {0}: o dinheiro fica com você"
 };

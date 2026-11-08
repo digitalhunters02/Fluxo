@@ -14,7 +14,8 @@ export function createStripeMock(secretKey = 'sk_test_123') {
   const mock = http.createServer((req, res) => {
     let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => {
       const u = new URL(req.url, 'http://x');
-      const params = nest([...(req.method === 'GET' ? u.searchParams : new URLSearchParams(b)).entries()]);
+      const isJson = (req.headers['content-type'] || '').includes('json');
+      const params = isJson ? (b ? JSON.parse(b) : {}) : nest([...(req.method === 'GET' ? u.searchParams : new URLSearchParams(b)).entries()]);
       S.calls.push({ method: req.method, path: u.pathname, params, auth: req.headers.authorization, account: req.headers['stripe-account'] });
       const send = (code, o) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(o)); };
       // controle de teste: marca uma sessão de checkout como paga e cria a assinatura correspondente
@@ -29,6 +30,18 @@ export function createStripeMock(secretKey = 'sk_test_123') {
     }
     if (req.headers.authorization !== `Bearer ${secretKey}`) return send(401, { error: { message: 'bad key' } });
       if (req.method === 'GET' && u.pathname === '/v1/prices') return send(200, { data: S.prices.filter((p) => p.lookup_key === [].concat(params.lookup_keys || [])[0] && p.active) });
+      // Accounts v2 (formato novo das contas conectadas). O estado lido vem dos mesmos marcadores que os testes já mexem
+      // (charges_enabled, capabilities.us_bank_account_ach_payments), então um teste liga a conta uma vez só.
+      const v2view = (a) => ({ id: a.id, object: 'v2.core.account', configuration: { merchant: { capabilities: {
+        card_payments: { status: a.charges_enabled ? 'active' : 'inactive' },
+        ach_debit_payments: { status: a.capabilities?.us_bank_account_ach_payments === 'active' ? 'active' : 'inactive' } } } },
+        requirements: { entries: a.details_submitted ? [] : [{ awaiting_action_from: 'user' }] } });
+      if (req.method === 'POST' && u.pathname === '/v2/core/accounts') { const id = `acct_${++S.n}`; S.accounts[id] = { id, v2: true, charges_enabled: false, details_submitted: false, payouts_enabled: false, params }; return send(200, v2view(S.accounts[id])); }
+      let v2m = u.pathname.match(/^\/v2\/core\/accounts\/(\w+)$/);
+      if (v2m && !S.accounts[v2m[1]]) return send(404, { error: { code: 'resource_missing', message: 'no such account' } });
+      if (v2m && req.method === 'POST') { const a = S.accounts[v2m[1]]; a.lastUpdate = params; if (params.configuration?.merchant?.capabilities?.ach_debit_payments?.requested) a.capabilities = { ...(a.capabilities || {}), us_bank_account_ach_payments: a.capabilities?.us_bank_account_ach_payments || 'inactive' }; return send(200, v2view(a)); }
+      if (v2m && req.method === 'GET') return send(200, v2view(S.accounts[v2m[1]]));
+      if (req.method === 'POST' && u.pathname === '/v2/core/account_links') return send(200, { url: `https://connect.stripe.test/setup/${params.account}`, account: params.account });
       if (req.method === 'POST' && u.pathname === '/v1/accounts') { const id = `acct_${++S.n}`; S.accounts[id] = { id, charges_enabled: false, details_submitted: false, payouts_enabled: false, params }; return send(200, S.accounts[id]); }
       let am = u.pathname.match(/^\/v1\/accounts\/(\w+)$/);
       if (am && req.method === 'POST' && S.accounts[am[1]]) { const c = params.capabilities || {}; S.accounts[am[1]].capabilities = { ...(S.accounts[am[1]].capabilities || {}), ...Object.fromEntries(Object.entries(c).map(([k, v]) => [k, v.requested === 'true' ? 'inactive' : 'inactive'])) }; S.accounts[am[1]].lastUpdate = params; return send(200, S.accounts[am[1]]); }
