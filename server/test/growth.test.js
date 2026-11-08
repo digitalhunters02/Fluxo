@@ -60,14 +60,17 @@ test('setup e planos novos', async () => {
 
 test('recursos novos são travados pelo plano (402) com o plano mínimo certo', async () => {
   await setPlan('plus');
-  const cases = [['/integrations/keys', 'api'], ['/connect/onboard', 'online_payments', 'POST'], ['/approvals', 'approvals'], ['/assets', 'fixed_assets'], ['/close/2026-01', 'close_checklist'], ['/audit/export.csv', 'audit_export']];
+  const cases = [['/integrations/keys', 'api'], ['/approvals', 'approvals'], ['/assets', 'fixed_assets'], ['/close/2026-01', 'close_checklist'], ['/audit/export.csv', 'audit_export']];
   for (const [p, feature, m] of cases) {
     const r = await call(p, m || 'GET', m ? {} : undefined);
     assert.equal(r.status, 402, p); assert.equal(r.body.feature, feature, p);
   }
+  assert.notEqual((await call('/connect/status')).body.available, false, 'Plus já inclui pagamento online');
   assert.equal((await call('/reports/forecast')).status, 200); // Plus tem previsão
   await setPlan('essentials');
   assert.equal((await call('/reports/forecast')).status, 402);
+  const noOnline = await call('/connect/onboard', 'POST', {});
+  assert.equal(noOnline.status, 402); assert.equal(noOnline.body.feature, 'online_payments'); assert.equal(noOnline.body.required, 'plus', 'pagamento online começa no Plus');
   await setPlan('enterprise');
 });
 
@@ -204,7 +207,7 @@ test('pagamento online (Stripe Connect): conectar, cobrar na conta conectada, re
   assert.equal(acc.loadDoc(inv.id).payments[0].method, 'card (online)');
   assert.equal((await call(`/public/doc/${token_}/pay`, 'POST', {}, '')).status, 400); // já paga
   assert.equal((await call(`/public/doc/${token_}`, 'GET', undefined, '')).body.payOnline, false);
-  await setPlan('plus');
+  await setPlan('essentials');
   assert.equal((await call('/connect/onboard', 'POST', {})).status, 402);
   await setPlan('enterprise');
 });

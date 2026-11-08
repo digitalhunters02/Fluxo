@@ -94,7 +94,7 @@ test('pagamento por banco que falha: some o "em andamento", vira lembrete e o li
   assert.equal(get("SELECT COUNT(*) n FROM reminders WHERE kind='payment_failed'").n, 1, 'um aviso só');
 });
 
-test('só o dono liga; desligar tira o banco do link; plano abaixo do Advanced não tem', async () => {
+test('só o dono liga; desligar tira o banco do link; plano abaixo do Plus não tem', async () => {
   await call('/users', 'POST', { name: 'Vera', email: 'v@x.com', password: 'senha1234', role: 'viewer' });
   const vt = (await call('/login', 'POST', { email: 'v@x.com', password: 'senha1234' }, '')).body.token;
   assert.equal((await call('/connect/ach', 'PUT', { enabled: false }, vt)).status, 403);
@@ -103,7 +103,7 @@ test('só o dono liga; desligar tira o banco do link; plano abaixo do Advanced n
   const inv = invoice(1000);
   await call(`/public/doc/${tokenOf(inv.id)}/pay`, 'POST', {}, '');
   assert.equal(Object.values(S.sessions).at(-1).params.payment_method_types, undefined);
-  await call('/plan', 'PUT', { plan: 'plus' });
+  await call('/plan', 'PUT', { plan: 'essentials' });
   assert.equal((await call('/connect/ach', 'PUT', { enabled: true })).status, 402);
 });
 test.after(() => { server.close(); mock.close(); });
