@@ -7,6 +7,7 @@ import { download } from '../csv.js';
 import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader, Select, Stat, Table, useAction, useLoad } from '../components/ui.jsx';
 import { useAuth } from '../App.jsx';
 import { LockedButton } from '../components/plan.jsx';
+import { shareUrls } from '../share.js';
 
 const TITLES = { invoice: [t('Invoices'), t('New invoice'), t('Customer')], estimate: [t('Estimates'), t('New estimate'), t('Customer')], bill: [t('Bills'), t('New bill'), t('Vendor')], credit: [t('Credit memos'), t('New credit memo'), t('Customer')], po: [t('Purchase orders'), t('New purchase order'), t('Vendor')] };
 
@@ -50,20 +51,26 @@ function BatchModal({ onClose, onDone }) {
 
 function QuickChargeModal({ onClose, onDone }) {
   const [run, busy] = useAction();
-  const [f, setF] = useState({ kind: 'service', description: '', price: '', customer_name: '', customer_email: '' });
+  const { settings: biz } = useAuth();
+  const [f, setF] = useState({ kind: 'service', description: '', price: '', customer_name: '', customer_email: '', customer_phone: '' });
   const [done, setDone] = useState(null);
   const [copied, setCopied] = useState(false);
   const save = async () => {
-    const r = await run(() => api.post('/docs/quick-charge', { kind: f.kind, description: f.description, amount_cents: toCents(f.price), customer_name: f.customer_name, customer_email: f.customer_email }));
+    const r = await run(() => api.post('/docs/quick-charge', { kind: f.kind, description: f.description, amount_cents: toCents(f.price), customer_name: f.customer_name, customer_email: f.customer_email, customer_phone: f.customer_phone }));
     if (r) setDone(r);
   };
   const copy = async () => { try { await navigator.clipboard.writeText(done.link); setCopied(true); } catch { /* o link também aparece escrito abaixo */ } };
   if (done) {
+    const wa = shareUrls({ phone: f.customer_phone, text: t('Hi {0}! Here is your invoice {1} for {2} from {3}: {4}', [f.customer_name || '', done.doc.number, money(done.doc.total), biz?.company_name || '', done.link]) });
     return (
       <Modal title={t('Payment link ready')} onClose={onDone} footer={<Button onClick={onDone}>{t('Done')}</Button>}>
         <p className="text-sm text-slate-600">{done.canPayOnline ? t('Customers can pay by card (and by bank, if you turned it on).') : t('Online payment is off: connect Stripe in Settings. The customer can still open this link and see the invoice.')}</p>
         <p className="mt-3 break-all rounded bg-slate-50 p-2 text-xs" data-testid="quick-link">{done.link}</p>
-        <div className="mt-3 flex gap-2"><Button onClick={copy}>{copied ? t('Link copied') : t('Copy link')}</Button><a className="btn-ghost inline-flex items-center rounded px-3 py-2 text-sm" href={done.link} target="_blank" rel="noreferrer">{t('Open link')}</a></div>
+        {done.emailed && <p className="mt-2 text-sm text-emerald-700">{t('The invoice was also emailed to the customer.')}</p>}
+        <div className="mt-3 flex flex-wrap gap-2"><Button onClick={copy}>{copied ? t('Link copied') : t('Copy link')}</Button>
+          <a className="btn btn-ghost" data-testid="quick-whatsapp" href={wa.whatsapp} target="_blank" rel="noreferrer">{t('Send by WhatsApp')}</a>
+          <a className="btn btn-ghost" data-testid="quick-sms" href={wa.sms}>{t('Send by text message')}</a>
+          <a className="btn btn-ghost" href={done.link} target="_blank" rel="noreferrer">{t('Open link')}</a></div>
       </Modal>
     );
   }
@@ -76,6 +83,7 @@ function QuickChargeModal({ onClose, onDone }) {
         <Field label={t('What is it for?')} className="col-span-2"><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
         <Field label={t('Customer name (optional)')}><Input value={f.customer_name} onChange={(e) => setF({ ...f, customer_name: e.target.value })} /></Field>
         <Field label={t('Customer email (optional)')}><Input type="email" value={f.customer_email} onChange={(e) => setF({ ...f, customer_email: e.target.value })} /></Field>
+        <Field label={t('Customer phone (optional)')} className="col-span-2"><Input type="tel" inputMode="tel" value={f.customer_phone} onChange={(e) => setF({ ...f, customer_phone: e.target.value })} /></Field>
       </div>
     </Modal>
   );

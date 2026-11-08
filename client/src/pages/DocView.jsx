@@ -9,6 +9,7 @@ import { Badge, Button, Card, ErrorBox, Field, Input, Loading, Modal, PageHeader
 import { useAuth } from '../App.jsx';
 import { AiCollectionButton } from '../components/AiAssist.jsx';
 import PlanBadge, { usePlanGate } from '../PlanBadge.jsx';
+import { shareUrls } from '../share.js';
 
 const NAMES = { invoice: t('Invoice'), estimate: t('Estimate'), bill: t('Bill'), credit: t('Credit memo'), po: t('Purchase order') };
 
@@ -158,6 +159,7 @@ export default function DocView() {
         <Button variant="ghost" onClick={() => nav(-1)}>{t('Back')}</Button>
         {!purchase && <Button variant="ghost" onClick={() => window.print()}>{t('Print / PDF')}</Button>}
         {!purchase && <Button variant="ghost" onClick={async () => { try { await navigator.clipboard.writeText(link); toast(t('Link copied')); } catch { prompt(t('Copy the link:'), link); } }}>{t('Copy link')}</Button>}
+        {d.type === 'invoice' && posted && d.balance > 0 && w && (() => { const u = shareUrls({ phone: d.contact_phone, text: t('Hi {0}! Here is your invoice {1} for {2} from {3}: {4}', [d.contact_name, d.number, money(d.balance), settings.company_name || '', link]) }); return <><a className="btn btn-ghost" data-testid="share-whatsapp" href={u.whatsapp} target="_blank" rel="noreferrer">{t('Send by WhatsApp')}</a><a className="btn btn-ghost" data-testid="share-sms" href={u.sms}>{t('Send by text message')}</a></>; })()}
         {!purchase && d.contact_email && <a className="btn btn-ghost" href={`mailto:${d.contact_email}?subject=${encodeURIComponent(`${NAMES[d.type]} ${d.number}`)}&body=${encodeURIComponent(t('Hi! Here is the link to view the document: {0}', [link]))}`}>{t('Send by email')}</a>}
         {d.type === 'invoice' && d.overdue && w && <AiCollectionButton docId={d.id} email={d.contact_email} tenant={user.tenant} />}
         {!purchase && posted && w && <Button variant="ghost" data-testid="email-to-customer" data-plan-locked={emailGate.locked ? emailGate.minPlan : undefined} onClick={() => (emailGate.locked ? emailGate.open() : setEmailing(true))}>{t('Email to customer')}<PlanBadge gate="email_invoices" /></Button>}

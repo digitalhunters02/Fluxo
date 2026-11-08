@@ -1646,3 +1646,8 @@ Copy link || Copiar link || Copiar enlace
 Link copied || Link copiado || Enlace copiado
 
 Open link || Abrir link || Abrir enlace
+Customer phone (optional) || Telefone do cliente (opcional) || Teléfono del cliente (opcional)
+Send by WhatsApp || Enviar por WhatsApp || Enviar por WhatsApp
+Send by text message || Enviar por mensagem de texto || Enviar por mensaje de texto
+Hi {0}! Here is your invoice {1} for {2} from {3}: {4} || Olá {0}! Aqui está a sua fatura {1} no valor de {2} de {3}: {4} || ¡Hola {0}! Aquí está su factura {1} por {2} de {3}: {4}
+The invoice was also emailed to the customer. || A fatura também foi enviada por e-mail ao cliente. || La factura también se envió por correo al cliente.

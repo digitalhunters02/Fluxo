@@ -110,7 +110,7 @@ export function computeLines(type, lines) {
 }
 
 export function loadDoc(id) {
-  const d = get(`SELECT d.*, c.name AS contact_name, c.email AS contact_email, p.name AS project_name FROM docs d
+  const d = get(`SELECT d.*, c.name AS contact_name, c.email AS contact_email, c.phone AS contact_phone, p.name AS project_name FROM docs d
     JOIN contacts c ON c.id=d.contact_id LEFT JOIN projects p ON p.id=d.project_id WHERE d.id=?`, id);
   if (!d) return null;
   d.lines = all('SELECT l.*, i.name AS item_name FROM doc_lines l LEFT JOIN items i ON i.id=l.item_id WHERE doc_id=? ORDER BY position, id', id);

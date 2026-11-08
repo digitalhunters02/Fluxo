@@ -131,4 +131,24 @@ test('cobrança rápida: vira fatura de uma linha com link; o cliente paga e o r
   assert.equal(acc.loadDoc(inv.id).payments[0].amount, 5000);
 });
 
+test('cobrança rápida: manda por e-mail quando o cliente tem e-mail; guarda o telefone para WhatsApp/SMS', async () => {
+  const mailer = await import('../src/mailer.js');
+  const sent = [];
+  mailer.setTransport(async (m) => { sent.push(m); });
+  const r = await call('/docs/quick-charge', 'POST', { description: 'Aula particular', amount_cents: 6000, customer_name: 'João Pereira', customer_email: 'joao@example.com', customer_phone: '(801) 555-0123' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.emailed, true);
+  assert.equal(sent.length, 1); assert.equal(sent[0].to, 'joao@example.com');
+  assert.match(sent[0].text, /\/p\//, 'o e-mail leva o link');
+  assert.equal(get("SELECT phone FROM contacts WHERE name='João Pereira'").phone, '(801) 555-0123');
+  assert.equal(acc.loadDoc(r.body.doc.id).contact_phone, '(801) 555-0123');
+  // sem e-mail do cliente: não envia nada, o link vai pela tela (WhatsApp, SMS ou copiar)
+  const r2 = await call('/docs/quick-charge', 'POST', { description: 'Conserto', amount_cents: 2500, customer_name: 'Sem Email' });
+  assert.equal(r2.body.emailed, false); assert.equal(sent.length, 1);
+  // pedido explícito de não enviar
+  const r3 = await call('/docs/quick-charge', 'POST', { description: 'Outro', amount_cents: 2500, customer_name: 'Ana', customer_email: 'ana@example.com', send_email: false });
+  assert.equal(r3.body.emailed, false); assert.equal(sent.length, 1);
+  mailer.setTransport(null);
+});
+
 after(() => { server.closeAllConnections?.(); server.close(); mock.closeAllConnections?.(); mock.close(); });

@@ -21,6 +21,7 @@ import * as taxWatcher from './taxWatcher.js';
 import * as importer from './importer.js';
 import * as stax from './salestax.js';
 import * as connectMod from './connect.js';
+import * as docmail from './docmail.js';
 import * as ai from './aiAssist.js';
 import { buildExport } from './exportAll.js';
 import * as plaidSvc from './plaid.js';
@@ -652,7 +653,7 @@ api.post('/docs/invoice/batch', can('sales', true), requireFeature('batch_invoic
 }));
 // Cobrança rápida: o cliente recebe de quem for (serviço, venda ou outro) sem montar uma fatura inteira. Vira uma fatura de uma linha,
 // emitida, com o link de pagamento pronto. Passa pela mesma contabilidade, pelo mesmo Stripe e pelos mesmos reembolsos das faturas.
-api.post('/docs/quick-charge', can('sales', true), wrap((req, res) => {
+api.post('/docs/quick-charge', can('sales', true), wrap(async (req, res) => {
   assertInvoiceQuota(1);
   const b = req.body || {};
   const kind = ['service', 'sale', 'other'].includes(b.kind) ? b.kind : 'service';
@@ -662,18 +663,26 @@ api.post('/docs/quick-charge', can('sales', true), wrap((req, res) => {
   if (amount > 100000000) throw bad('The amount is too large');
   const email = String(b.customer_email || '').trim().slice(0, 200);
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw bad('Invalid customer email');
+  const phone = String(b.customer_phone || '').replace(/[^\d+\-().\s]/g, '').trim().slice(0, 25);
   const name = String(b.customer_name || '').trim().slice(0, 150) || (email ? email.split('@')[0] : '') || 'Walk-in customer';
   let contactId = Number(b.contact_id) || 0;
   if (contactId && !get('SELECT 1 FROM contacts WHERE id=?', contactId)) throw bad('Select a contact');
   if (!contactId) {
     const found = get("SELECT id FROM contacts WHERE kind IN ('customer','both') AND lower(name)=lower(?) AND active=1", name);
-    contactId = found ? found.id : insert("INSERT INTO contacts(kind,name,email,terms_days) VALUES('customer',?,?,0)", name, email);
+    contactId = found ? found.id : insert("INSERT INTO contacts(kind,name,email,phone,terms_days) VALUES('customer',?,?,?,0)", name, email, phone);
+    if (found && phone && !get("SELECT phone FROM contacts WHERE id=?", contactId)?.phone) run('UPDATE contacts SET phone=? WHERE id=?', phone, contactId);
   }
   const d = acc.saveDoc({ type: 'invoice', contact_id: contactId, issue_date: acc.today(), due_date: acc.today(), post: true, notes: `Quick charge (${kind})`, lines: [{ description, qty: 1, unit_price: amount }] }, req.user);
   audit(req, 'create', d.type, d.id, d.number);
   const link = `${billing.originOf(req)}/p/${withSlug(d.share_token)}`;
   const canPayOnline = hasFeature('online_payments') && getSetting('connect_ready', '0') === '1' && !!getSetting('connect_account_id', '');
-  ok(res, { doc: { id: d.id, number: d.number, total: d.total, status: d.status }, link, canPayOnline });
+  // e-mail: só se o cliente deu e-mail, o servidor tem e-mail configurado e o plano inclui enviar faturas; senão o link é copiado ou enviado por WhatsApp/SMS pela tela
+  let emailed = false;
+  const to = email || get('SELECT email FROM contacts WHERE id=?', contactId)?.email || '';
+  if (to && b.send_email !== false && docmail.emailReady() && hasFeature('email_invoices')) {
+    try { const dr = docmail.draftFor(d.id); await docmail.emailDocument(d.id, { to, subject: dr.subject, message: dr.message, attach_pdf: true }, link, req.user); emailed = true; } catch (e) { console.error('quick charge email failed:', e.message); }
+  }
+  ok(res, { doc: { id: d.id, number: d.number, total: d.total, status: d.status }, link, canPayOnline, emailed });
 }));
 api.post('/docs/:type', (req, res, next) => can(docModule(req.params.type), true)(req, res, next), wrap((req, res) => {
   const pay = req.params.type === 'invoice' ? req.body.pay_now : null; // recibo de venda: fatura emitida e paga na hora

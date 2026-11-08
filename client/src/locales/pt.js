@@ -2161,5 +2161,10 @@ export default {
  "Payment link ready": "Link de pagamento pronto",
  "Customers can pay by card (and by bank, if you turned it on).": "O cliente paga com cartão (e pelo banco, se você ligou).",
  "Online payment is off: connect Stripe in Settings. The customer can still open this link and see the invoice.": "O pagamento online está desligado: conecte o Stripe em Configurações. O cliente ainda pode abrir este link e ver a fatura.",
- "Open link": "Abrir link"
+ "Open link": "Abrir link",
+ "Customer phone (optional)": "Telefone do cliente (opcional)",
+ "Send by WhatsApp": "Enviar por WhatsApp",
+ "Send by text message": "Enviar por mensagem de texto",
+ "Hi {0}! Here is your invoice {1} for {2} from {3}: {4}": "Olá {0}! Aqui está a sua fatura {1} no valor de {2} de {3}: {4}",
+ "The invoice was also emailed to the customer.": "A fatura também foi enviada por e-mail ao cliente."
 };
