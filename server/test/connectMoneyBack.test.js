@@ -108,4 +108,27 @@ test('reembolso de pagamento que não está ligado a uma fatura (feito antes des
   assert.equal(reminders('stripe_review').length, 1);
 });
 
+
+test('cobrança rápida: vira fatura de uma linha com link; o cliente paga e o reembolso funciona igual ao das faturas', async () => {
+  const bad = await call('/docs/quick-charge', 'POST', { description: 'x', amount_cents: 10 });
+  assert.equal(bad.status, 400, 'abaixo de US$ 0,50 não vale');
+  assert.equal((await call('/docs/quick-charge', 'POST', { amount_cents: 5000 })).status, 400, 'sem descrição');
+  const r = await call('/docs/quick-charge', 'POST', { kind: 'sale', description: 'Bicicleta usada', amount_cents: 8000, customer_name: 'Maria Silva', customer_email: 'maria@example.com' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.doc.total, 8000); assert.equal(r.body.canPayOnline, true);
+  assert.match(r.body.link, /^https:\/\/app\.fluxo\.test\/p\/./);
+  const d = acc.loadDoc(r.body.doc.id);
+  assert.equal(d.type, 'invoice'); assert.equal(d.lines.length, 1); assert.equal(d.lines[0].description, 'Bicicleta usada');
+  assert.notEqual(d.status, 'draft', 'já sai emitida, com o link pronto');
+  // mesma cliente de novo: não duplica o contato
+  await call('/docs/quick-charge', 'POST', { description: 'Conserto', amount_cents: 3000, customer_name: 'maria silva' });
+  assert.equal(all("SELECT id FROM contacts WHERE lower(name)='maria silva'").length, 1);
+  // o cliente paga pelo link e o reembolso parcial ajusta o pagamento
+  const inv = acc.loadDoc(r.body.doc.id);
+  const paid = await payOnline(inv, 'pi_quick', 8000);
+  assert.equal(paid.status, 'paid');
+  assert.equal((await hook({ id: 'qr1', type: 'charge.refunded', account: acct, data: { object: { id: 'ch_q', payment_intent: 'pi_quick', refunded: false, amount_refunded: 3000 } } })).body.handled, 'partial_refund');
+  assert.equal(acc.loadDoc(inv.id).payments[0].amount, 5000);
+});
+
 after(() => { server.closeAllConnections?.(); server.close(); mock.closeAllConnections?.(); mock.close(); });

@@ -1630,3 +1630,19 @@ Stripe refunded part of invoice {0}: the payment was reduced || O Stripe reembol
 Card dispute on invoice {0}: send your evidence in Stripe before the deadline || Contestação de cartão na fatura {0}: envie as provas no Stripe antes do prazo || Disputa de tarjeta en la factura {0}: envía tus pruebas en Stripe antes del plazo
 Dispute lost on invoice {0}: the payment was removed || Contestação perdida na fatura {0}: o pagamento foi removido || Disputa perdida en la factura {0}: se quitó el pago
 Dispute won on invoice {0}: the money stays with you || Contestação ganha na fatura {0}: o dinheiro fica com você || Disputa ganada en la factura {0}: el dinero se queda contigo
+Quick charge || Cobrança rápida || Cobro rápido
+Charge for a service, a sale or anything else. You get a payment link to send. || Cobre um serviço, uma venda ou qualquer outra coisa. Você recebe um link de pagamento para enviar. || Cobre un servicio, una venta o cualquier otra cosa. Recibe un enlace de pago para enviar.
+Service || Serviço || Servicio
+Sale || Venda || Venta
+Amount || Valor || Importe
+What is it for? || Cobrança de quê? || ¿Por qué concepto?
+Customer name (optional) || Nome do cliente (opcional) || Nombre del cliente (opcional)
+Customer email (optional) || E-mail do cliente (opcional) || Correo del cliente (opcional)
+Create payment link || Criar link de pagamento || Crear enlace de pago
+Payment link ready || Link de pagamento pronto || Enlace de pago listo
+Customers can pay by card (and by bank, if you turned it on). || O cliente paga com cartão (e pelo banco, se você ligou). || El cliente paga con tarjeta (y con banco, si lo activó).
+Online payment is off: connect Stripe in Settings. The customer can still open this link and see the invoice. || O pagamento online está desligado: conecte o Stripe em Configurações. O cliente ainda pode abrir este link e ver a fatura. || El pago en línea está desactivado: conecte Stripe en Configuración. El cliente aún puede abrir este enlace y ver la factura.
+Copy link || Copiar link || Copiar enlace
+Link copied || Link copiado || Enlace copiado
+
+Open link || Abrir link || Abrir enlace

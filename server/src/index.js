@@ -650,6 +650,31 @@ api.post('/docs/invoice/batch', can('sales', true), requireFeature('batch_invoic
   const ids = acc.batchInvoices(req.body, req.user);
   audit(req, 'create', 'invoice', null, `batch of ${ids.length}`); ok(res, { ids });
 }));
+// Cobrança rápida: o cliente recebe de quem for (serviço, venda ou outro) sem montar uma fatura inteira. Vira uma fatura de uma linha,
+// emitida, com o link de pagamento pronto. Passa pela mesma contabilidade, pelo mesmo Stripe e pelos mesmos reembolsos das faturas.
+api.post('/docs/quick-charge', can('sales', true), wrap((req, res) => {
+  assertInvoiceQuota(1);
+  const b = req.body || {};
+  const kind = ['service', 'sale', 'other'].includes(b.kind) ? b.kind : 'service';
+  const description = String(need(b.description, 'Enter what you are charging for')).trim().slice(0, 200);
+  const amount = Math.round(Number(b.amount_cents));
+  if (!Number.isFinite(amount) || amount < 50) throw bad('The amount must be at least $0.50');
+  if (amount > 100000000) throw bad('The amount is too large');
+  const email = String(b.customer_email || '').trim().slice(0, 200);
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw bad('Invalid customer email');
+  const name = String(b.customer_name || '').trim().slice(0, 150) || (email ? email.split('@')[0] : '') || 'Walk-in customer';
+  let contactId = Number(b.contact_id) || 0;
+  if (contactId && !get('SELECT 1 FROM contacts WHERE id=?', contactId)) throw bad('Select a contact');
+  if (!contactId) {
+    const found = get("SELECT id FROM contacts WHERE kind IN ('customer','both') AND lower(name)=lower(?) AND active=1", name);
+    contactId = found ? found.id : insert("INSERT INTO contacts(kind,name,email,terms_days) VALUES('customer',?,?,0)", name, email);
+  }
+  const d = acc.saveDoc({ type: 'invoice', contact_id: contactId, issue_date: acc.today(), due_date: acc.today(), post: true, notes: `Quick charge (${kind})`, lines: [{ description, qty: 1, unit_price: amount }] }, req.user);
+  audit(req, 'create', d.type, d.id, d.number);
+  const link = `${billing.originOf(req)}/p/${withSlug(d.share_token)}`;
+  const canPayOnline = hasFeature('online_payments') && getSetting('connect_ready', '0') === '1' && !!getSetting('connect_account_id', '');
+  ok(res, { doc: { id: d.id, number: d.number, total: d.total, status: d.status }, link, canPayOnline });
+}));
 api.post('/docs/:type', (req, res, next) => can(docModule(req.params.type), true)(req, res, next), wrap((req, res) => {
   const pay = req.params.type === 'invoice' ? req.body.pay_now : null; // recibo de venda: fatura emitida e paga na hora
   if (req.params.type === 'invoice') assertInvoiceQuota(1);

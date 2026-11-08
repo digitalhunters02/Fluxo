@@ -48,6 +48,39 @@ function BatchModal({ onClose, onDone }) {
   );
 }
 
+function QuickChargeModal({ onClose, onDone }) {
+  const [run, busy] = useAction();
+  const [f, setF] = useState({ kind: 'service', description: '', price: '', customer_name: '', customer_email: '' });
+  const [done, setDone] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const save = async () => {
+    const r = await run(() => api.post('/docs/quick-charge', { kind: f.kind, description: f.description, amount_cents: toCents(f.price), customer_name: f.customer_name, customer_email: f.customer_email }));
+    if (r) setDone(r);
+  };
+  const copy = async () => { try { await navigator.clipboard.writeText(done.link); setCopied(true); } catch { /* o link também aparece escrito abaixo */ } };
+  if (done) {
+    return (
+      <Modal title={t('Payment link ready')} onClose={onDone} footer={<Button onClick={onDone}>{t('Done')}</Button>}>
+        <p className="text-sm text-slate-600">{done.canPayOnline ? t('Customers can pay by card (and by bank, if you turned it on).') : t('Online payment is off: connect Stripe in Settings. The customer can still open this link and see the invoice.')}</p>
+        <p className="mt-3 break-all rounded bg-slate-50 p-2 text-xs" data-testid="quick-link">{done.link}</p>
+        <div className="mt-3 flex gap-2"><Button onClick={copy}>{copied ? t('Link copied') : t('Copy link')}</Button><a className="btn-ghost inline-flex items-center rounded px-3 py-2 text-sm" href={done.link} target="_blank" rel="noreferrer">{t('Open link')}</a></div>
+      </Modal>
+    );
+  }
+  return (
+    <Modal title={t('Quick charge')} onClose={onClose} footer={<><Button variant="ghost" onClick={onClose}>{t('Cancel')}</Button><Button disabled={busy || !f.description.trim() || toCents(f.price) < 50} onClick={save}>{t('Create payment link')}</Button></>}>
+      <p className="mb-3 text-sm text-slate-600">{t('Charge for a service, a sale or anything else. You get a payment link to send.')}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label={t('Type')}><Select value={f.kind} onChange={(e) => setF({ ...f, kind: e.target.value })}><option value="service">{t('Service')}</option><option value="sale">{t('Sale')}</option><option value="other">{t('Other')}</option></Select></Field>
+        <Field label={t('Amount')}><Input inputMode="decimal" placeholder="0.00" value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} /></Field>
+        <Field label={t('What is it for?')} className="col-span-2"><Input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
+        <Field label={t('Customer name (optional)')}><Input value={f.customer_name} onChange={(e) => setF({ ...f, customer_name: e.target.value })} /></Field>
+        <Field label={t('Customer email (optional)')}><Input type="email" value={f.customer_email} onChange={(e) => setF({ ...f, customer_email: e.target.value })} /></Field>
+      </div>
+    </Modal>
+  );
+}
+
 export default function Docs({ type }) {
   const { can } = useAuth();
   const nav = useNavigate();
@@ -59,6 +92,7 @@ export default function Docs({ type }) {
   const purchase = ['bill', 'po'].includes(type);
   const { has, planInfo } = useAuth();
   const [batch, setBatch] = useState(false);
+  const [quick, setQuick] = useState(false);
   const rows = useMemo(() => (data || []).filter((d) => {
     if (status === 'overdue' ? !d.overdue : status && d.status !== status) return false;
     return !q || `${d.number} ${d.contact_name}`.toLowerCase().includes(q.toLowerCase());
@@ -73,6 +107,7 @@ export default function Docs({ type }) {
       <PageHeader title={title}>
         <Button variant="ghost" onClick={() => download(`${type}s.csv`, [[t('Number'), who, t('Issued'), t('Due'), t('Status'), t('Total'), t('Paid§m'), t('Balance')], ...rows.map((d) => [d.number, d.contact_name, d.issue_date, d.due_date, d.status, d.total / 100, d.paid / 100, d.balance / 100])])}>{t('Export CSV')}</Button>
         {type === 'invoice' && can('sales', true) && (has('batch_invoices') ? <Button variant="ghost" onClick={() => setBatch(true)}>{t('Batch invoices')}</Button> : <LockedButton gate="batch_invoices" data-testid="batch-locked">{t('Batch invoices')}</LockedButton>)}
+        {type === 'invoice' && can('sales', true) && <Button variant="ghost" data-testid="quick-charge" onClick={() => setQuick(true)}>{t('Quick charge')}</Button>}
         {can(mod, true) && <Button onClick={() => nav(`/document/${type}/new`)}>+ {newLabel}</Button>}
       </PageHeader>
       {type === 'invoice' && planInfo.limits.invoices_per_month != null && (
@@ -106,6 +141,7 @@ export default function Docs({ type }) {
           ))}
         </Table>
       </Card>
+      {quick && <QuickChargeModal onClose={() => setQuick(false)} onDone={() => { setQuick(false); reload(); }} />}
       {batch && <BatchModal onClose={() => setBatch(false)} onDone={() => { setBatch(false); reload(); }} />}
     </>
   );

@@ -2150,5 +2150,16 @@ export default {
  "Stripe refunded part of invoice {0}: the payment was reduced": "Stripe reembolsó parte de la factura {0}: se redujo el pago",
  "Card dispute on invoice {0}: send your evidence in Stripe before the deadline": "Disputa de tarjeta en la factura {0}: envía tus pruebas en Stripe antes del plazo",
  "Dispute lost on invoice {0}: the payment was removed": "Disputa perdida en la factura {0}: se quitó el pago",
- "Dispute won on invoice {0}: the money stays with you": "Disputa ganada en la factura {0}: el dinero se queda contigo"
+ "Dispute won on invoice {0}: the money stays with you": "Disputa ganada en la factura {0}: el dinero se queda contigo",
+ "Quick charge": "Cobro rápido",
+ "Charge for a service, a sale or anything else. You get a payment link to send.": "Cobre un servicio, una venta o cualquier otra cosa. Recibe un enlace de pago para enviar.",
+ "Sale": "Venta",
+ "What is it for?": "¿Por qué concepto?",
+ "Customer name (optional)": "Nombre del cliente (opcional)",
+ "Customer email (optional)": "Correo del cliente (opcional)",
+ "Create payment link": "Crear enlace de pago",
+ "Payment link ready": "Enlace de pago listo",
+ "Customers can pay by card (and by bank, if you turned it on).": "El cliente paga con tarjeta (y con banco, si lo activó).",
+ "Online payment is off: connect Stripe in Settings. The customer can still open this link and see the invoice.": "El pago en línea está desactivado: conecte Stripe en Configuración. El cliente aún puede abrir este enlace y ver la factura.",
+ "Open link": "Abrir enlace"
 };
