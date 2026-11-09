@@ -136,7 +136,8 @@ export async function createCheckout({ plan, payroll, origin, email, signup = fa
     ...(customer && !signup ? { customer } : email ? { customer_email: email } : {}),
     success_url: signup ? `${origin}/welcome?session_id={CHECKOUT_SESSION_ID}` : `${origin}/settings/plan?checkout=success`,
     cancel_url: signup ? `${origin}/pricing?canceled=1` : `${origin}/settings/plan?checkout=canceled`,
-    allow_promotion_codes: 'true', client_reference_id: currentSlug() || 'fluxo',
+    // Código promocional só no plano MENSAL: no anual o Stripe aplicaria o cupom "3 meses" ao ano inteiro; o anual já tem 10% e a promoção não soma.
+    ...(normalizeInterval(interval) === 'month' ? { allow_promotion_codes: 'true' } : {}), client_reference_id: currentSlug() || 'fluxo',
     // ref: código de afiliado capturado na página de preços (?ref=CODE); viaja na sessão do Stripe para sobreviver ao redirect e voltar em verifyCheckoutSession().
     metadata: { fluxo_signup: signup ? '1' : '0', plan, interval, product: PRODUCT, payroll: payroll ? '1' : '0', ref: ref ? String(ref).slice(0, 64) : undefined },
     subscription_data: { metadata: { fluxo_plan: plan, fluxo_interval: interval, product: PRODUCT } },

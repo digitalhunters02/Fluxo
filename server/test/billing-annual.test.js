@@ -53,10 +53,12 @@ test('checkout anual cria os preços anuais (plano + folha), uma vez, e leva a e
   assert.equal(Object.values(p.line_items)[0].price, priceByKey('fluxo_plan_plus_yearly').id);
   assert.equal(p.metadata.interval, 'year'); assert.equal(p.subscription_data.metadata.fluxo_interval, 'year');
   assert.equal(p.metadata.product, 'fluxo'); assert.equal(p.subscription_data.metadata.product, 'fluxo');
+  assert.ok(!p.allow_promotion_codes, 'anual não oferece código promocional (o cupom de 3 meses valeria o ano todo)');
   const n = S.prices.length; await call('/public/checkout', 'POST', { plan: 'plus', payroll: true, interval: 'year' }, ''); assert.equal(S.prices.length, n, 'repetir não cria preço de novo');
   // intervalo desconhecido vira mensal; o mensal usa o preço cheio
   const m = await call('/public/checkout', 'POST', { plan: 'starter', interval: 'weekly' }, '');
   assert.equal(S.sessions[m.body.id].params.metadata.interval, 'month'); assert.equal(priceByKey('fluxo_plan_starter_monthly').unit_amount, 2900);
+  assert.equal(String(S.sessions[m.body.id].params.allow_promotion_codes), 'true', 'mensal aceita código promocional');
 });
 
 test('depois do pagamento anual o plano e o período anual ficam gravados', async () => {
