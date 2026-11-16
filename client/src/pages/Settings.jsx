@@ -220,7 +220,7 @@ function AutomationsTab() {
 }
 
 /** Itens do plano Free (o que todo mundo tem; não são recursos com selo). */
-const FREE_FEATURES = [t('5 invoices per month & unlimited estimates'), t('Import from QuickBooks & Xero'), t('Sales tax by state'), t('Download all your data'), t('Send by link, email button or PDF'), t('Expenses, receipts & sales receipts'), t('Bank CSV import & reconciliation'), t('Core financial reports'), t('Invoices, estimates & credit memos')];
+const FREE_FEATURES = [t('5 invoices per month & unlimited estimates'), t('Import from QuickBooks & Xero'), t('Sales tax by state'), t('Download all your data'), t('Send by link, email button or PDF'), t('Expenses, receipts & sales receipts'), t('Bank CSV import & reconciliation'), t('Core financial reports'), t('Invoices, estimates & credit memos'), t('Quick charge: get paid by link without building a full invoice')];
 
 /** O que o plano traz: no Free, o básico; nos demais, "Tudo do plano anterior, mais:" com os recursos que ELE acrescenta (vindos do servidor), cada um com o selo do plano onde entra. */
 function PlanFeatureList({ plan, catalog }) {
@@ -306,7 +306,7 @@ function PlanTab() {
         })}
       </div>
       <Card title={<>{t('Payroll add-on')}<PlanBadge plan="payroll" /></>} className="mt-4">
-        <p className="text-sm text-slate-600">{shownInterval === 'year' && planInfo.payrollYearlyPrice ? t('U.S. payroll: ${0}/year + ${1} per employee per year. Calculates and records payroll, pay stubs, W-2 and 941 summaries.', [planInfo.payrollYearlyPrice.base, planInfo.payrollYearlyPrice.perEmployee]) : t('U.S. payroll: ${0}/month + ${1} per employee. Calculates and records payroll, pay stubs, W-2 and 941 summaries.', [planInfo.payrollPrice.base, planInfo.payrollPrice.perEmployee])}</p>
+        <p className="text-sm text-slate-600">{shownInterval === 'year' && planInfo.payrollYearlyPrice ? t('U.S. payroll: ${0}/year + ${1} per employee per year. Calculates and records payroll and pay stubs, creates the direct-deposit bank file (NACHA), the federal deposit calendar, Forms 941, 940 and W-2, and the 1099-NEC file.', [planInfo.payrollYearlyPrice.base, planInfo.payrollYearlyPrice.perEmployee]) : t('U.S. payroll: ${0}/month + ${1} per employee. Calculates and records payroll and pay stubs, creates the direct-deposit bank file (NACHA), the federal deposit calendar, Forms 941, 940 and W-2, and the 1099-NEC file.', [planInfo.payrollPrice.base, planInfo.payrollPrice.perEmployee])}</p>
         <div className="mt-3 flex items-center gap-3"><Badge status={planInfo.payroll ? 'paid' : 'void'}>{planInfo.payroll ? t('Active') : t('Inactive')}</Badge>
           {owner && !previewing && (!stripeOn || bill.managed) && <Button variant="ghost" disabled={busy} onClick={() => (stripeOn ? change({ payroll: !planInfo.payroll }) : manual({ payroll: !planInfo.payroll }))}>{planInfo.payroll ? t('Turn off') : t('Turn on')}</Button>}</div>
       </Card>

@@ -960,7 +960,7 @@ export default {
  "Switch to the {0} plan?": "Mudar para o plano {0}?",
  "Upgrade": "Fazer upgrade",
  "Downgrade": "Reduzir plano",
- "U.S. payroll: ${0}/month + ${1} per employee. Calculates and records payroll, pay stubs, W-2 and 941 summaries.": "Folha dos EUA: US${0}/mês + US${1} por funcionário. Calcula e registra a folha, holerites e resumos de W-2 e 941.",
+ "U.S. payroll: ${0}/month + ${1} per employee. Calculates and records payroll and pay stubs, creates the direct-deposit bank file (NACHA), the federal deposit calendar, Forms 941, 940 and W-2, and the 1099-NEC file.": "Folha dos EUA: US${0}/mês + US${1} por funcionário. Calcula e registra a folha e os holerites, gera o arquivo do banco para o depósito direto (NACHA), o calendário de depósitos federais, os formulários 941, 940 e W-2 e o arquivo do 1099-NEC.",
  "Turn off": "Desligar",
  "Turn on": "Ligar",
  "Online billing is not connected yet: the owner switches plans here by hand.": "A cobrança online ainda não está conectada: o proprietário troca de plano aqui manualmente.",
@@ -1811,7 +1811,7 @@ export default {
  "Yearly plan: you pay once for 12 months. You can cancel renewal at any time; unused months are not refunded, and access continues until the end of the year you paid for. We email you before it renews.": "Plano anual: você paga uma vez pelos 12 meses. Pode cancelar a renovação a qualquer momento; não há reembolso dos meses não usados, e o acesso continua até o fim do ano pago. Avisamos por e-mail antes de renovar.",
  "Add U.S. payroll (${0}/yr + ${1} per employee/yr)": "Adicionar folha dos EUA (US${0}/ano + US${1} por funcionário/ano)",
  "Include U.S. payroll (${0}/yr + ${1} per employee/yr)": "Incluir folha dos EUA (US${0}/ano + US${1} por funcionário/ano)",
- "U.S. payroll: ${0}/year + ${1} per employee per year. Calculates and records payroll, pay stubs, W-2 and 941 summaries.": "Folha dos EUA: US${0}/ano + US${1} por funcionário por ano. Calcula e registra a folha, holerites e resumos de W-2 e 941.",
+ "U.S. payroll: ${0}/year + ${1} per employee per year. Calculates and records payroll and pay stubs, creates the direct-deposit bank file (NACHA), the federal deposit calendar, Forms 941, 940 and W-2, and the 1099-NEC file.": "Folha dos EUA: US${0}/ano + US${1} por funcionário por ano. Calcula e registra a folha e os holerites, gera o arquivo do banco para o depósito direto (NACHA), o calendário de depósitos federais, os formulários 941, 940 e W-2 e o arquivo do 1099-NEC.",
  "{0} companies in a group included, then ${1}/year for each extra company": "{0} empresas no grupo incluídas, depois US$ {1}/ano por empresa extra",
  "Insurance agency accounts": "Contas de agência de seguros",
  "Adds the accounts an insurance agency needs: a premium trust bank account, premiums payable to carriers, and commission income. Nothing you already have is changed or removed.": "Acrescenta as contas que uma agência de seguros precisa: banco de custódia de prêmios, prêmios a repassar às seguradoras e receita de comissão. Nada do que você já tem é alterado ou removido.",
@@ -2166,5 +2166,6 @@ export default {
  "Send by WhatsApp": "Enviar por WhatsApp",
  "Send by text message": "Enviar por mensagem de texto",
  "Hi {0}! Here is your invoice {1} for {2} from {3}: {4}": "Olá {0}! Aqui está a sua fatura {1} no valor de {2} de {3}: {4}",
- "The invoice was also emailed to the customer.": "A fatura também foi enviada por e-mail ao cliente."
+ "The invoice was also emailed to the customer.": "A fatura também foi enviada por e-mail ao cliente.",
+ "Quick charge: get paid by link without building a full invoice": "Cobrança rápida: receba pelo link sem montar uma fatura inteira"
 };
