@@ -77,9 +77,11 @@ Every feature has a minimum plan, enforced on the server (HTTP 402) and in the U
 |---|---|---|
 | Free | $0 | 5 new invoices per month, unlimited estimates, expenses, bank CSV import and reconciliation, core reports, import from QuickBooks/Xero, sales tax by state, download all your data, share by link / email button / PDF, 1 user. No card needed; it has no variable cost (no bank feeds, no server-sent email) |
 | Starter | $29 | Everything in Free plus unlimited invoices, credit memos, branding, unlimited users, 1 accountant (read-only) |
-| Essentials | $65 | Bills, recurring invoices, time tracking, full report set, audit log, connected banks (2), AI assistant (30 uses/month) |
-| Plus | $109 | Inventory, project profitability, purchase orders, budgets, classes, 1099 report, period lock, connected banks (5), AI assistant (100/month), up to 3 accountants |
-| Advanced | $269 | Custom roles and permissions, batch invoicing, online payments with card and bank (ACH), unlimited accountants, AI assistant (300/month), connected banks (15) |
+| Essentials | $65 | Bills, recurring invoices, time tracking, full report set, audit log, email invoices with PDF, connected banks (2), AI assistant (30 uses/month) |
+| Plus | $109 | Inventory, project profitability, purchase orders, budgets, classes, 1099 report, period lock, cash-flow forecast, online payments with card and bank (ACH) through Stripe Connect, connected banks (5), AI assistant (100/month), up to 3 accountants |
+| Advanced | $269 | Custom roles and permissions, batch invoicing, API and webhooks, unlimited accountants, AI assistant (300/month), connected banks (15) |
+| Business | $599 | Bill approvals, fixed assets, month-end close checklist, audit export, up to 5 companies in a group with consolidation |
+| Enterprise | $900 | SSO, 10 companies in a group included (+$100/month each extra company) |
 | Payroll add-on | $35 + $5/employee | U.S. payroll (calculation, records, bank file, deposit calendar and tax-form files; Fluxo never moves money or files) |
 
 QuickBooks Online list prices for comparison: $38 / $85 / $140 / $340; payroll Core $50 + $6.50. Feature map: `server/src/plans.js`.
