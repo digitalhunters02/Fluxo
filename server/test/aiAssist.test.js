@@ -19,7 +19,7 @@ const A = (code) => get('SELECT id FROM accounts WHERE code=?', code).id;
 
 // cliente de mentira: devolve o que cada teste mandar
 let reply = null; const sent = [];
-const fake = { messages: { create: async (req) => { sent.push(req); const out = typeof reply === 'function' ? reply(req) : reply; return { content: [{ type: 'tool_use', name: req.tool_choice.name, input: out }], usage: { input_tokens: 100, output_tokens: 40 } }; } } };
+const fake = { messages: { create: async (req) => { sent.push(req); const out = typeof reply === 'function' ? reply(req) : reply; return { content: [{ type: 'tool_use', name: req.tools[0].name, input: out }], usage: { input_tokens: 100, output_tokens: 40 } }; } } };
 ai.setClientForTests(fake);
 
 let owner = '';
