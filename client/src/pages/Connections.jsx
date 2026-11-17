@@ -22,6 +22,14 @@ const rangeOf = (p) => {
   return { from: addDays(to, -(Number(p) - 1)), to };
 };
 
+/** "Atualizado hoje às 14:32" / "Atualizado em 16 nov. às 09:05" (saldo guardado, atualiza sozinho de hora em hora). */
+const updatedText = (iso) => {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return d.toDateString() === new Date().toDateString() ? t('Updated today at {0}', [time]) : t('Updated {0} at {1}', [date(iso.slice(0, 10)), time]);
+};
+
 /* ------------------------------- Plaid Link (navegador) ------------------------------- */
 let linkScript = null;
 const loadPlaidLink = () => linkScript || (linkScript = new Promise((resolve, reject) => {
@@ -56,7 +64,7 @@ function Overview({ onConnect, hasConnections }) {
     <>
       <div className="no-print mb-4 flex justify-end"><Select className="field max-w-[12rem]" value={period} onChange={(e) => setPeriod(e.target.value)} aria-label={t('Period')}>{Object.entries(PERIODS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></div>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label={t('Cash in connected banks')} value={money(d.balance)} sub={[d.creditOwed ? `${t('Cards owed')}: ${money(d.creditOwed)}` : '', d.loanOwed ? t('Owed on loans: {0}', [money(d.loanOwed)]) : ''].filter(Boolean).join(' · ') || undefined} />
+        <Stat label={t('Cash in connected banks')} value={money(d.balance)} sub={[d.creditOwed ? `${t('Cards owed')}: ${money(d.creditOwed)}` : '', d.loanOwed ? t('Owed on loans: {0}', [money(d.loanOwed)]) : '', d.balanceAt ? updatedText(d.balanceAt) : ''].filter(Boolean).join(' · ') || undefined} />
         <Stat label={t('Money in')} value={money(d.moneyIn)} tone="good" sub={`${date(from)} – ${date(to)}`} />
         <Stat label={t('Money out')} value={money(d.moneyOut)} tone="bad" />
         <Stat label={t('Net')} value={money(d.moneyIn - d.moneyOut)} tone={d.moneyIn - d.moneyOut < 0 ? 'bad' : 'good'} />
@@ -172,7 +180,7 @@ function Banks({ overview, reload, canWrite }) {
         <Card key={c.item_id} className="mb-4" pad={false}
           title={<span className="flex items-center gap-2">{c.institution_name || t('Bank')} {c.demo ? <Badge status="draft">{t('Demo')}</Badge> : null}
             {c.status === 'ok' ? <Badge status="paid">{t('Connected')}</Badge> : c.status === 'new_accounts' ? <Badge status="sent">{t('New accounts found')}</Badge> : <Badge status="declined">{c.status === 'login_required' ? t('Sign-in needed') : t('Problem')}</Badge>}</span>}
-          action={<div className="flex items-center gap-3 text-xs">{c.last_sync && <span className="text-slate-400">{t('Synced')} {date(c.last_sync.slice(0, 10))}</span>}
+          action={<div className="flex items-center gap-3 text-xs">{c.last_sync && <span className="text-slate-400" data-testid="bank-synced-at">{updatedText(c.last_sync)}</span>}
             {canWrite && c.status === 'login_required' && mode === 'live' && <button className="text-brand-700 hover:underline" onClick={() => act(() => connectLive(c.item_id))}>{t('Reconnect')}</button>}
             {canWrite && c.status === 'new_accounts' && mode === 'live' && <button className="text-brand-700 hover:underline" data-testid="plaid-add-accounts" onClick={() => act(() => connectLive(c.item_id))}>{t('Add accounts')}</button>}
             {canWrite && <button className="text-rose-600 hover:underline" onClick={() => confirm(t('Disconnect this bank? Your bookkeeping entries stay; no new transactions will arrive.')) && act(async () => { await api.del(`/plaid/items/${c.item_id}`); reload(); }, t('Bank disconnected'))}>{t('Disconnect')}</button>}</div>}>
@@ -182,6 +190,7 @@ function Banks({ overview, reload, canWrite }) {
         </Card>
       ))}
       <p className="text-xs text-slate-400">{t('Linked accounts send their transactions to Banking → Transactions, already categorized when we can, ready to review and reconcile.')}</p>
+      {overview.connections.length > 0 && <p className="mt-1 text-xs text-slate-400" data-testid="bank-auto-hint">{t('Balances and transactions update on their own about every hour, at no extra cost.')}</p>}
     </>
   );
 }

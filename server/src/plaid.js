@@ -354,7 +354,9 @@ export function insights(q = {}) {
   const accounts = connectionAccounts();
   // Saldo = só contas de dinheiro (corrente, poupança). Cartão e financiamento são dívida; investimento fica à parte.
   const sumOf = (g) => accounts.filter((a) => a.group === g).reduce((s, a) => s + (a.balance_current || 0), 0);
-  return { from, to, balance: sumOf('cash'), creditOwed: sumOf('card'), loanOwed: sumOf('loan'), investments: sumOf('invest'), moneyIn: totals.money_in, moneyOut: totals.money_out, byCategory, topMerchants, payers, monthly };
+  // hora do saldo: a mais antiga entre as contas (guardado; atualiza sozinho de hora em hora, sem custo extra)
+  const balanceAt = accounts.map((a) => a.balance_at).filter(Boolean).sort()[0] || null;
+  return { from, to, balance: sumOf('cash'), creditOwed: sumOf('card'), loanOwed: sumOf('loan'), investments: sumOf('invest'), balanceAt, moneyIn: totals.money_in, moneyOut: totals.money_out, byCategory, topMerchants, payers, monthly };
 }
 
 /* -------------------------------------- webhook -------------------------------------- */

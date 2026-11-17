@@ -129,6 +129,12 @@ test('visão geral: saldo, quem pagou, gastos por categoria e histórico', async
   const d = i.body;
   assert.equal(d.balance, 150050, 'o financiamento do carro não entra no saldo'); assert.equal(d.creditOwed, 41025);
   assert.equal(d.loanOwed, 645289);
+  assert.ok(d.balanceAt && !Number.isNaN(Date.parse(d.balanceAt)), 'manda a hora do saldo guardado');
+  // abrir a visão geral lê o saldo guardado: nenhuma chamada nova à Plaid, e nunca o saldo ao vivo pago
+  const n0 = calls.length;
+  await call('/plaid/insights'); await call('/plaid/overview'); await call('/plaid/activity');
+  assert.equal(calls.length, n0, 'abrir as telas não chama a Plaid');
+  assert.ok(!calls.some((c) => c.path === '/accounts/balance/get'));
   // financiamento não vira conta de banco no livro
   const loanRow = get("SELECT id FROM plaid_accounts WHERE account_id='a-loan'");
   const lk = await call(`/plaid/accounts/${loanRow.id}`, 'PUT', { create: true });

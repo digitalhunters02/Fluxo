@@ -2170,5 +2170,8 @@ export default {
  "Owed on loans: {0}": "Por pagar en préstamos: {0}",
  "Loan (owed)": "Préstamo (por pagar)",
  "Not counted in your cash (view only)": "No cuenta en su saldo (solo para ver)",
- "Loans and investments are not bank accounts in the books: they stay in the bank summary only": "Préstamos e inversiones no son cuentas bancarias en los libros: quedan solo en el resumen del banco"
+ "Loans and investments are not bank accounts in the books: they stay in the bank summary only": "Préstamos e inversiones no son cuentas bancarias en los libros: quedan solo en el resumen del banco",
+ "Updated today at {0}": "Actualizado hoy a las {0}",
+ "Updated {0} at {1}": "Actualizado el {0} a las {1}",
+ "Balances and transactions update on their own about every hour, at no extra cost.": "Saldos y movimientos se actualizan solos más o menos cada hora, sin costo extra."
 };
