@@ -20,6 +20,7 @@ const mock = http.createServer((req, res) => {
       return send(200, { accounts: [
         { account_id: 'a-chk', name: 'Checking', official_name: 'Plaid Checking', mask: '0000', type: 'depository', subtype: 'checking', balances: { current: 1500.5, available: 1400, iso_currency_code: 'USD' } },
         { account_id: 'a-cc', name: 'Credit Card', mask: '3333', type: 'credit', subtype: 'credit card', balances: { current: 410.25, available: null, iso_currency_code: 'USD' } },
+        { account_id: 'a-loan', name: '2014 FORD F-150', mask: '7777', type: 'loan', subtype: 'auto', balances: { current: 6452.89, available: null, iso_currency_code: 'USD' } },
       ] });
     }
     if (req.url === '/transactions/sync') { const page = state.pages.shift() || { added: [], modified: [], removed: [], next_cursor: body.cursor || 'c0', has_more: false }; return send(200, page); }
@@ -80,7 +81,7 @@ test('troca o public_token, guarda o access_token criptografado e sincroniza com
   assert.equal(row.cursor, 'cur2');
   assert.equal(get('SELECT COUNT(*) AS n FROM plaid_transactions').n, 4);           // as 2 páginas foram aplicadas
   assert.equal(get("SELECT amount FROM plaid_transactions WHERE transaction_id='t2'").amount, 1840);   // Plaid: positivo = saída
-  assert.equal(r.body.accounts.length, 2);
+  assert.equal(r.body.accounts.length, 3); // corrente, cartão e o financiamento do carro
   assert.equal(r.body.accounts.find((a) => a.account_id === 'a-chk').balance_current, 150050);
   // a segunda chamada de sync enviou o cursor da primeira página
   const syncs = calls.filter((c) => c.path === '/transactions/sync');
@@ -126,7 +127,19 @@ test('sync incremental: modificadas, removidas e pendente que vira postada', asy
 test('visão geral: saldo, quem pagou, gastos por categoria e histórico', async () => {
   const i = await call('/plaid/insights'); assert.equal(i.status, 200);
   const d = i.body;
-  assert.equal(d.balance, 150050); assert.equal(d.creditOwed, 41025);
+  assert.equal(d.balance, 150050, 'o financiamento do carro não entra no saldo'); assert.equal(d.creditOwed, 41025);
+  assert.equal(d.loanOwed, 645289);
+  // financiamento não vira conta de banco no livro
+  const loanRow = get("SELECT id FROM plaid_accounts WHERE account_id='a-loan'");
+  const lk = await call(`/plaid/accounts/${loanRow.id}`, 'PUT', { create: true });
+  assert.equal(lk.status, 400);
+  assert.match(lk.body.error, /Loans and investments/);
+  // bancos grandes (OAuth): com PLAID_REDIRECT_URI, o Link é criado com o endereço de volta
+  process.env.PLAID_REDIRECT_URI = 'https://fluxo.example.test/connections/banks';
+  const before = calls.length;
+  assert.equal((await call('/plaid/link-token', 'POST', {})).status, 200);
+  assert.equal(calls.slice(before).find((c) => c.path === '/link/token/create').body.redirect_uri, 'https://fluxo.example.test/connections/banks');
+  delete process.env.PLAID_REDIRECT_URI;
   assert.equal(d.moneyIn, 250000); assert.equal(d.moneyOut, 1840 + 6400 + 4100);        // t2 + t5 + t4 (t3 foi removida)
   assert.deepEqual(d.payers.map((p) => [p.name, p.total]), [['Brightside Dental', 250000]]);
   assert.ok(d.byCategory.find((c) => c.category === 'TRANSPORTATION'));

@@ -1,5 +1,6 @@
 import { all, get } from './db.js';
 import { today, addDays, addMonths, advance, computeLines } from './accounting.js';
+import { accountGroup } from './plaid.js';
 
 /** Saldo na natureza da conta (positivo = normal). */
 const natural = (r) => (['asset', 'expense'].includes(r.type) ? r.debit - r.credit : r.credit - r.debit);
@@ -189,7 +190,8 @@ export function dashboard() {
   const pendingBank = get(`SELECT COUNT(*) AS n FROM bank_txns WHERE status='pending'`).n;
   // Saldo real informado pelo banco (Plaid) nas contas ligadas: o "caixa" acima é o dos livros e só fecha com ele quando tudo foi revisado.
   const linked = all(`SELECT type, balance_current FROM plaid_accounts WHERE linked_account_id IS NOT NULL AND balance_current IS NOT NULL`);
-  const bank = linked.length ? { cash: linked.filter((a) => !/credit/i.test(a.type)).reduce((s, a) => s + a.balance_current, 0), cardDebt: linked.filter((a) => /credit/i.test(a.type)).reduce((s, a) => s + a.balance_current, 0) } : null;
+  const sumG = (g) => linked.filter((a) => accountGroup(a.type) === g).reduce((s, a) => s + a.balance_current, 0);
+  const bank = linked.length ? { cash: sumG('cash'), cardDebt: sumG('card'), loanDebt: sumG('loan') } : null;
   const lowStock = get(`SELECT COUNT(*) AS n FROM items WHERE track_inventory=1 AND active=1 AND qty_on_hand<=reorder_point`).n;
   const upcoming = all(`SELECT d.id, d.type, d.number, d.due_date, d.total-d.paid AS balance, c.name AS contact_name FROM docs d JOIN contacts c ON c.id=d.contact_id
     WHERE d.status IN ('sent','open','partial') AND d.total-d.paid>0 ORDER BY d.due_date LIMIT 8`);

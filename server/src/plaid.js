@@ -99,6 +99,9 @@ export async function createLinkToken(user, itemId = null) {
     if (it.status === 'new_accounts') body.update = { account_selection_enabled: true }; // deixa a pessoa marcar as contas novas
   } else body.products = ['transactions'];
   if (env().PLAID_WEBHOOK_URL) body.webhook = env().PLAID_WEBHOOK_URL;
+  // Bancos grandes (Chase, Wells Fargo...) entram pelo site do próprio banco (OAuth) e voltam para este endereço. Tem de ser
+  // igual ao cadastrado em "Allowed redirect URIs" no painel da Plaid (ex.: https://<site do Fluxo>/connections/banks).
+  if (env().PLAID_REDIRECT_URI) body.redirect_uri = env().PLAID_REDIRECT_URI;
   // Sem isto o Plaid traz só 90 dias de histórico. Pedimos até 24 meses (PLAID_HISTORY_DAYS, 30 a 730);
   // vale para bancos conectados depois desta mudança — o valor é fixado na conexão.
   if (!itemId) {
@@ -259,6 +262,8 @@ export function linkAccount(plaidAccountRowId, { linked_account_id, create }) {
     return connectionAccounts();
   }
   if (create) {
+    const grp = accountGroup(pa.type);
+    if (grp === 'loan' || grp === 'invest') throw bad('Loans and investments are not bank accounts in the books: they stay in the bank summary only');
     const credit = pa.type === 'credit';
     const name = `${get('SELECT institution_name FROM plaid_items WHERE item_id=?', pa.item_id)?.institution_name || 'Bank'} ${pa.name}${pa.mask ? ` ••${pa.mask}` : ''}`.slice(0, 80);
     const subtype = credit ? 'credit_card' : 'bank';
@@ -290,10 +295,20 @@ export async function removeItem(itemId) {
 }
 
 /* ------------------------------------- consultas ------------------------------------- */
+/** Grupo de cada conta do banco pelo tipo da Plaid: depository = dinheiro, credit = cartão, loan = financiamento,
+ *  investment = investimento. Sem tipo (dado antigo), conta como dinheiro, como antes. */
+export function accountGroup(type) {
+  const k = String(type || '').toLowerCase();
+  if (k === 'credit') return 'card';
+  if (k === 'loan') return 'loan';
+  if (k === 'investment' || k === 'brokerage') return 'invest';
+  if (k === 'depository' || !k) return 'cash';
+  return 'other';
+}
 export function connectionAccounts() {
   return all(`SELECT pa.*, a.name AS linked_name, i.institution_name, i.status AS item_status FROM plaid_accounts pa JOIN plaid_items i ON i.item_id=pa.item_id
     LEFT JOIN accounts a ON a.id=pa.linked_account_id ORDER BY i.institution_name, pa.name`)
-    .map((a) => ({ ...a, is_credit: a.type === 'credit' }));
+    .map((a) => ({ ...a, is_credit: a.type === 'credit', group: accountGroup(a.type) }));
 }
 export function connectionView(itemId) {
   const item = get('SELECT id,item_id,institution_name,status,error_code,last_sync,demo,created_at FROM plaid_items WHERE item_id=?', itemId);
@@ -337,9 +352,9 @@ export function insights(q = {}) {
   const payers = all(`SELECT COALESCE(NULLIF(t.merchant,''), t.name) AS name, SUM(-t.amount) AS total, COUNT(*) AS count, MAX(t.date) AS last_date ${base} AND t.amount<0 AND ${real} GROUP BY 1 ORDER BY total DESC LIMIT 10`, ...p);
   const monthly = all(`SELECT substr(t.date,1,7) AS month, COALESCE(SUM(CASE WHEN t.amount<0 THEN -t.amount END),0) AS money_in, COALESCE(SUM(CASE WHEN t.amount>0 THEN t.amount END),0) AS money_out ${base} AND ${real} GROUP BY 1 ORDER BY 1`, ...p);
   const accounts = connectionAccounts();
-  const cash = accounts.filter((a) => !a.is_credit).reduce((s, a) => s + (a.balance_current || 0), 0);
-  const owed = accounts.filter((a) => a.is_credit).reduce((s, a) => s + (a.balance_current || 0), 0);
-  return { from, to, balance: cash, creditOwed: owed, moneyIn: totals.money_in, moneyOut: totals.money_out, byCategory, topMerchants, payers, monthly };
+  // Saldo = só contas de dinheiro (corrente, poupança). Cartão e financiamento são dívida; investimento fica à parte.
+  const sumOf = (g) => accounts.filter((a) => a.group === g).reduce((s, a) => s + (a.balance_current || 0), 0);
+  return { from, to, balance: sumOf('cash'), creditOwed: sumOf('card'), loanOwed: sumOf('loan'), investments: sumOf('invest'), moneyIn: totals.money_in, moneyOut: totals.money_out, byCategory, topMerchants, payers, monthly };
 }
 
 /* -------------------------------------- webhook -------------------------------------- */

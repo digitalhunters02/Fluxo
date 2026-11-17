@@ -104,5 +104,5 @@ test('painel: sem banco ligado não há saldo do banco; com banco, mostra o sald
   const card = get("SELECT id FROM accounts WHERE subtype='credit_card' ORDER BY id LIMIT 1").id;
   insert("INSERT INTO plaid_accounts(item_id,account_id,name,type,subtype,balance_current,linked_account_id) VALUES('it1','p2','Visa','credit','credit card',80000,?)", card);
   insert("INSERT INTO plaid_accounts(item_id,account_id,name,type,subtype,balance_current) VALUES('it1','p3','Não ligada','depository','savings',999999)");
-  assert.deepEqual(rep.dashboard().bank, { cash: 700000, cardDebt: 80000 });
+  assert.deepEqual(rep.dashboard().bank, { cash: 700000, cardDebt: 80000, loanDebt: 0 });
 });

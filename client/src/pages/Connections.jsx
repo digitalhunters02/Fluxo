@@ -56,7 +56,7 @@ function Overview({ onConnect, hasConnections }) {
     <>
       <div className="no-print mb-4 flex justify-end"><Select className="field max-w-[12rem]" value={period} onChange={(e) => setPeriod(e.target.value)} aria-label={t('Period')}>{Object.entries(PERIODS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select></div>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label={t('Cash in connected banks')} value={money(d.balance)} sub={d.creditOwed ? `${t('Cards owed')}: ${money(d.creditOwed)}` : undefined} />
+        <Stat label={t('Cash in connected banks')} value={money(d.balance)} sub={[d.creditOwed ? `${t('Cards owed')}: ${money(d.creditOwed)}` : '', d.loanOwed ? t('Owed on loans: {0}', [money(d.loanOwed)]) : ''].filter(Boolean).join(' · ') || undefined} />
         <Stat label={t('Money in')} value={money(d.moneyIn)} tone="good" sub={`${date(from)} – ${date(to)}`} />
         <Stat label={t('Money out')} value={money(d.moneyOut)} tone="bad" />
         <Stat label={t('Net')} value={money(d.moneyIn - d.moneyOut)} tone={d.moneyIn - d.moneyOut < 0 ? 'bad' : 'good'} />
@@ -115,12 +115,14 @@ function AccountRow({ a, bankAccounts, onChange }) {
   const linkedValue = a.linked_account_id ? String(a.linked_account_id) : '';
   const change = (v) => act(async () => { await api.put(`/plaid/accounts/${a.id}`, v === 'new' ? { create: true } : { linked_account_id: v ? Number(v) : null }); onChange(); }, t('Account linked'));
   const options = bankAccounts.filter((b) => (a.is_credit ? b.subtype === 'credit_card' : b.subtype === 'bank'));
+  const owed = a.is_credit || a.group === 'loan';
+  const viewOnly = a.group === 'loan' || a.group === 'invest'; // financiamento e investimento não viram conta de banco no livro
   return (
     <tr>
       <td className="td"><div className="font-medium">{a.name} <span className="text-slate-400">••{a.mask}</span></div><div className="text-xs capitalize text-slate-400">{a.subtype || a.type}</div></td>
-      <td className="td num text-right">{a.balance_current == null ? '—' : money(a.is_credit ? -a.balance_current : a.balance_current)}{a.balance_available != null && !a.is_credit && <div className="text-xs text-slate-400">{t('Available')} {money(a.balance_available)}</div>}</td>
-      <td className="td"><Select value={linkedValue} onChange={(e) => change(e.target.value)} aria-label={t('Link to bookkeeping account')}>
-        <option value="">{t('Not linked (view only)')}</option>{options.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}{!a.linked_account_id && <option value="new">{t('+ Create a new account')}</option>}</Select></td>
+      <td className="td num text-right">{a.balance_current == null ? '—' : money(owed ? -a.balance_current : a.balance_current)}{a.balance_available != null && !owed && a.group === 'cash' && <div className="text-xs text-slate-400">{t('Available')} {money(a.balance_available)}</div>}{a.group === 'loan' && <div className="text-xs text-amber-600" data-testid="loan-owed">{t('Loan (owed)')}</div>}</td>
+      <td className="td">{viewOnly ? <span className="text-xs text-slate-400">{t('Not counted in your cash (view only)')}</span> : <Select value={linkedValue} onChange={(e) => change(e.target.value)} aria-label={t('Link to bookkeeping account')}>
+        <option value="">{t('Not linked (view only)')}</option>{options.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}{!a.linked_account_id && <option value="new">{t('+ Create a new account')}</option>}</Select>}</td>
     </tr>
   );
 }
@@ -131,13 +133,28 @@ function Banks({ overview, reload, canWrite }) {
   const nav = useNavigate();
   const { data: accounts } = useLoad(() => api.get('/banking/accounts'));
   const mode = overview.mode;
-  const connectLive = async (existingItem) => {
-    const { link_token } = await api.post('/plaid/link-token', existingItem ? { item_id: existingItem } : {});
+  // Bancos grandes (OAuth): a pessoa sai para o site do banco e volta para esta página com ?oauth_state_id=...; aí o
+  // Link reabre com o MESMO link_token (guardado nesta aba) e termina a ligação.
+  const openLink = async (link_token, existingItem, receivedRedirectUri) => {
     const Plaid = await loadPlaidLink();
-    Plaid.create({ token: link_token, onSuccess: (public_token, metadata) => {
+    Plaid.create({ token: link_token, ...(receivedRedirectUri ? { receivedRedirectUri } : {}), onSuccess: (public_token, metadata) => {
+      try { sessionStorage.removeItem('fluxo_plaid_link'); } catch { /* sem armazenamento */ }
       act(async () => { if (!existingItem) await api.post('/plaid/exchange', { public_token, institution: metadata?.institution }); else await api.post('/plaid/sync', { item_id: existingItem, repaired: true }); reload(); }, t('Bank connected'));
     } }).open();
   };
+  const connectLive = async (existingItem) => {
+    const { link_token } = await api.post('/plaid/link-token', existingItem ? { item_id: existingItem } : {});
+    try { sessionStorage.setItem('fluxo_plaid_link', JSON.stringify({ link_token, item: existingItem || null })); } catch { /* sem armazenamento */ }
+    await openLink(link_token, existingItem);
+  };
+  useEffect(() => {
+    if (!/[?&]oauth_state_id=/.test(window.location.search)) return;
+    let saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem('fluxo_plaid_link') || 'null'); } catch { /* */ }
+    const back = window.location.href;
+    window.history.replaceState(null, '', window.location.pathname);
+    if (saved?.link_token) openLink(saved.link_token, saved.item, back).catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const connect = () => act(() => (mode === 'live' ? connectLive() : api.post('/plaid/demo', {}).then(reload)), mode === 'live' ? undefined : t('Demo bank connected'));
   const used = overview.connections.length;
   const full = used >= overview.limit;
