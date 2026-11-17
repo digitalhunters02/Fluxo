@@ -129,7 +129,23 @@ export async function exchangePublicToken({ public_token, institution }, user) {
   assertCanAddConnection();
   if (!public_token) throw bad('Missing bank connection token');
   const ex = await plaid('/item/public_token/exchange', { public_token });
-  const itemId = storeItem({ item_id: ex.item_id, access_token: ex.access_token, institution_name: institution?.name, institution_id: institution?.institution_id }, user);
+  // O mesmo banco ligado de novo (mesma instituição e mesmas contas): a Plaid cobraria em dobro e os lançamentos viriam
+  // repetidos. Desfaz a ligação nova e avisa (a pessoa usa "Reconectar" na conexão que já existe).
+  const instId = institution?.institution_id;
+  const same = instId ? all('SELECT item_id, access_token_enc FROM plaid_items WHERE institution_id=? AND item_id<>?', instId, ex.item_id) : [];
+  if (same.length) {
+    const key = (a) => `${a.mask || ''}|${String(a.name || '').toLowerCase()}`;
+    const fresh = new Set(((await plaid('/accounts/get', { access_token: ex.access_token })).accounts || []).map(key));
+    for (const s of same) {
+      let old = [];
+      try { old = (await plaid('/accounts/get', { access_token: decrypt(s.access_token_enc) })).accounts || []; } catch { continue; }
+      if (old.some((a) => fresh.has(key(a)))) {
+        await plaid('/item/remove', { access_token: ex.access_token }).catch(() => {});
+        throw new HttpError(409, 'This bank is already connected. If it asks you to sign in again, use Reconnect on that connection.', { code: 'duplicate_bank' });
+      }
+    }
+  }
+  const itemId = storeItem({ item_id: ex.item_id, access_token: ex.access_token, institution_name: institution?.name, institution_id: instId }, user);
   await syncItem(itemId);
   return connectionView(itemId);
 }

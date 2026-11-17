@@ -13,6 +13,7 @@ const mock = http.createServer((req, res) => {
     const body = b ? JSON.parse(b) : {}; calls.push({ path: req.url, body, headers: req.headers });
     const send = (code, o) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(o)); };
     if (req.url === '/link/token/create') return send(200, { link_token: 'link-sandbox-123', expiration: 'x' });
+    if (req.url === '/item/public_token/exchange' && body.public_token === 'p-dup') return send(200, { access_token: 'access-sandbox-DUP', item_id: 'item-dup' });
     if (req.url === '/item/public_token/exchange') return send(200, { access_token: 'access-sandbox-SECRET-TOKEN', item_id: 'item-1' });
     if (req.url === '/accounts/get') {
       if (state.accountsFail) return send(400, { error_type: 'ITEM_ERROR', error_code: state.accountsFail, error_message: 'login required' });
@@ -196,6 +197,15 @@ test('webhook de erro do item marca reautenticação', async () => {
   await hook({ webhook_type: 'ITEM', webhook_code: 'LOGIN_REPAIRED', item_id: 'item-1' });
   assert.equal(get('SELECT status FROM plaid_items WHERE item_id=?', 'item-1').status, 'ok');
   assert.deepEqual((await hook({ webhook_type: 'ITEM', webhook_code: 'ERROR', item_id: 'desconhecido' })).body, { ignored: true });
+});
+
+test('o mesmo banco ligado de novo é recusado e a ligação nova é desfeita na Plaid', async () => {
+  const before = calls.length;
+  const r = await call('/plaid/exchange', 'POST', { public_token: 'p-dup', institution: { name: 'First Platypus Bank', institution_id: 'ins_1' } });
+  assert.equal(r.status, 409, JSON.stringify(r.body));
+  assert.ok(calls.slice(before).some((c) => c.path === '/item/remove' && c.body.access_token === 'access-sandbox-DUP'));
+  assert.equal(get("SELECT COUNT(*) AS n FROM plaid_items WHERE item_id='item-dup'").n, 0);
+  state.remove.length = 0; // o teste de desconectar confere a lista de remoções do zero
 });
 
 test('conta nova no mesmo banco: oferece "Adicionar contas" e o Link abre com escolha de contas', async () => {
