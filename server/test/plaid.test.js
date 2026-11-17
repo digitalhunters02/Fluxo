@@ -198,6 +198,29 @@ test('webhook de erro do item marca reautenticação', async () => {
   assert.deepEqual((await hook({ webhook_type: 'ITEM', webhook_code: 'ERROR', item_id: 'desconhecido' })).body, { ignored: true });
 });
 
+test('conta nova no mesmo banco: oferece "Adicionar contas" e o Link abre com escolha de contas', async () => {
+  await hook({ webhook_type: 'ITEM', webhook_code: 'NEW_ACCOUNTS_AVAILABLE', item_id: 'item-1' });
+  assert.equal(get('SELECT status FROM plaid_items WHERE item_id=?', 'item-1').status, 'new_accounts');
+  // a sincronização normal não apaga o aviso
+  state.pages = [{ added: [], modified: [], removed: [], next_cursor: 'cur6', has_more: false }];
+  await plaid.syncItem('item-1');
+  assert.equal(get('SELECT status FROM plaid_items WHERE item_id=?', 'item-1').status, 'new_accounts');
+  // o Link em modo de atualização pede a escolha de contas
+  const before = calls.length;
+  const lt = await call('/plaid/link-token', 'POST', { item_id: 'item-1' });
+  assert.equal(lt.status, 200);
+  const req = calls.slice(before).find((c) => c.path === '/link/token/create');
+  assert.ok(req.body.access_token, 'modo de atualização');
+  assert.deepEqual(req.body.update, { account_selection_enabled: true });
+  // terminou o Link: volta a ok
+  await call('/plaid/sync', 'POST', { item_id: 'item-1', repaired: true });
+  assert.equal(get('SELECT status FROM plaid_items WHERE item_id=?', 'item-1').status, 'ok');
+  // aviso de desconexão pendente pede login de novo
+  await hook({ webhook_type: 'ITEM', webhook_code: 'PENDING_DISCONNECT', item_id: 'item-1' });
+  assert.equal(get('SELECT status FROM plaid_items WHERE item_id=?', 'item-1').status, 'login_required');
+  await hook({ webhook_type: 'ITEM', webhook_code: 'LOGIN_REPAIRED', item_id: 'item-1' });
+});
+
 test('desconectar remove a conexão e os dados do banco, mas preserva o que já foi para a contabilidade', async () => {
   const before = get('SELECT COUNT(*) AS n FROM bank_txns').n;
   assert.equal((await call('/plaid/items/item-1', 'DELETE')).status, 200);

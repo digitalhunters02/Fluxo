@@ -135,7 +135,7 @@ function Banks({ overview, reload, canWrite }) {
     const { link_token } = await api.post('/plaid/link-token', existingItem ? { item_id: existingItem } : {});
     const Plaid = await loadPlaidLink();
     Plaid.create({ token: link_token, onSuccess: (public_token, metadata) => {
-      act(async () => { if (!existingItem) await api.post('/plaid/exchange', { public_token, institution: metadata?.institution }); else await api.post('/plaid/sync', { item_id: existingItem }); reload(); }, t('Bank connected'));
+      act(async () => { if (!existingItem) await api.post('/plaid/exchange', { public_token, institution: metadata?.institution }); else await api.post('/plaid/sync', { item_id: existingItem, repaired: true }); reload(); }, t('Bank connected'));
     } }).open();
   };
   const connect = () => act(() => (mode === 'live' ? connectLive() : api.post('/plaid/demo', {}).then(reload)), mode === 'live' ? undefined : t('Demo bank connected'));
@@ -154,9 +154,10 @@ function Banks({ overview, reload, canWrite }) {
       {overview.connections.length === 0 ? <Card><Empty>{t('No banks connected yet.')}</Empty></Card> : overview.connections.map((c) => (
         <Card key={c.item_id} className="mb-4" pad={false}
           title={<span className="flex items-center gap-2">{c.institution_name || t('Bank')} {c.demo ? <Badge status="draft">{t('Demo')}</Badge> : null}
-            {c.status === 'ok' ? <Badge status="paid">{t('Connected')}</Badge> : <Badge status="declined">{c.status === 'login_required' ? t('Sign-in needed') : t('Problem')}</Badge>}</span>}
+            {c.status === 'ok' ? <Badge status="paid">{t('Connected')}</Badge> : c.status === 'new_accounts' ? <Badge status="sent">{t('New accounts found')}</Badge> : <Badge status="declined">{c.status === 'login_required' ? t('Sign-in needed') : t('Problem')}</Badge>}</span>}
           action={<div className="flex items-center gap-3 text-xs">{c.last_sync && <span className="text-slate-400">{t('Synced')} {date(c.last_sync.slice(0, 10))}</span>}
             {canWrite && c.status === 'login_required' && mode === 'live' && <button className="text-brand-700 hover:underline" onClick={() => act(() => connectLive(c.item_id))}>{t('Reconnect')}</button>}
+            {canWrite && c.status === 'new_accounts' && mode === 'live' && <button className="text-brand-700 hover:underline" data-testid="plaid-add-accounts" onClick={() => act(() => connectLive(c.item_id))}>{t('Add accounts')}</button>}
             {canWrite && <button className="text-rose-600 hover:underline" onClick={() => confirm(t('Disconnect this bank? Your bookkeeping entries stay; no new transactions will arrive.')) && act(async () => { await api.del(`/plaid/items/${c.item_id}`); reload(); }, t('Bank disconnected'))}>{t('Disconnect')}</button>}</div>}>
           <Table head={[t('Account'), { label: t('Balance'), right: true }, t('Bookkeeping account')]}>
             {c.accounts.map((a) => <AccountRow key={a.id} a={a} bankAccounts={accounts || []} onChange={reload} />)}

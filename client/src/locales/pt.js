@@ -2167,5 +2167,7 @@ export default {
  "Send by text message": "Enviar por mensagem de texto",
  "Hi {0}! Here is your invoice {1} for {2} from {3}: {4}": "Olá {0}! Aqui está a sua fatura {1} no valor de {2} de {3}: {4}",
  "The invoice was also emailed to the customer.": "A fatura também foi enviada por e-mail ao cliente.",
- "Quick charge: get paid by link without building a full invoice": "Cobrança rápida: receba pelo link sem montar uma fatura inteira"
+ "Quick charge: get paid by link without building a full invoice": "Cobrança rápida: receba pelo link sem montar uma fatura inteira",
+ "New accounts found": "Novas contas encontradas",
+ "Add accounts": "Adicionar contas"
 };

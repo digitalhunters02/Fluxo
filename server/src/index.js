@@ -779,7 +779,11 @@ api.get('/plaid/overview', wrap((_req, res) => ok(res, { mode: plaidSvc.plaidMod
 api.post('/plaid/link-token', can('banking', true), wrap(async (req, res) => ok(res, { link_token: await plaidSvc.createLinkToken(req.user, req.body.item_id) })));
 api.post('/plaid/exchange', can('banking', true), wrap(async (req, res) => { const c = await plaidSvc.exchangePublicToken(req.body, req.user); audit(req, 'connect', 'bank', null, c.institution_name); ok(res, c); }));
 api.post('/plaid/demo', can('banking', true), wrap(async (req, res) => { const c = await plaidSvc.connectDemo(req.user); audit(req, 'connect', 'bank', null, 'Demo Bank'); ok(res, c); }));
-api.post('/plaid/sync', can('banking', true), wrap(async (req, res) => ok(res, req.body.item_id ? await plaidSvc.syncItem(req.body.item_id) : { items: await plaidSvc.syncAll() })));
+api.post('/plaid/sync', can('banking', true), wrap(async (req, res) => {
+  // repaired: a pessoa acabou de passar pelo modo de atualização (reconectar ou adicionar contas novas)
+  if (req.body.item_id && req.body.repaired) plaidSvc.markRepaired(req.body.item_id);
+  ok(res, req.body.item_id ? await plaidSvc.syncItem(req.body.item_id) : { items: await plaidSvc.syncAll() });
+}));
 api.put('/plaid/accounts/:id', can('banking', true), wrap((req, res) => ok(res, plaidSvc.linkAccount(id(req), { linked_account_id: req.body.linked_account_id, create: !!req.body.create }))));
 api.delete('/plaid/items/:itemId', can('banking', true), wrap(async (req, res) => { await plaidSvc.removeItem(req.params.itemId); audit(req, 'disconnect', 'bank', null, req.params.itemId); ok(res, {}); }));
 api.get('/plaid/activity', wrap((req, res) => ok(res, plaidSvc.activity(req.query))));

@@ -96,6 +96,7 @@ export async function createLinkToken(user, itemId = null) {
     const it = get('SELECT * FROM plaid_items WHERE item_id=?', itemId);
     if (!it) throw new HttpError(404, 'Connection not found');
     body.access_token = decrypt(it.access_token_enc);
+    if (it.status === 'new_accounts') body.update = { account_selection_enabled: true }; // deixa a pessoa marcar as contas novas
   } else body.products = ['transactions'];
   if (env().PLAID_WEBHOOK_URL) body.webhook = env().PLAID_WEBHOOK_URL;
   // Sem isto o Plaid traz só 90 dias de histórico. Pedimos até 24 meses (PLAID_HISTORY_DAYS, 30 a 730);
@@ -180,7 +181,7 @@ export async function syncItem(itemId) {
           run("DELETE FROM bank_txns WHERE hash=? AND status='pending'", `plaid:${rm.transaction_id}`);
         }
       }
-      run('UPDATE plaid_items SET cursor=?, last_sync=?, status=\'ok\', error_code=\'\' WHERE item_id=?', cursor, new Date().toISOString(), item.item_id);
+      run("UPDATE plaid_items SET cursor=?, last_sync=?, status=CASE WHEN status='new_accounts' THEN status ELSE 'ok' END, error_code=CASE WHEN status='new_accounts' THEN error_code ELSE '' END WHERE item_id=?", cursor, new Date().toISOString(), item.item_id);
     });
     const imported = pushToBookkeeping(item.item_id);
     return { added, imported };
@@ -189,6 +190,11 @@ export async function syncItem(itemId) {
     else if (e.plaidCode) run("UPDATE plaid_items SET status='error', error_code=? WHERE item_id=?", e.plaidCode, item.item_id);
     throw e;
   }
+}
+
+/** Depois do modo de atualização (Reconectar / Adicionar contas): o banco volta a "ok". */
+export function markRepaired(itemId) {
+  run("UPDATE plaid_items SET status='ok', error_code='' WHERE item_id=?", itemId);
 }
 
 export async function syncAll() {
@@ -351,8 +357,11 @@ export async function handleWebhook(payload) {
   }
   if (payload.webhook_type === 'ITEM') {
     if (payload.webhook_code === 'ERROR' && payload.error?.error_code === 'ITEM_LOGIN_REQUIRED') run("UPDATE plaid_items SET status='login_required', error_code='ITEM_LOGIN_REQUIRED' WHERE item_id=?", itemId);
-    else if (payload.webhook_code === 'PENDING_EXPIRATION') run("UPDATE plaid_items SET status='login_required', error_code='PENDING_EXPIRATION' WHERE item_id=?", itemId);
-    else if (payload.webhook_code === 'USER_PERMISSION_REVOKED') run("UPDATE plaid_items SET status='revoked', error_code='USER_PERMISSION_REVOKED' WHERE item_id=?", itemId);
+    else if (payload.webhook_code === 'ERROR' && payload.error?.error_code) run("UPDATE plaid_items SET status='error', error_code=? WHERE item_id=?", payload.error.error_code, itemId);
+    else if (payload.webhook_code === 'PENDING_EXPIRATION' || payload.webhook_code === 'PENDING_DISCONNECT') run("UPDATE plaid_items SET status='login_required', error_code=? WHERE item_id=?", payload.webhook_code, itemId);
+    else if (payload.webhook_code === 'USER_PERMISSION_REVOKED' || payload.webhook_code === 'USER_ACCOUNT_REVOKED') run("UPDATE plaid_items SET status='revoked', error_code=? WHERE item_id=?", payload.webhook_code, itemId);
+    // conta nova no mesmo banco (ex.: abriu uma poupança): a tela oferece "Adicionar contas" (modo de atualização com escolha de contas)
+    else if (payload.webhook_code === 'NEW_ACCOUNTS_AVAILABLE') run("UPDATE plaid_items SET status='new_accounts', error_code='' WHERE item_id=? AND status='ok'", itemId);
     else if (payload.webhook_code === 'LOGIN_REPAIRED') run("UPDATE plaid_items SET status='ok', error_code='' WHERE item_id=?", itemId);
   }
   return { handled: true };
